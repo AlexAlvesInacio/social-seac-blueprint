@@ -13,6 +13,7 @@ import { Route as PainelRouteImport } from './routes/painel'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
+import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
 
 const PainelRoute = PainelRouteImport.update({
   id: '/painel',
@@ -34,17 +35,24 @@ const FamiliasIndexRoute = FamiliasIndexRouteImport.update({
   path: '/familias/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FamiliasIdRoute = FamiliasIdRouteImport.update({
+  id: '/familias/$id',
+  path: '/familias/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/painel': typeof PainelRoute
+  '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/painel': typeof PainelRoute
+  '/familias/$id': typeof FamiliasIdRoute
   '/familias': typeof FamiliasIndexRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/painel': typeof PainelRoute
+  '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/painel' | '/familias/'
+  fullPaths: '/' | '/auth' | '/painel' | '/familias/$id' | '/familias/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/painel' | '/familias'
-  id: '__root__' | '/' | '/auth' | '/painel' | '/familias/'
+  to: '/' | '/auth' | '/painel' | '/familias/$id' | '/familias'
+  id: '__root__' | '/' | '/auth' | '/painel' | '/familias/$id' | '/familias/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   PainelRoute: typeof PainelRoute
+  FamiliasIdRoute: typeof FamiliasIdRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
 }
 
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FamiliasIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/familias/$id': {
+      id: '/familias/$id'
+      path: '/familias/$id'
+      fullPath: '/familias/$id'
+      preLoaderRoute: typeof FamiliasIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   PainelRoute: PainelRoute,
+  FamiliasIdRoute: FamiliasIdRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
 }
 export const routeTree = rootRouteImport
