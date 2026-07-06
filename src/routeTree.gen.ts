@@ -17,6 +17,7 @@ import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ComposicaoCestaRouteImport } from './routes/composicao-cesta'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuditoriaRouteImport } from './routes/auditoria'
 import { Route as AtendimentoRouteImport } from './routes/atendimento'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
@@ -62,6 +63,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditoriaRoute = AuditoriaRouteImport.update({
+  id: '/auditoria',
+  path: '/auditoria',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AtendimentoRoute = AtendimentoRouteImport.update({
   id: '/atendimento',
   path: '/atendimento',
@@ -86,6 +92,7 @@ const FamiliasIdRoute = FamiliasIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
+  '/auditoria': typeof AuditoriaRoute
   '/auth': typeof AuthRoute
   '/composicao-cesta': typeof ComposicaoCestaRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
+  '/auditoria': typeof AuditoriaRoute
   '/auth': typeof AuthRoute
   '/composicao-cesta': typeof ComposicaoCestaRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
+  '/auditoria': typeof AuditoriaRoute
   '/auth': typeof AuthRoute
   '/composicao-cesta': typeof ComposicaoCestaRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/atendimento'
+    | '/auditoria'
     | '/auth'
     | '/composicao-cesta'
     | '/configuracoes'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/atendimento'
+    | '/auditoria'
     | '/auth'
     | '/composicao-cesta'
     | '/configuracoes'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/atendimento'
+    | '/auditoria'
     | '/auth'
     | '/composicao-cesta'
     | '/configuracoes'
@@ -174,6 +186,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AtendimentoRoute: typeof AtendimentoRoute
+  AuditoriaRoute: typeof AuditoriaRoute
   AuthRoute: typeof AuthRoute
   ComposicaoCestaRoute: typeof ComposicaoCestaRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auditoria': {
+      id: '/auditoria'
+      path: '/auditoria'
+      fullPath: '/auditoria'
+      preLoaderRoute: typeof AuditoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/atendimento': {
       id: '/atendimento'
       path: '/atendimento'
@@ -278,6 +298,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AtendimentoRoute: AtendimentoRoute,
+  AuditoriaRoute: AuditoriaRoute,
   AuthRoute: AuthRoute,
   ComposicaoCestaRoute: ComposicaoCestaRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
@@ -292,3 +313,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
