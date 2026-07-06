@@ -9,38 +9,268 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UsuariosRouteImport } from './routes/usuarios'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as RecebimentosRouteImport } from './routes/recebimentos'
+import { Route as PainelRouteImport } from './routes/painel'
+import { Route as EstoqueRouteImport } from './routes/estoque'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ComposicaoCestaRouteImport } from './routes/composicao-cesta'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuditoriaRouteImport } from './routes/auditoria'
+import { Route as AtendimentoRouteImport } from './routes/atendimento'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
+import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
 
+const UsuariosRoute = UsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecebimentosRoute = RecebimentosRouteImport.update({
+  id: '/recebimentos',
+  path: '/recebimentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EstoqueRoute = EstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComposicaoCestaRoute = ComposicaoCestaRouteImport.update({
+  id: '/composicao-cesta',
+  path: '/composicao-cesta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditoriaRoute = AuditoriaRouteImport.update({
+  id: '/auditoria',
+  path: '/auditoria',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AtendimentoRoute = AtendimentoRouteImport.update({
+  id: '/atendimento',
+  path: '/atendimento',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FamiliasIndexRoute = FamiliasIndexRouteImport.update({
+  id: '/familias/',
+  path: '/familias/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FamiliasIdRoute = FamiliasIdRouteImport.update({
+  id: '/familias/$id',
+  path: '/familias/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/atendimento': typeof AtendimentoRoute
+  '/auditoria': typeof AuditoriaRoute
+  '/auth': typeof AuthRoute
+  '/composicao-cesta': typeof ComposicaoCestaRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/estoque': typeof EstoqueRoute
+  '/painel': typeof PainelRoute
+  '/recebimentos': typeof RecebimentosRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/': typeof FamiliasIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/atendimento': typeof AtendimentoRoute
+  '/auditoria': typeof AuditoriaRoute
+  '/auth': typeof AuthRoute
+  '/composicao-cesta': typeof ComposicaoCestaRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/estoque': typeof EstoqueRoute
+  '/painel': typeof PainelRoute
+  '/recebimentos': typeof RecebimentosRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias': typeof FamiliasIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/atendimento': typeof AtendimentoRoute
+  '/auditoria': typeof AuditoriaRoute
+  '/auth': typeof AuthRoute
+  '/composicao-cesta': typeof ComposicaoCestaRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/estoque': typeof EstoqueRoute
+  '/painel': typeof PainelRoute
+  '/recebimentos': typeof RecebimentosRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/usuarios': typeof UsuariosRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/': typeof FamiliasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/atendimento'
+    | '/auditoria'
+    | '/auth'
+    | '/composicao-cesta'
+    | '/configuracoes'
+    | '/estoque'
+    | '/painel'
+    | '/recebimentos'
+    | '/relatorios'
+    | '/usuarios'
+    | '/familias/$id'
+    | '/familias/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/atendimento'
+    | '/auditoria'
+    | '/auth'
+    | '/composicao-cesta'
+    | '/configuracoes'
+    | '/estoque'
+    | '/painel'
+    | '/recebimentos'
+    | '/relatorios'
+    | '/usuarios'
+    | '/familias/$id'
+    | '/familias'
+  id:
+    | '__root__'
+    | '/'
+    | '/atendimento'
+    | '/auditoria'
+    | '/auth'
+    | '/composicao-cesta'
+    | '/configuracoes'
+    | '/estoque'
+    | '/painel'
+    | '/recebimentos'
+    | '/relatorios'
+    | '/usuarios'
+    | '/familias/$id'
+    | '/familias/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AtendimentoRoute: typeof AtendimentoRoute
+  AuditoriaRoute: typeof AuditoriaRoute
+  AuthRoute: typeof AuthRoute
+  ComposicaoCestaRoute: typeof ComposicaoCestaRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
+  EstoqueRoute: typeof EstoqueRoute
+  PainelRoute: typeof PainelRoute
+  RecebimentosRoute: typeof RecebimentosRoute
+  RelatoriosRoute: typeof RelatoriosRoute
+  UsuariosRoute: typeof UsuariosRoute
+  FamiliasIdRoute: typeof FamiliasIdRoute
+  FamiliasIndexRoute: typeof FamiliasIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/usuarios': {
+      id: '/usuarios'
+      path: '/usuarios'
+      fullPath: '/usuarios'
+      preLoaderRoute: typeof UsuariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recebimentos': {
+      id: '/recebimentos'
+      path: '/recebimentos'
+      fullPath: '/recebimentos'
+      preLoaderRoute: typeof RecebimentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/estoque': {
+      id: '/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof EstoqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/composicao-cesta': {
+      id: '/composicao-cesta'
+      path: '/composicao-cesta'
+      fullPath: '/composicao-cesta'
+      preLoaderRoute: typeof ComposicaoCestaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auditoria': {
+      id: '/auditoria'
+      path: '/auditoria'
+      fullPath: '/auditoria'
+      preLoaderRoute: typeof AuditoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/atendimento': {
+      id: '/atendimento'
+      path: '/atendimento'
+      fullPath: '/atendimento'
+      preLoaderRoute: typeof AtendimentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +278,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/familias/': {
+      id: '/familias/'
+      path: '/familias'
+      fullPath: '/familias/'
+      preLoaderRoute: typeof FamiliasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/familias/$id': {
+      id: '/familias/$id'
+      path: '/familias/$id'
+      fullPath: '/familias/$id'
+      preLoaderRoute: typeof FamiliasIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AtendimentoRoute: AtendimentoRoute,
+  AuditoriaRoute: AuditoriaRoute,
+  AuthRoute: AuthRoute,
+  ComposicaoCestaRoute: ComposicaoCestaRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
+  EstoqueRoute: EstoqueRoute,
+  PainelRoute: PainelRoute,
+  RecebimentosRoute: RecebimentosRoute,
+  RelatoriosRoute: RelatoriosRoute,
+  UsuariosRoute: UsuariosRoute,
+  FamiliasIdRoute: FamiliasIdRoute,
+  FamiliasIndexRoute: FamiliasIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
