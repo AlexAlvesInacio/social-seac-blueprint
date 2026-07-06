@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as RecebimentosRouteImport } from './routes/recebimentos'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as EstoqueRouteImport } from './routes/estoque'
@@ -24,6 +25,11 @@ import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
 const UsuariosRoute = UsuariosRouteImport.update({
   id: '/usuarios',
   path: '/usuarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecebimentosRoute = RecebimentosRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
+  '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
+  '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias': typeof FamiliasIndexRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
+  '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/painel'
     | '/recebimentos'
+    | '/relatorios'
     | '/usuarios'
     | '/familias/$id'
     | '/familias/'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/painel'
     | '/recebimentos'
+    | '/relatorios'
     | '/usuarios'
     | '/familias/$id'
     | '/familias'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/painel'
     | '/recebimentos'
+    | '/relatorios'
     | '/usuarios'
     | '/familias/$id'
     | '/familias/'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   EstoqueRoute: typeof EstoqueRoute
   PainelRoute: typeof PainelRoute
   RecebimentosRoute: typeof RecebimentosRoute
+  RelatoriosRoute: typeof RelatoriosRoute
   UsuariosRoute: typeof UsuariosRoute
   FamiliasIdRoute: typeof FamiliasIdRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
@@ -180,6 +193,13 @@ declare module '@tanstack/react-router' {
       path: '/usuarios'
       fullPath: '/usuarios'
       preLoaderRoute: typeof UsuariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recebimentos': {
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   EstoqueRoute: EstoqueRoute,
   PainelRoute: PainelRoute,
   RecebimentosRoute: RecebimentosRoute,
+  RelatoriosRoute: RelatoriosRoute,
   UsuariosRoute: UsuariosRoute,
   FamiliasIdRoute: FamiliasIdRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
