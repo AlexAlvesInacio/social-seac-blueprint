@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RecebimentosRouteImport } from './routes/recebimentos'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
 import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
 
+const RecebimentosRoute = RecebimentosRouteImport.update({
+  id: '/recebimentos',
+  path: '/recebimentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PainelRoute = PainelRouteImport.update({
   id: '/painel',
   path: '/painel',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
+  '/recebimentos': typeof RecebimentosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
+  '/recebimentos': typeof RecebimentosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias': typeof FamiliasIndexRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
+  '/recebimentos': typeof RecebimentosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/estoque'
     | '/painel'
+    | '/recebimentos'
     | '/familias/$id'
     | '/familias/'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/estoque'
     | '/painel'
+    | '/recebimentos'
     | '/familias/$id'
     | '/familias'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/estoque'
     | '/painel'
+    | '/recebimentos'
     | '/familias/$id'
     | '/familias/'
   fileRoutesById: FileRoutesById
@@ -117,12 +129,20 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   EstoqueRoute: typeof EstoqueRoute
   PainelRoute: typeof PainelRoute
+  RecebimentosRoute: typeof RecebimentosRoute
   FamiliasIdRoute: typeof FamiliasIdRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/recebimentos': {
+      id: '/recebimentos'
+      path: '/recebimentos'
+      fullPath: '/recebimentos'
+      preLoaderRoute: typeof RecebimentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/painel': {
       id: '/painel'
       path: '/painel'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   EstoqueRoute: EstoqueRoute,
   PainelRoute: PainelRoute,
+  RecebimentosRoute: RecebimentosRoute,
   FamiliasIdRoute: FamiliasIdRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
 }
