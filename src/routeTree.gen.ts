@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UsuariosRouteImport } from './routes/usuarios'
 import { Route as RecebimentosRouteImport } from './routes/recebimentos'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as EstoqueRouteImport } from './routes/estoque'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
 import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
 
+const UsuariosRoute = UsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecebimentosRoute = RecebimentosRouteImport.update({
   id: '/recebimentos',
   path: '/recebimentos',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
+  '/usuarios': typeof UsuariosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
+  '/usuarios': typeof UsuariosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias': typeof FamiliasIndexRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
+  '/usuarios': typeof UsuariosRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/painel'
     | '/recebimentos'
+    | '/usuarios'
     | '/familias/$id'
     | '/familias/'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/painel'
     | '/recebimentos'
+    | '/usuarios'
     | '/familias/$id'
     | '/familias'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/painel'
     | '/recebimentos'
+    | '/usuarios'
     | '/familias/$id'
     | '/familias/'
   fileRoutesById: FileRoutesById
@@ -156,12 +168,20 @@ export interface RootRouteChildren {
   EstoqueRoute: typeof EstoqueRoute
   PainelRoute: typeof PainelRoute
   RecebimentosRoute: typeof RecebimentosRoute
+  UsuariosRoute: typeof UsuariosRoute
   FamiliasIdRoute: typeof FamiliasIdRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/usuarios': {
+      id: '/usuarios'
+      path: '/usuarios'
+      fullPath: '/usuarios'
+      preLoaderRoute: typeof UsuariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recebimentos': {
       id: '/recebimentos'
       path: '/recebimentos'
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   EstoqueRoute: EstoqueRoute,
   PainelRoute: PainelRoute,
   RecebimentosRoute: RecebimentosRoute,
+  UsuariosRoute: UsuariosRoute,
   FamiliasIdRoute: FamiliasIdRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
 }
