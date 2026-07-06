@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RecebimentosRouteImport } from './routes/recebimentos'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as EstoqueRouteImport } from './routes/estoque'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AtendimentoRouteImport } from './routes/atendimento'
 import { Route as IndexRouteImport } from './routes/index'
@@ -31,6 +32,11 @@ const PainelRoute = PainelRouteImport.update({
 const EstoqueRoute = EstoqueRouteImport.update({
   id: '/estoque',
   path: '/estoque',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
   '/auth': typeof AuthRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
   '/auth': typeof AuthRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
   '/auth': typeof AuthRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/atendimento'
     | '/auth'
+    | '/configuracoes'
     | '/estoque'
     | '/painel'
     | '/recebimentos'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/atendimento'
     | '/auth'
+    | '/configuracoes'
     | '/estoque'
     | '/painel'
     | '/recebimentos'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/atendimento'
     | '/auth'
+    | '/configuracoes'
     | '/estoque'
     | '/painel'
     | '/recebimentos'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AtendimentoRoute: typeof AtendimentoRoute
   AuthRoute: typeof AuthRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   EstoqueRoute: typeof EstoqueRoute
   PainelRoute: typeof PainelRoute
   RecebimentosRoute: typeof RecebimentosRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/estoque'
       fullPath: '/estoque'
       preLoaderRoute: typeof EstoqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AtendimentoRoute: AtendimentoRoute,
   AuthRoute: AuthRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   EstoqueRoute: EstoqueRoute,
   PainelRoute: PainelRoute,
   RecebimentosRoute: RecebimentosRoute,
