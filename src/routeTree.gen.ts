@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PainelRouteImport } from './routes/painel'
+import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AtendimentoRouteImport } from './routes/atendimento'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,6 +20,11 @@ import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
 const PainelRoute = PainelRouteImport.update({
   id: '/painel',
   path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EstoqueRoute = EstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
   '/auth': typeof AuthRoute
+  '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
   '/auth': typeof AuthRoute
+  '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias': typeof FamiliasIndexRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/atendimento': typeof AtendimentoRoute
   '/auth': typeof AuthRoute
+  '/estoque': typeof EstoqueRoute
   '/painel': typeof PainelRoute
   '/familias/$id': typeof FamiliasIdRoute
   '/familias/': typeof FamiliasIndexRoute
@@ -78,16 +87,25 @@ export interface FileRouteTypes {
     | '/'
     | '/atendimento'
     | '/auth'
+    | '/estoque'
     | '/painel'
     | '/familias/$id'
     | '/familias/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/atendimento' | '/auth' | '/painel' | '/familias/$id' | '/familias'
+  to:
+    | '/'
+    | '/atendimento'
+    | '/auth'
+    | '/estoque'
+    | '/painel'
+    | '/familias/$id'
+    | '/familias'
   id:
     | '__root__'
     | '/'
     | '/atendimento'
     | '/auth'
+    | '/estoque'
     | '/painel'
     | '/familias/$id'
     | '/familias/'
@@ -97,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AtendimentoRoute: typeof AtendimentoRoute
   AuthRoute: typeof AuthRoute
+  EstoqueRoute: typeof EstoqueRoute
   PainelRoute: typeof PainelRoute
   FamiliasIdRoute: typeof FamiliasIdRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
@@ -109,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/painel'
       fullPath: '/painel'
       preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/estoque': {
+      id: '/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof EstoqueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -153,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AtendimentoRoute: AtendimentoRoute,
   AuthRoute: AuthRoute,
+  EstoqueRoute: EstoqueRoute,
   PainelRoute: PainelRoute,
   FamiliasIdRoute: FamiliasIdRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
