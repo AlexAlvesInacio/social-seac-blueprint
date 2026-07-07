@@ -230,11 +230,7 @@ function FamiliasPage() {
                       {familia.status === "liberado" && <Badge>Liberado</Badge>}
                       {familia.status === "bloqueado" && <Badge variant="destructive">Bloqueado</Badge>}
                       {familia.status === "inativo" && <Badge variant="outline" className="text-muted-foreground">Inativo</Badge>}
-                      {familia.status === "avaliar" && (
-                        <Badge variant="warning" className="gap-1">
-                          <AlertTriangle className="h-3 w-3" /> Avaliar definitivo
-                        </Badge>
-                      )}
+                      {familia.status === "avaliar" && <Badge>Liberado</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end gap-2">
