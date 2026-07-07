@@ -167,7 +167,8 @@ function FamiliasPage() {
 
       <Card className="mt-4">
         <CardContent className="p-0">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nome da família</TableHead>
