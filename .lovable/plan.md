@@ -320,11 +320,13 @@ O SEAC Social terá dois tipos principais de cesta para organizar o atendimento 
 2. Famílias, assistidos, membros (`/familias`, `/familias/:id`).
 3. `beneficios`, `itens_estoque`, `doadores_fornecedores`, configurações mínimas.
 4. `composicao_beneficio` e `/composicao-cesta`.
-5. Atendimento com regra dos 25 dias, bloqueio por estoque/status e **registro de tentativas bloqueadas**.
-6. **Liberação excepcional (admin)** + entrega vinculada à tentativa.
-7. Estoque e movimentações (`origem_tipo` + `origem_id`).
-8. Recebimentos com `doador_fornecedor_id` (item a item, banco preparado para evoluir para cabeçalho + itens).
-9. Montagem de benefícios.
-10. Relatórios básicos (incluindo bloqueios e liberações).
-11. Auditoria interna.
-12. Homologação completa dos quatro perfis antes de discutir módulos futuros (que **não fazem parte deste PRD**).
+5. Atendimento com regra dos 25 dias, bloqueio por estoque/status, **registro de tentativas bloqueadas** e **Cesta Extra / Cesta Padrão**.
+6. **Liberação excepcional (admin)** + entrega vinculada à tentativa (apenas bloqueio por prazo/social).
+7. Controle de **3 retiradas extras consecutivas** e alerta de avaliação para cadastro definitivo.
+8. Efetivação de cadastro (admin/coordenação) para liberar Cesta Padrão no próximo mês.
+9. Estoque e movimentações (`origem_tipo` + `origem_id`).
+10. Recebimentos com `doador_fornecedor_id` (item a item, banco preparado para evoluir para cabeçalho + itens).
+11. Montagem de benefícios.
+12. Relatórios básicos (incluindo bloqueios, liberações e retiradas extras).
+13. Auditoria interna.
+14. Homologação completa dos quatro perfis antes de discutir módulos futuros (que **não fazem parte deste PRD**).
