@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, Search, Eye, ArrowRight, AlertTriangle, MessageSquare } from "lucide-react";
+import { Plus, Search, Eye, ArrowRight, AlertTriangle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +130,7 @@ function FamiliasPage() {
         </Button>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         <SummaryCard value={String(total)} label="Total de famílias" />
         <SummaryCard value={String(definitivos)} label="Cadastros definitivos" />
         <SummaryCard value={String(extras)} label="Cadastros extra/em avaliação" className="border-l-secondary" />
@@ -167,102 +167,113 @@ function FamiliasPage() {
 
       <Card className="mt-4">
         <CardContent className="p-0">
-          <Table className="min-w-[1400px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome da família</TableHead>
-                <TableHead>Responsável</TableHead>
-                <TableHead>CPF / RG</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Bairro</TableHead>
-                <TableHead>Tipo de cadastro</TableHead>
-                <TableHead>Progresso Extra</TableHead>
-                <TableHead>Última retirada</TableHead>
-                <TableHead>Próxima data permitida</TableHead>
-                <TableHead>Acompanhamento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {exemploFamilias.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[1100px]">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={12} className="py-16 text-center text-sm text-muted-foreground">
-                    Nenhuma família cadastrada ainda.<br />
-                    <Link to="/familias/$id" params={{ id: "exemplo" }} className="mt-2 inline-block text-primary hover:underline">
-                      Ver exemplo de detalhe →
-                    </Link>
-                  </TableCell>
+                  <TableHead>Nome da família</TableHead>
+                  <TableHead>Responsável</TableHead>
+                  <TableHead className="whitespace-nowrap">CPF / RG</TableHead>
+                  <TableHead className="whitespace-nowrap">Telefone</TableHead>
+                  <TableHead>Bairro</TableHead>
+                  <TableHead>Tipo de cadastro</TableHead>
+                  <TableHead>Progresso Extra</TableHead>
+                  <TableHead>Acompanhamento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : (
-                exemploFamilias.map((familia) => (
-                  <TableRow key={familia.id}>
-                    <TableCell className="font-medium">
-                      {familia.nome}
-                      <div className="text-xs text-muted-foreground">ID: {familia.id}</div>
+              </TableHeader>
+              <TableBody>
+                {exemploFamilias.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="py-16 text-center text-sm text-muted-foreground">
+                      Nenhuma família cadastrada ainda.<br />
+                      <Link to="/familias/$id" params={{ id: "exemplo" }} className="mt-2 inline-block text-primary hover:underline">
+                        Ver exemplo de detalhe →
+                      </Link>
                     </TableCell>
-                    <TableCell>{familia.responsavel}</TableCell>
-                    <TableCell>{familia.documento}</TableCell>
-                    <TableCell>{familia.telefone}</TableCell>
-                    <TableCell>{familia.bairro}</TableCell>
-                    <TableCell>
-                      {familia.tipoCadastro === "definitivo" ? (
-                        <Badge>Definitivo / Cesta Padrão</Badge>
-                      ) : (
-                        <Badge variant="outline">Extra / em avaliação</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {familia.progressoExtra ? (
-                        <span className={familia.progressoExtra === "3/3" ? "text-destructive font-medium" : "text-foreground font-medium"}>
-                          {familia.progressoExtra} retiradas
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{familia.ultimaRetirada}</TableCell>
-                    <TableCell>{familia.proximaData}</TableCell>
-                    <TableCell>
-                      <AcompanhamentoBadge status={familia.acompanhamento} />
-                    </TableCell>
-                    <TableCell>
-                      {familia.status === "liberado" && <Badge>Liberado</Badge>}
-                      {familia.status === "bloqueado" && <Badge variant="destructive">Bloqueado</Badge>}
-                      {familia.status === "inativo" && <Badge variant="outline" className="text-muted-foreground">Inativo</Badge>}
-                      {familia.status === "avaliar" && <Badge>Liberado</Badge>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col items-end gap-2">
-                        <div className="flex justify-end gap-2">
+                  </TableRow>
+                ) : (
+                  exemploFamilias.map((familia) => {
+                    const inativa = familia.status === "inativo";
+                    return (
+                    <TableRow key={familia.id}>
+                      <TableCell className="font-medium">
+                        {familia.nome}
+                        <div className="text-xs text-muted-foreground">ID: {familia.id}</div>
+                      </TableCell>
+                      <TableCell>{familia.responsavel}</TableCell>
+                      <TableCell className="whitespace-nowrap">{familia.documento}</TableCell>
+                      <TableCell className="whitespace-nowrap">{familia.telefone}</TableCell>
+                      <TableCell>{familia.bairro}</TableCell>
+                      <TableCell>
+                        {familia.tipoCadastro === "definitivo" ? (
+                          <Badge>Definitivo / Cesta Padrão</Badge>
+                        ) : (
+                          <Badge variant="warning">Extra / em avaliação</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {familia.progressoExtra ? (
+                          <span className={familia.progressoExtra === "3/3" ? "text-warning font-medium" : "text-foreground font-medium"}>
+                            {familia.progressoExtra} retiradas
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <AcompanhamentoBadge status={familia.acompanhamento} />
+                          {(familia.ultimaRetirada !== "—" || familia.proximaData !== "—") && (
+                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                              Última: {familia.ultimaRetirada} · Próxima: {familia.proximaData}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {familia.status === "liberado" && <Badge>Liberado</Badge>}
+                        {familia.status === "bloqueado" && <Badge variant="destructive">Bloqueado</Badge>}
+                        {familia.status === "inativo" && <Badge variant="outline" className="text-muted-foreground">Inativo</Badge>}
+                        {familia.status === "avaliar" && (
+                          <Badge variant="warning" className="gap-1">
+                            <AlertTriangle className="h-3 w-3" /> Avaliar definitivo
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2 whitespace-nowrap">
                           <Button variant="outline" size="sm" className="gap-1" asChild>
                             <Link to="/familias/$id" params={{ id: String(familia.id) }}>
                               <Eye className="h-3.5 w-3.5" /> Ver detalhes
                             </Link>
                           </Button>
-                          <Button size="sm" className="gap-1" asChild>
-                            <Link to="/atendimento">
+                          {inativa ? (
+                            <Button size="sm" className="gap-1" disabled>
                               <ArrowRight className="h-3.5 w-3.5" /> Ir para atendimento
-                            </Link>
-                          </Button>
-                        </div>
-                        <div className="flex justify-end gap-2">
+                            </Button>
+                          ) : (
+                            <Button size="sm" className="gap-1" asChild>
+                              <Link to="/atendimento">
+                                <ArrowRight className="h-3.5 w-3.5" /> Ir para atendimento
+                              </Link>
+                            </Button>
+                          )}
                           {familia.progressoExtra === "3/3" && (
                             <Button variant="warning" size="sm" className="gap-1">
                               <AlertTriangle className="h-3.5 w-3.5" /> Avaliar cadastro definitivo
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" className="text-muted-foreground gap-1">
-                            <MessageSquare className="h-3.5 w-3.5" /> Registrar observação
-                          </Button>
                         </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
+                      </TableCell>
+                    </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
             </Table>
+          </div>
         </CardContent>
       </Card>
     </AppShell>
