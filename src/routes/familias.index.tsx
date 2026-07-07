@@ -272,7 +272,7 @@ function FamiliasPage() {
                       <TableCell>{familia.bairro}</TableCell>
                       <TableCell>
                         {familia.tipoCadastro === "definitivo" ? (
-                          <Badge className="bg-success text-success-foreground hover:bg-success/90">Definitivo</Badge>
+                          <Badge>Definitivo</Badge>
                         ) : (
                           <Badge variant="warning">Avaliação</Badge>
                         )}
