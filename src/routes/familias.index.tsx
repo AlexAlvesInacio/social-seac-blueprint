@@ -267,7 +267,8 @@ function FamiliasPage() {
                 ))
               )}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </AppShell>
