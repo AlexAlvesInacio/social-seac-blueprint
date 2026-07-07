@@ -201,7 +201,7 @@ O SEAC Social terá dois tipos principais de cesta para organizar o atendimento 
 - **`doadores_fornecedores`** — id, nome, tipo (`doador`|`fornecedor`|`ambos`), contato, observacoes, ativo.
 - **`recebimentos`** — id, data, item_id, quantidade, unidade, origem (`doacao`|`compra`|`investimento`|`ajuste`), **doador_fornecedor_id** (FK), valor_unitario, valor_total, nota_fiscal, validade, lote, local_armazenamento, usuario_id, observacao. *(No MVP, um item por lançamento; evolução prevista abaixo.)*
 - **`montagens_beneficio`** — id, beneficio_id, data, quantidade, usuario_id, observacao.
-- **`entregas`** — id, assistido_id, familia_id, beneficio_id, data_hora, usuario_id, observacao, **liberacao_excepcional** (bool), **tentativa_entrega_id** (FK, nullable), **observacao_liberacao** (nullable).
+- **`entregas`** — id, assistido_id, familia_id, beneficio_id, **tipo_cesta** (`extra`|`padrao`), data_hora, usuario_id, observacao, **liberacao_excepcional** (bool), **tentativa_entrega_id** (FK, nullable), **observacao_liberacao** (nullable).
 - **`tentativas_entrega`** — id, assistido_id, familia_id, usuario_id (quem tentou), data_hora, motivo_bloqueio (`antes_25_dias`|`sem_estoque`|`assistido_inativo`|`outro`), proxima_data_permitida, observacao, status (`bloqueada`|`liberada_excepcionalmente`|`cancelada`), **liberado_por_usuario_id** (FK, nullable), **liberado_em** (nullable), **observacao_liberacao** (nullable).
 - **`movimentacoes_estoque`** — id, item_id, tipo (`entrada`|`saida`|`ajuste`|`montagem`|`baixa_entrega`), quantidade, saldo_anterior, saldo_posterior, **origem_tipo** (`recebimento`|`entrega`|`montagem`|`ajuste`), **origem_id**, usuario_id, data_hora, observacao.
 - **`configuracoes`** — chave/valor (ex.: `dias_entre_cestas=25`).
