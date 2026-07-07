@@ -125,17 +125,22 @@ Esse fluxo é o núcleo do sistema.
 
 1. **Primeiro usuário vira admin ativo**; próximos ficam pendentes.
 2. **Pendente/inativo não acessam** o sistema.
-3. **Regra dos 25 dias** vale apenas para Cesta Básica (parâmetro configurável).
-4. **Bloqueio sem estoque**: sem Cesta Básica pronta, entrega não confirma.
+3. **Regra dos 25 dias** vale para Cesta Extra e Cesta Padrão (parâmetro configurável).
+4. **Bloqueio sem estoque**: sem saldo do benefício correspondente, entrega não confirma.
 5. **Bloqueio por assistido inativo**: assistido inativo não recebe.
-6. **Baixa automática**: entrega confirmada baixa 1 unidade do benefício correspondente e gera movimentação.
-7. **Histórico de entregas** imutável, com usuário, data/hora, benefício, observação.
-8. **Movimentações de estoque** imutáveis, com `origem_tipo` + `origem_id` (recebimento, entrega, montagem, ajuste), saldo anterior e posterior.
-9. **Tentativas bloqueadas são sempre registradas** — mesmo sem entrega — com motivo e próxima data permitida.
-10. **Liberação excepcional apenas por admin**, com observação obrigatória. Registra quem liberou, quando, motivo original e observação.
-11. **Entrega liberada excepcionalmente** é vinculada à tentativa original (`tentativa_entrega_id`) e marcada com `liberacao_excepcional=true`. Segue o mesmo fluxo de baixa/histórico/movimentação.
-12. **Montagem** só ocorre com saldo suficiente de todos os itens da composição do benefício.
-13. **RLS ativo** em todas as tabelas; verificação de papel via função `has_role(user_id, role)` SECURITY DEFINER; roles em tabela separada.
+6. **Cesta Extra vs. Cesta Padrão**: assistido em avaliação/pré-cadastrado/novo recebe Cesta Extra; assistido definitivo/aprovado recebe Cesta Padrão.
+7. **Cesta Extra limitada a 3 retiradas consecutivas**: progresso 1/3, 2/3, 3/3, com controle de `retiradas_extra_realizadas`.
+8. **Após a 3ª retirada extra consecutiva**: sistema exibe aviso fixo — "Assistido completou 3 retiradas extras. Avaliar cadastro definitivo para liberar Cesta Padrão no próximo mês.".
+9. **Não há conversão automática** para cadastro definitivo; efetivação deve ser feita por admin/coordenação.
+10. **Cesta Padrão só é liberada no próximo mês** após aprovação definitiva do cadastro.
+11. **Baixa automática**: entrega confirmada baixa 1 unidade do benefício correspondente e gera movimentação.
+12. **Histórico de entregas** imutável, com usuário, data/hora, benefício, observação.
+13. **Movimentações de estoque** imutáveis, com `origem_tipo` + `origem_id` (recebimento, entrega, montagem, ajuste), saldo anterior e posterior.
+14. **Tentativas bloqueadas são sempre registradas** — mesmo sem entrega — com motivo, próxima data permitida e tipo de cesta.
+15. **Liberação excepcional apenas por admin**, apenas em bloqueio por prazo/social, com observação obrigatória. Registra quem liberou, quando, motivo original e observação.
+16. **Entrega liberada excepcionalmente** é vinculada à tentativa original (`tentativa_entrega_id`) e marcada com `liberacao_excepcional=true`. Segue o mesmo fluxo de baixa/histórico/movimentação.
+17. **Montagem** só ocorre com saldo suficiente de todos os itens da composição do benefício.
+18. **RLS ativo** em todas as tabelas; verificação de papel via função `has_role(user_id, role)` SECURITY DEFINER; roles em tabela separada.
 
 ---
 
