@@ -272,26 +272,28 @@ function FamiliasPage() {
                       <TableCell>{familia.bairro}</TableCell>
                       <TableCell>
                         {familia.tipoCadastro === "definitivo" ? (
-                          <Badge>Definitivo / Cesta Padrão</Badge>
+                          <Badge className="bg-success text-success-foreground hover:bg-success/90">Definitivo</Badge>
                         ) : (
-                          <Badge variant="warning">Extra / em avaliação</Badge>
+                          <Badge variant="warning">Avaliação</Badge>
                         )}
                       </TableCell>
                       <TableCell>
-                        {familia.progressoExtra ? (
-                          <span className={familia.progressoExtra === "3/3" ? "text-warning font-medium" : "text-foreground font-medium"}>
-                            {familia.progressoExtra} retiradas
-                          </span>
-                        ) : (
+                        {familia.tipoCadastro === "definitivo" ? (
                           <span className="text-muted-foreground">—</span>
+                        ) : familia.progressoExtra === "novo" ? (
+                          <Badge variant="outline">Novo</Badge>
+                        ) : (
+                          <span className={familia.progressoExtra === "3/3" ? "text-warning font-medium" : "text-foreground font-medium"}>
+                            {familia.progressoExtra}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <AcompanhamentoBadge status={familia.acompanhamento} />
-                          {(familia.ultimaRetirada !== "—" || familia.proximaData !== "—") && (
+                          {familia.ultimaRetirada !== "—" && (
                             <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                              Última: {familia.ultimaRetirada} · Próxima: {familia.proximaData}
+                              Última retirada: {familia.ultimaRetirada}
                             </span>
                           )}
                         </div>
