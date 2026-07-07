@@ -110,7 +110,7 @@ Esse fluxo é o núcleo do sistema.
 | `/painel` | Indicadores: famílias, assistidos ativos, cestas em estoque, entregas hoje/mês, alertas de estoque baixo, últimas entregas, últimas tentativas bloqueadas. | admin, atendente, estoque |
 | `/familias` | Lista/busca por nome, CPF/RG, telefone, bairro, status. | admin, atendente |
 | `/familias/:id` | Detalhe: dados, endereço, composição, assistidos, membros, histórico de entregas e tentativas. | admin, atendente |
-| `/atendimento` | Busca assistido, mostra elegibilidade; se bloqueado, exibe motivo, próxima data e (para admin) botão "Liberar excepcionalmente". | admin, atendente |
+| `/atendimento` | Busca assistido por CPF/RG/nome/telefone. Mostra cenários: sem busca, pré-cadastro não encontrado (criar pré-cadastro + entregar Cesta Extra), assistido em avaliação (Cesta Extra com progresso 1/3, 2/3, 3/3), assistido definitivo (Cesta Padrão). Exibe última retirada, próxima data permitida, status liberado/bloqueado, motivo e ações. Liberação excepcional só para admin e só em bloqueio por prazo/social, com observação obrigatória. Bloqueio por falta de estoque não permite liberação excepcional. | admin, atendente |
 | `/estoque` | Itens, saldos, mínimos, movimentações, alertas. | admin, estoque |
 | `/recebimentos` | Entradas por item (doação/compra/investimento/ajuste) com doador/fornecedor referenciado. | admin, estoque |
 | `/configuracoes` | Itens, unidades, categorias, benefícios, doadores/fornecedores, parâmetros. | admin |
