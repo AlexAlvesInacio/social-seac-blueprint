@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, Search, Eye, ArrowRight, AlertTriangle } from "lucide-react";
+import { Plus, Search, Eye, ArrowRight, AlertTriangle, MessageSquare } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -30,6 +31,7 @@ const exemploFamilias = [
     progressoExtra: null,
     ultimaRetirada: "16/05/2025",
     proximaData: "10/06/2025 (Faltam 18 dias)",
+    acompanhamento: "em_dia" as const,
     status: "liberado" as const,
   },
   {
@@ -43,6 +45,7 @@ const exemploFamilias = [
     progressoExtra: "2/3" as const,
     ultimaRetirada: "20/05/2025",
     proximaData: "13/06/2025 (Faltam 21 dias)",
+    acompanhamento: "em_dia" as const,
     status: "liberado" as const,
   },
   {
@@ -56,6 +59,7 @@ const exemploFamilias = [
     progressoExtra: "3/3" as const,
     ultimaRetirada: "18/05/2025",
     proximaData: "11/06/2025 (Faltam 19 dias)",
+    acompanhamento: "em_dia" as const,
     status: "avaliar" as const,
   },
   {
@@ -69,6 +73,7 @@ const exemploFamilias = [
     progressoExtra: null,
     ultimaRetirada: "05/05/2025",
     proximaData: "30/05/2025 (Atrasado)",
+    acompanhamento: "atencao_60" as const,
     status: "bloqueado" as const,
   },
   {
@@ -80,8 +85,9 @@ const exemploFamilias = [
     bairro: "São José",
     tipoCadastro: "extra" as const,
     progressoExtra: "1/3" as const,
-    ultimaRetirada: "10/05/2025",
+    ultimaRetirada: "10/02/2025",
     proximaData: "04/06/2025 (Faltam 12 dias)",
+    acompanhamento: "sem_retirada_90" as const,
     status: "liberado" as const,
   },
   {
@@ -95,11 +101,21 @@ const exemploFamilias = [
     progressoExtra: null,
     ultimaRetirada: "—",
     proximaData: "—",
+    acompanhamento: "inativo" as const,
     status: "inativo" as const,
   },
 ];
 
 function FamiliasPage() {
+  const total = exemploFamilias.length;
+  const definitivos = exemploFamilias.filter((f) => f.tipoCadastro === "definitivo").length;
+  const extras = exemploFamilias.filter((f) => f.tipoCadastro === "extra").length;
+  const aguardandoAvaliacao = exemploFamilias.filter((f) => f.status === "avaliar").length;
+  const semRetirada90 = exemploFamilias.filter((f) => f.acompanhamento === "sem_retirada_90").length;
+  const bloqueadasInativas = exemploFamilias.filter(
+    (f) => f.status === "bloqueado" || f.status === "inativo",
+  ).length;
+
   return (
     <AppShell
       title="Famílias"
@@ -114,6 +130,19 @@ function FamiliasPage() {
         </Button>
       }
     >
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <SummaryCard value={String(total)} label="Total de famílias" />
+        <SummaryCard value={String(definitivos)} label="Cadastros definitivos" />
+        <SummaryCard value={String(extras)} label="Cadastros extra/em avaliação" className="border-l-secondary" />
+        <SummaryCard value={String(aguardandoAvaliacao)} label="Aguardando avaliação definitiva" className="border-l-warning" />
+        <SummaryCard value={String(semRetirada90)} label="Sem retirada 90 dias+" className="border-l-destructive" />
+        <SummaryCard value={String(bloqueadasInativas)} label="Bloqueadas/inativas" className="border-l-destructive" />
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Acompanhamento é apenas informativo. Não bloqueia entregas, não torna a família inativa automaticamente e não gera tarefa de contato.
+      </p>
+
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-6">
           <Field label="Nome"><Input placeholder="Buscar por nome" /></Field>
@@ -150,6 +179,7 @@ function FamiliasPage() {
                 <TableHead>Progresso Extra</TableHead>
                 <TableHead>Última retirada</TableHead>
                 <TableHead>Próxima data permitida</TableHead>
+                <TableHead>Acompanhamento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -157,7 +187,7 @@ function FamiliasPage() {
             <TableBody>
               {exemploFamilias.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="py-16 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={12} className="py-16 text-center text-sm text-muted-foreground">
                     Nenhuma família cadastrada ainda.<br />
                     <Link to="/familias/$id" params={{ id: "exemplo" }} className="mt-2 inline-block text-primary hover:underline">
                       Ver exemplo de detalhe →
@@ -194,27 +224,42 @@ function FamiliasPage() {
                     <TableCell>{familia.ultimaRetirada}</TableCell>
                     <TableCell>{familia.proximaData}</TableCell>
                     <TableCell>
-                      {familia.status === "liberado" && <Badge variant="secondary">Liberado</Badge>}
+                      <AcompanhamentoBadge status={familia.acompanhamento} />
+                    </TableCell>
+                    <TableCell>
+                      {familia.status === "liberado" && <Badge>Liberado</Badge>}
                       {familia.status === "bloqueado" && <Badge variant="destructive">Bloqueado</Badge>}
                       {familia.status === "inativo" && <Badge variant="outline" className="text-muted-foreground">Inativo</Badge>}
                       {familia.status === "avaliar" && (
-                        <Badge variant="destructive" className="gap-1">
+                        <Badge variant="warning" className="gap-1">
                           <AlertTriangle className="h-3 w-3" /> Avaliar definitivo
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" className="gap-1" asChild>
-                          <Link to="/familias/$id" params={{ id: String(familia.id) }}>
-                            <Eye className="h-3.5 w-3.5" /> Ver detalhes
-                          </Link>
-                        </Button>
-                        <Button size="sm" className="gap-1" asChild>
-                          <Link to="/atendimento">
-                            <ArrowRight className="h-3.5 w-3.5" /> Ir para atendimento
-                          </Link>
-                        </Button>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" className="gap-1" asChild>
+                            <Link to="/familias/$id" params={{ id: String(familia.id) }}>
+                              <Eye className="h-3.5 w-3.5" /> Ver detalhes
+                            </Link>
+                          </Button>
+                          <Button size="sm" className="gap-1" asChild>
+                            <Link to="/atendimento">
+                              <ArrowRight className="h-3.5 w-3.5" /> Ir para atendimento
+                            </Link>
+                          </Button>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          {familia.progressoExtra === "3/3" && (
+                            <Button variant="warning" size="sm" className="gap-1">
+                              <AlertTriangle className="h-3.5 w-3.5" /> Avaliar cadastro definitivo
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" className="text-muted-foreground gap-1">
+                            <MessageSquare className="h-3.5 w-3.5" /> Registrar observação
+                          </Button>
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -226,6 +271,25 @@ function FamiliasPage() {
       </Card>
     </AppShell>
   );
+}
+
+function SummaryCard({ value, label, className }: { value: string; label: string; className?: string }) {
+  return (
+    <Card className={cn("border-l-4 border-l-primary", className)}>
+      <CardContent className="p-4">
+        <div className="text-2xl font-bold text-foreground">{value}</div>
+        <div className="text-xs text-muted-foreground">{label}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AcompanhamentoBadge({ status }: { status: string }) {
+  if (status === "em_dia") return <Badge>Em dia</Badge>;
+  if (status === "atencao_60") return <Badge variant="warning">Atenção 60 dias</Badge>;
+  if (status === "sem_retirada_90") return <Badge variant="destructive">Sem retirada 90 dias+</Badge>;
+  if (status === "inativo") return <Badge variant="outline" className="text-muted-foreground">Inativo</Badge>;
+  return <span className="text-muted-foreground">—</span>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
