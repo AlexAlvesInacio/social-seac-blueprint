@@ -193,7 +193,7 @@ O SEAC Social terá dois tipos principais de cesta para organizar o atendimento 
 - **`profiles`** — id (auth.users), nome, email, telefone, status (`ativo`|`inativo`), timestamps.
 - **`user_roles`** — user_id, role (`admin`|`atendente`|`estoque`|`pendente`). Roles em tabela separada.
 - **`familias`** — id, nome_familia, endereco, bairro, cidade, uf, cep, telefone, whatsapp, moradores, criancas, idosos, gestantes, pcd, observacoes, status, created_by, timestamps.
-- **`assistidos`** — id, familia_id, nome, cpf, rg, nascimento, telefone, responsavel_familiar, deficiencia, observacoes, status, timestamps.
+- **`assistidos`** — id, familia_id, nome, cpf, rg, nascimento, telefone, responsavel_familiar, deficiencia, observacoes, status, **tipo_cadastro** (`extra`|`definitivo`), **status_cadastro** (`em_avaliacao`|`aprovado`|`inativo`), **retiradas_extra_realizadas** (int, default 0), **data_ultima_retirada_extra** (date, nullable), **elegivel_para_avaliacao_definitiva** (bool, default false), **aprovado_definitivo_por** (FK, nullable), **aprovado_definitivo_em** (timestamp, nullable), timestamps.
 - **`membros`** — id, familia_id, nome, nascimento, parentesco, tipo (crianca/idoso/gestante/pcd/outro), observacoes.
 - **`beneficios`** — id, nome, descricao, controla_estoque (bool), ativo (bool). Ex.: Cesta Básica, Marmita, Kit Gestante, Cesta de Natal, Kit Dia das Crianças, Kit Páscoa.
 - **`itens_estoque`** — id, nome, tipo (`alimento`|`beneficio`), categoria, unidade, saldo_atual, estoque_minimo, ativo. Benefícios prontos com `controla_estoque=true` também existem aqui como item movimentável (ou referenciados via `beneficio_id`, a decidir na fase de banco).
