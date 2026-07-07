@@ -296,17 +296,21 @@ O SEAC Social terá dois tipos principais de cesta para organizar o atendimento 
 3. Admin gerencia papéis e status em `/usuarios`; pendente/inativo bloqueados.
 4. Atendente, estoque e pendente respeitam suas restrições em todas as rotas.
 5. Famílias, assistidos e membros cadastráveis e editáveis.
-6. `/atendimento` localiza assistido e mostra elegibilidade correta.
-7. **Toda tentativa bloqueada é registrada** com motivo e próxima data.
-8. **Atendente vê o bloqueio mas não libera**; **admin libera excepcionalmente** com observação obrigatória.
-9. Entrega liberada excepcionalmente confirma normalmente, baixa 1 unidade, gera histórico e movimentação, vincula à tentativa original e marca `liberacao_excepcional=true`.
-10. Entrega comum baixa 1 unidade da Cesta Básica pronta e gera movimentação com `origem_tipo=entrega`.
-11. `/recebimentos` registra com `doador_fornecedor_id`, aumenta estoque e gera movimentação com `origem_tipo=recebimento`.
-12. `/composicao-cesta` gerencia composição por benefício e permite montar, respeitando saldos e gerando movimentações com `origem_tipo=montagem`.
-13. `/painel` mostra indicadores corretos e alertas de estoque baixo.
-14. Relatórios de famílias, entregas, **bloqueios**, **liberações excepcionais**, estoque, doações/compras/investimento e social geral retornam dados coerentes.
-15. RLS testado com os quatro perfis; nenhum acesso indevido.
-16. Interface pt-BR, tema claro, verde/turquesa/branco, menu lateral fixo, botões grandes.
+6. `/atendimento` localiza assistido e diferencia corretamente: em avaliação (Cesta Extra) ou definitivo (Cesta Padrão).
+7. **Cesta Extra** respeita o limite de 3 retiradas consecutivas e exibe progresso 1/3, 2/3, 3/3.
+8. **Após a 3ª retirada extra consecutiva**, sistema exibe alerta fixo para avaliação de cadastro definitivo, sem converter automaticamente.
+9. **Regra dos 25 dias** aplica-se a Cesta Extra e Cesta Padrão.
+10. **Toda tentativa bloqueada é registrada** com motivo, próxima data e tipo de cesta.
+11. **Atendente vê o bloqueio mas não libera**; **admin libera excepcionalmente** apenas em bloqueio por prazo/social, com observação obrigatória.
+12. **Bloqueio por falta de estoque não permite liberação excepcional**; apenas registra a tentativa bloqueada.
+13. Entrega liberada excepcionalmente confirma normalmente, baixa 1 unidade, gera histórico e movimentação, vincula à tentativa original e marca `liberacao_excepcional=true`.
+14. Entrega comum baixa 1 unidade do benefício entregue e gera movimentação com `origem_tipo=entrega`.
+15. `/recebimentos` registra com `doador_fornecedor_id`, aumenta estoque e gera movimentação com `origem_tipo=recebimento`.
+16. `/composicao-cesta` gerencia composição por benefício e permite montar, respeitando saldos e gerando movimentações com `origem_tipo=montagem`.
+17. `/painel` mostra indicadores corretos e alertas de estoque baixo.
+18. Relatórios de famílias, entregas, **retiradas extras**, **bloqueios**, **liberações excepcionais**, estoque, doações/compras/investimento e social geral retornam dados coerentes.
+19. RLS testado com os quatro perfis; nenhum acesso indevido.
+20. Interface pt-BR, tema claro, verde/turquesa/branco, menu lateral fixo, botões grandes.
 
 ---
 
