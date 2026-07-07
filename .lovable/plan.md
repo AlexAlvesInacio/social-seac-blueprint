@@ -52,14 +52,15 @@ Regras de liberação:
 
 1. Login e usuários.
 2. Famílias, assistidos, membros.
-3. Atendimento e entrega de benefício.
-4. **Tentativas de entrega bloqueadas + liberação excepcional (admin)**.
-5. Estoque (itens individuais + benefícios prontos).
-6. Recebimentos (com referência a doador/fornecedor).
-7. Configurações (itens, unidades, categorias, benefícios).
-8. **Composição por benefício** (Cesta Básica, Kit Gestante, etc.).
-9. Montagem de benefícios (a partir da composição).
-10. Relatórios básicos, incluindo bloqueios e liberações excepcionais.
+3. **Cesta Extra e Cesta Padrão** (novos/sem cadastro vs. definitivo/aprovado).
+4. Atendimento e entrega de benefício.
+5. **Tentativas de entrega bloqueadas + liberação excepcional (admin)**.
+6. Estoque (itens individuais + benefícios prontos).
+7. Recebimentos (com referência a doador/fornecedor).
+8. Configurações (itens, unidades, categorias, benefícios).
+9. **Composição por benefício** (Cesta Básica, Kit Gestante, etc.).
+10. Montagem de benefícios (a partir da composição).
+11. Relatórios básicos, incluindo bloqueios, liberações e retiradas extras.
 
 ---
 
