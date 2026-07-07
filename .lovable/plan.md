@@ -81,15 +81,21 @@ Membros (composição familiar)
   ▼
 Atendimento (busca CPF/RG/nome/telefone)
   ▼
-Elegibilidade: ativo? passou 25 dias? tem estoque?
-  ├── SIM ──► Entrega ──► Baixa automática (1 Cesta Básica) ──► Histórico + Movimentação
-  └── NÃO ──► Registra Tentativa Bloqueada (motivo + próxima data)
-                 ▼
-             Admin pode "Liberar excepcionalmente" (com observação obrigatória)
-                 ▼
-             Entrega vinculada à tentativa (liberacao_excepcional=true) ──► Baixa + Histórico + Movimentação
+Cadastro encontrado?
+  ├── NÃO ──► Oferecer pré-cadastro e, se necessário, entregar Cesta Extra
+  └── SIM ──► Status do cadastro
+                ├── em_avaliação / extra ──► Cesta Extra (máx. 3 retiradas; 25 dias; alerta na 3ª)
+                └── definitivo / aprovado ──► Cesta Padrão (25 dias; estoque; status)
+                      ▼
+                Elegibilidade: ativo? passou 25 dias? tem estoque?
+                  ├── SIM ──► Entrega ──► Baixa automática (1 benefício) ──► Histórico + Movimentação
+                  └── NÃO ──► Registra Tentativa Bloqueada (motivo + próxima data)
+                                 ▼
+                    Admin pode "Liberar excepcionalmente" (apenas bloqueio por prazo/social; observação obrigatória)
+                                 ▼
+                    Entrega vinculada à tentativa (liberacao_excepcional=true) ──► Baixa + Histórico + Movimentação
   ▼
-Relatórios (entregas, bloqueios, liberações, estoque, doações, social)
+Relatórios (entregas, bloqueios, liberações, retiradas extras, estoque, doações, social)
 ```
 
 Esse fluxo é o núcleo do sistema.
