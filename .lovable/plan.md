@@ -144,6 +144,48 @@ Esse fluxo é o núcleo do sistema.
 
 ---
 
+## 9.5. Regras detalhadas de Cesta Extra e Cesta Padrão
+
+O SEAC Social terá dois tipos principais de cesta para organizar o atendimento e a avaliação de novos assistidos:
+
+### Cesta Extra
+
+- Destinada a assistidos **novos**, **sem cadastro definitivo**, **pré-cadastrados** ou **em avaliação**.
+- Controla até **3 retiradas extras consecutivas**.
+- O progresso deve ser apresentado visualmente como **1/3**, **2/3** e **3/3**.
+- A **regra dos 25 dias** também se aplica à Cesta Extra.
+- Após completar a **3ª retirada extra consecutiva**, o sistema deve exibir o aviso fixo:
+  > "Assistido completou 3 retiradas extras. Avaliar cadastro definitivo para liberar Cesta Padrão no próximo mês."
+- O cadastro **não vira definitivo automaticamente**.
+- A efetivação para cadastro definitivo deve ser feita por **admin/coordenação**.
+
+### Cesta Padrão
+
+- Destinada a assistidos com **cadastro definitivo/aprovado**.
+- A **regra dos 25 dias** se aplica normalmente.
+- Só pode ser liberada **no próximo mês** após a aprovação definitiva do cadastro.
+
+### No atendimento
+
+- Se **não encontrar cadastro**: mostrar opção de criar **pré-cadastro**.
+- Se necessário, permitir **criar pré-cadastro e entregar Cesta Extra** na mesma ação.
+- Se assistido estiver **em avaliação**: mostrar progresso das retiradas extras e usar Cesta Extra.
+- Se assistido for **definitivo**: mostrar Cesta Padrão, última retirada, próxima data permitida e status liberado/bloqueado.
+- Se **não houver estoque**: bloquear entrega e não permitir liberação excepcional.
+- Toda retirada (Extra ou Padrão) deve gerar **histórico** e **movimentação de estoque** quando a lógica for implementada.
+
+### Campos futuros sugeridos no cadastro do assistido
+
+- `tipo_cadastro`: `extra` | `definitivo`
+- `status_cadastro`: `em_avaliacao` | `aprovado` | `inativo`
+- `retiradas_extra_realizadas`
+- `data_ultima_retirada_extra`
+- `elegivel_para_avaliacao_definitiva`
+- `aprovado_definitivo_por`
+- `aprovado_definitivo_em`
+
+---
+
 ## 10. Modelo inicial de banco (conceitual)
 
 ### Tabelas
