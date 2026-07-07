@@ -1,45 +1,27 @@
-## Correção de layout e responsividade — /familias
+## Refinar /familias — remover coluna Ações, adicionar seleção e barra de ações
 
-### Causa do overflow
-A tabela usa `min-w-[1400px]` dentro de um `<main class="flex-1">` sem `min-w-0`. Isso força o conteúdo principal a ficar mais largo que o viewport, gerando rolagem horizontal na página inteira e escondendo colunas atrás da sidebar.
+Arquivo único: `src/routes/familias.index.tsx` (nenhuma outra tela é tocada).
 
 ### Mudanças
 
-**1. `src/components/app-shell.tsx`** — 1 linha
-- Adicionar `min-w-0` à coluna `flex-1` do layout, para que filhos largos não estourem a viewport. Correção de higiene de layout; não altera visualmente outras telas.
+1. **Estado local de seleção** — `const [selectedId, setSelectedId] = useState<number | null>(null)`. Seleção única.
 
-**2. `src/routes/familias.index.tsx`**
+2. **Coluna de seleção (checkbox)** — nova primeira coluna estreita (`w-10`) com `<Checkbox>` (`@/components/ui/checkbox`). Marcar troca `selectedId`; clicar em outra desmarca a anterior. Linha selecionada recebe fundo suave (`bg-muted/40`).
 
-Cards de resumo (topo)
-- Ajustar grid para escalonar melhor: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-6` e garantir que os cards quebrem quando não couberem.
+3. **Nome da família clicável** — envolver o nome em `<Link to="/familias/$id" params={{ id: String(familia.id) }}>` com estilo de link discreto (hover underline, cor `text-foreground`). Remover a linha `ID: {familia.id}`.
 
-Tabela — reduzir colunas visíveis
-- Remover as colunas dedicadas **Última retirada** e **Próxima data permitida**.
-- Incorporar esses dados como texto pequeno (`text-xs text-muted-foreground`) abaixo do bairro ou dentro da célula "Acompanhamento": ex. "Última: 16/05 · Próxima: 10/06 (Faltam 18 dias)".
-- Colunas finais visíveis: Nome, Responsável, CPF/RG, Telefone, Bairro, Tipo, Progresso Extra, Acompanhamento, Status, Ações.
+4. **Remover coluna Ações** e remover as duas linhas de botões dentro de cada `<TableRow>`.
 
-Rolagem
-- Envolver a `<Table>` em `<div class="overflow-x-auto">` dentro do card e reduzir `min-w` para `min-w-[1100px]`, de forma que a rolagem horizontal (quando necessária) fique **dentro do card**, não na página.
-- Usar `whitespace-nowrap` em células como CPF/RG e Telefone para evitar quebra excessiva.
+5. **Colunas finais visíveis** (10): seleção · Nome · Responsável · CPF/RG · Telefone · Bairro · Tipo de cadastro · Progresso Extra · Acompanhamento · Status. Sem "Última retirada"/"Próxima data permitida" como colunas — texto pequeno já vive dentro de "Acompanhamento" (mantido).
 
-Coluna Ações — enxugar
-- Manter sempre: **Ver detalhes** + **Ir para atendimento** (em linha, `whitespace-nowrap`).
-- Quando `progressoExtra === "3/3"`: adicionar **Avaliar cadastro definitivo** (variant `warning`).
-- **Família inativa**: manter só **Ver detalhes**; **Ir para atendimento** fica desabilitado (cinza, `disabled`, sem `asChild`/`Link`).
-- Remover **Registrar observação** da linha (por enquanto, conforme instrução — não incluir em "Mais ações" agora para reduzir poluição visual).
+6. **Barra de ações da família selecionada** — renderizada **acima da tabela** (dentro do mesmo Card, antes da `<Table>`, ou como Card próprio logo acima) apenas quando `selectedId !== null`:
+   - Texto: `Família selecionada: <Nome>`.
+   - Botões: **Ver detalhes** (link para `/familias/$id`), **Ir para atendimento** (link `/atendimento` — desabilitado se `status === "inativo"`), **Avaliar cadastro definitivo** (variant `warning`, só quando `progressoExtra === "3/3"`), **Registrar observação** (variant `ghost`, discreto).
+   - Fecha com um botão pequeno "Limpar seleção".
 
-Badges — normalizar
-- Definitivo / Cesta Padrão → verde (default).
-- Extra / em avaliação → laranja (variant `warning`, no lugar de `outline`).
-- Em dia → verde.
-- Atenção 60 dias → laranja.
-- Sem retirada 90 dias+ → vermelho (destructive) — apenas informativo, texto continua neutro.
-- Bloqueado → vermelho.
-- Inativo → cinza (outline muted).
-- Status "avaliar" (progresso 3/3): mostrar badge laranja **Avaliar definitivo** na coluna Status (substitui o "Liberado" atual quando 3/3), mantendo o botão de ação laranja em Ações.
+7. **Layout** — manter `min-w-0` já aplicado no shell. Reduzir `min-w` da tabela para `min-w-[900px]` já que não há mais coluna Ações. `overflow-x-auto` no wrapper permanece, garantindo rolagem só dentro do card.
 
-Mensagem informativa
-- Manter o parágrafo: "Acompanhamento é apenas informativo. Não bloqueia entregas, não torna a família inativa automaticamente e não gera tarefa de contato."
+8. **Cards de resumo, badges e mensagem informativa** — sem alteração (grid já responsivo, cores já corretas).
 
 ### Fora do escopo
-- Nenhuma alteração em banco, Supabase, lógica real ou outras telas do sistema.
+Banco, Supabase, lógica real, outras telas, `AppShell` (já corrigido em turno anterior).
