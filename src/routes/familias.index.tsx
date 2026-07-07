@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, Search, Eye, ArrowRight, AlertTriangle, MessageSquare } from "lucide-react";
+import { Plus, Search, Eye, ArrowRight, AlertTriangle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
