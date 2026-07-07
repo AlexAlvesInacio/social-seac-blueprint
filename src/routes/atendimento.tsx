@@ -12,7 +12,6 @@ import {
   ShoppingBasket,
   ArrowRight,
   SearchX,
-  UserX,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
