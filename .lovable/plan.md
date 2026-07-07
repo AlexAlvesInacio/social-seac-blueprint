@@ -269,8 +269,10 @@ O SEAC Social terá dois tipos principais de cesta para organizar o atendimento 
 **Sociais/operacionais**
 - Famílias: cadastradas, ativas, inativas, por bairro, com crianças/idosos/gestantes/PCD.
 - Assistidos: ativos, inativos, por bairro/família/documento.
+- **Assistidos em avaliação vs. definitivos**: quantidade, evolução, efetivações por admin.
 - Entregas: por dia/mês/assistido/família/bairro/usuário/benefício.
-- **Bloqueios**: total, por motivo (antes_25_dias, sem_estoque, assistido_inativo, outro), período, usuário, bairro.
+- **Retiradas extras**: por assistido, família, mês, progresso (1/3, 2/3, 3/3) e alertas de 3ª retirada.
+- **Bloqueios**: total, por motivo (antes_25_dias, sem_estoque, assistido_inativo, outro), por tipo de cesta (extra/padrão), período, usuário, bairro.
 - **Liberações excepcionais**: total, quem liberou, motivo original, observação, assistido/família, data.
 - Social geral: pessoas impactadas, crianças/idosos/gestantes/PCD atendidos, cestas entregues.
 
