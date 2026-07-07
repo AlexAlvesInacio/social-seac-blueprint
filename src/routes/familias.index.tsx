@@ -100,7 +100,7 @@ const exemploFamilias = [
     telefone: "(11) 94444-5555",
     bairro: "Vila Esperança",
     tipoCadastro: "extra" as const,
-    progressoExtra: null,
+    progressoExtra: "novo" as const,
     ultimaRetirada: "—",
     proximaData: "—",
     acompanhamento: "inativo" as const,
