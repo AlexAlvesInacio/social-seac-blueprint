@@ -83,7 +83,6 @@ const observacoesSociais = [
 ];
 
 function FamiliaDetail() {
-  const { id } = Route.useParams();
   const alertaAvaliacao = assistidos.some(
     (a) => a.tipoCadastro === "Avaliação" && a.progresso === "3/3",
   );
