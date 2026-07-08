@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -69,6 +70,13 @@ function statusBadge(status: StatusRec) {
 }
 
 function RecebimentosPage() {
+  const [tipo, setTipo] = useState<"doacao" | "compra" | "investimento">("doacao");
+  const parteLabel = tipo === "compra" ? "Fornecedor" : tipo === "investimento" ? "Origem do recurso" : "Doador ou fornecedor";
+  const partePlaceholder = tipo === "compra"
+    ? "Nome do fornecedor"
+    : tipo === "investimento"
+      ? "Ex.: Recurso interno SEAC, campanha, parceiro"
+      : "Nome do doador ou fornecedor";
   return (
     <AppShell title="Recebimentos">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -104,7 +112,7 @@ function RecebimentosPage() {
               <p className="text-xs text-muted-foreground">Selecione o tipo e preencha os dados abaixo.</p>
             </div>
 
-            <Tabs defaultValue="doacao">
+            <Tabs value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
               <TabsList>
                 <TabsTrigger value="doacao">Doação</TabsTrigger>
                 <TabsTrigger value="compra">Compra</TabsTrigger>
@@ -115,7 +123,7 @@ function RecebimentosPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <Field label="Data do recebimento"><Input type="date" defaultValue="2025-05-21" /></Field>
               <Field label="Tipo / origem">
-                <Select defaultValue="doacao">
+                <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="doacao">Doação</SelectItem>
@@ -124,9 +132,13 @@ function RecebimentosPage() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Doador ou fornecedor"><Input placeholder="Nome do doador ou fornecedor" /></Field>
+              <Field label={parteLabel}><Input placeholder={partePlaceholder} /></Field>
               <Field label="Documento ou referência (opcional)"><Input placeholder="CNPJ, NF, protocolo..." /></Field>
-              <Field label="Valor total estimado (R$)"><Input placeholder="0,00" /></Field>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Valor total estimado (R$)</Label>
+                <Input placeholder="0,00" />
+                <p className="text-[11px] text-muted-foreground">Pode ser preenchido manualmente ou conferido com o total dos itens.</p>
+              </div>
               <Field label="Comprovante / anexo"><Input type="file" /></Field>
             </div>
             <Field label="Observação"><Textarea placeholder="Observação opcional" /></Field>
@@ -141,8 +153,8 @@ function RecebimentosPage() {
                 <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar item</Button>
               </div>
 
-              <div className="grid gap-2 border-b p-3 md:grid-cols-[1.4fr_0.8fr_0.9fr_1fr_1fr_auto]">
-                <Field label="Item">
+              <div className="grid gap-3 border-b p-3 sm:grid-cols-2 lg:grid-cols-12">
+                <div className="lg:col-span-3"><Field label="Item">
                   <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="arroz">Arroz 5kg</SelectItem>
@@ -150,9 +162,9 @@ function RecebimentosPage() {
                       <SelectItem value="oleo">Óleo 900ml</SelectItem>
                     </SelectContent>
                   </Select>
-                </Field>
-                <Field label="Quantidade"><Input type="number" placeholder="0" /></Field>
-                <Field label="Unidade">
+                </Field></div>
+                <div className="lg:col-span-2"><Field label="Quantidade"><Input type="number" placeholder="Informe a quantidade" /></Field></div>
+                <div className="lg:col-span-2"><Field label="Unidade">
                   <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="un">unidade</SelectItem>
@@ -161,10 +173,12 @@ function RecebimentosPage() {
                       <SelectItem value="kg">kg</SelectItem>
                     </SelectContent>
                   </Select>
-                </Field>
-                <Field label="Valor unitário (R$)"><Input placeholder="0,00" /></Field>
-                <Field label="Valor total (R$)"><Input placeholder="0,00" /></Field>
-                <div className="flex items-end"><Button size="sm" variant="ghost" className="gap-1 text-muted-foreground"><Plus className="h-4 w-4" /></Button></div>
+                </Field></div>
+                <div className="lg:col-span-2"><Field label="Valor unitário estimado"><Input placeholder="R$ 0,00" /></Field></div>
+                <div className="lg:col-span-2"><Field label="Valor total do item"><Input placeholder="R$ 0,00" /></Field></div>
+                <div className="flex items-end lg:col-span-1">
+                  <Button size="sm" variant="outline" className="w-full gap-1"><Plus className="h-4 w-4" /> Adicionar</Button>
+                </div>
               </div>
 
               <Table>
@@ -173,8 +187,8 @@ function RecebimentosPage() {
                     <TableHead>Item</TableHead>
                     <TableHead>Quantidade</TableHead>
                     <TableHead>Unidade</TableHead>
-                    <TableHead>Valor unitário</TableHead>
-                    <TableHead>Valor total</TableHead>
+                    <TableHead>Valor unitário estimado</TableHead>
+                    <TableHead>Valor total do item</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
