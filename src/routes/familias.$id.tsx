@@ -161,7 +161,7 @@ function FamiliaDetail() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
           <SummaryCard label="Moradores" value="5" />
           <SummaryCard label="Assistidos" value="2" />
-          <SummaryCard label="Membros" value="4" />
+          <SummaryCard label="Membros familiares" value="3" />
           <SummaryCard label="Crianças" value="2" />
           <SummaryCard label="Idosos" value="1" />
           <SummaryCard label="Gestantes" value="0" />
