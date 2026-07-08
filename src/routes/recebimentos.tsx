@@ -89,7 +89,7 @@ function RecebimentosPage() {
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-xs text-muted-foreground">{k.label}</p>
+                  <p className="text-xs leading-tight text-muted-foreground">{k.label}</p>
                   <p className="mt-0.5 text-xl font-semibold leading-tight">{k.value}</p>
                   <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{k.hint}</p>
                 </div>
@@ -145,15 +145,13 @@ function RecebimentosPage() {
 
             {/* Itens recebidos */}
             <div className="rounded-md border">
-              <div className="flex items-center justify-between border-b p-3">
-                <div>
-                  <p className="text-sm font-semibold">Itens recebidos</p>
-                  <p className="text-xs text-muted-foreground">Um recebimento pode conter vários itens.</p>
-                </div>
-                <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar item</Button>
+              <div className="border-b p-3">
+                <p className="text-sm font-semibold">Itens recebidos</p>
+                <p className="text-xs text-muted-foreground">Um recebimento pode conter vários itens.</p>
               </div>
 
-              <div className="grid gap-3 border-b p-3 sm:grid-cols-2 lg:grid-cols-12">
+              <div className="border-b p-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-10">
                 <div className="lg:col-span-3"><Field label="Item">
                   <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
@@ -174,10 +172,11 @@ function RecebimentosPage() {
                     </SelectContent>
                   </Select>
                 </Field></div>
-                <div className="lg:col-span-2"><Field label="Valor unitário estimado"><Input placeholder="R$ 0,00" /></Field></div>
-                <div className="lg:col-span-2"><Field label="Valor total do item"><Input placeholder="R$ 0,00" /></Field></div>
-                <div className="flex items-end lg:col-span-1">
-                  <Button size="sm" variant="outline" className="w-full gap-1"><Plus className="h-4 w-4" /> Adicionar</Button>
+                <div className="lg:col-span-3"><Field label="Valor unitário estimado (R$)"><Input placeholder="0,00" /></Field></div>
+                <div className="lg:col-span-10 sm:col-span-2"><Field label="Valor total do item (R$)"><Input placeholder="0,00" /></Field></div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar item</Button>
                 </div>
               </div>
 
