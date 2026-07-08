@@ -48,6 +48,7 @@ const assistidos = [
     ultimaRetirada: "20/05/2025",
     proximaData: "—",
     progresso: "2/3",
+    proximaAvaliacao: "14/06/2025",
   },
 ];
 
