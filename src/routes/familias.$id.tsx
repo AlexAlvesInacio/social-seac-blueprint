@@ -46,9 +46,8 @@ const assistidos = [
     tipoCadastro: "Avaliação",
     beneficio: "Cesta Extra",
     ultimaRetirada: "20/05/2025",
-    proximaData: "—",
+    proximaData: "14/06/2025",
     progresso: "2/3",
-    proximaAvaliacao: "14/06/2025",
   },
 ];
 
