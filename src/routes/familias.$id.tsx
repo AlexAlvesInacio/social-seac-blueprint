@@ -55,7 +55,6 @@ const membros = [
   { nome: "Pedro da Silva", nasc: "12/03/2016", parentesco: "Filho", tipo: "Criança", obs: "—" },
   { nome: "Ana da Silva", nasc: "08/09/2019", parentesco: "Filha", tipo: "Criança", obs: "—" },
   { nome: "José da Silva", nasc: "04/02/1952", parentesco: "Pai", tipo: "Idoso", obs: "Hipertenso." },
-  { nome: "Carla da Silva", nasc: "22/07/1990", parentesco: "Irmã", tipo: "PCD", obs: "Cadeirante." },
 ];
 
 const entregas = [
