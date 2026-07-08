@@ -187,7 +187,7 @@ function FamiliasPage() {
                   </Link>
                 </Button>
                 {selected.status === "inativo" ? (
-                  <Button size="sm" className="gap-1" disabled>
+                  <Button variant="outline" size="sm" className="gap-1 text-muted-foreground" disabled>
                     <ArrowRight className="h-3.5 w-3.5" /> Ir para atendimento
                   </Button>
                 ) : (
@@ -278,10 +278,10 @@ function FamiliasPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {familia.tipoCadastro === "definitivo" ? (
+                        {familia.status === "inativo" ? (
                           <span className="text-muted-foreground">—</span>
-                        ) : familia.progressoExtra === "novo" ? (
-                          <Badge variant="outline">Novo</Badge>
+                        ) : familia.tipoCadastro === "definitivo" ? (
+                          <span className="text-muted-foreground">—</span>
                         ) : (
                           <span className={familia.progressoExtra === "3/3" ? "text-warning font-medium" : "text-foreground font-medium"}>
                             {familia.progressoExtra}
