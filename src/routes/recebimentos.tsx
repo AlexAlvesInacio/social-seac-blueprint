@@ -150,33 +150,33 @@ function RecebimentosPage() {
                 <p className="text-xs text-muted-foreground">Um recebimento pode conter vários itens.</p>
               </div>
 
-              <div className="border-b p-3">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-10">
-                <div className="lg:col-span-3"><Field label="Item">
-                  <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="arroz">Arroz 5kg</SelectItem>
-                      <SelectItem value="feijao">Feijão 1kg</SelectItem>
-                      <SelectItem value="oleo">Óleo 900ml</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field></div>
-                <div className="lg:col-span-2"><Field label="Quantidade"><Input type="number" placeholder="Informe a quantidade" /></Field></div>
-                <div className="lg:col-span-2"><Field label="Unidade">
-                  <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="un">unidade</SelectItem>
-                      <SelectItem value="pc">pacote</SelectItem>
-                      <SelectItem value="cx">caixa</SelectItem>
-                      <SelectItem value="kg">kg</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field></div>
-                <div className="lg:col-span-3"><Field label="Valor unitário estimado (R$)"><Input placeholder="0,00" /></Field></div>
-                <div className="lg:col-span-10 sm:col-span-2"><Field label="Valor total do item (R$)"><Input placeholder="0,00" /></Field></div>
+              <div className="space-y-3 border-b p-3">
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  <Field label="Item">
+                    <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="arroz">Arroz 5kg</SelectItem>
+                        <SelectItem value="feijao">Feijão 1kg</SelectItem>
+                        <SelectItem value="oleo">Óleo 900ml</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Quantidade"><Input type="number" placeholder="Informe a quantidade" /></Field>
+                  <Field label="Unidade">
+                    <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="un">unidade</SelectItem>
+                        <SelectItem value="pc">pacote</SelectItem>
+                        <SelectItem value="cx">caixa</SelectItem>
+                        <SelectItem value="kg">kg</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
                 </div>
-                <div className="mt-3 flex justify-end">
-                  <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar item</Button>
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                  <Field label="Valor unitário estimado (R$)"><Input placeholder="0,00" /></Field>
+                  <Field label="Valor total do item (R$)"><Input placeholder="0,00" /></Field>
+                  <Button variant="outline" className="gap-2 sm:col-span-2 md:col-span-1"><Plus className="h-4 w-4" /> Adicionar item</Button>
                 </div>
               </div>
 
