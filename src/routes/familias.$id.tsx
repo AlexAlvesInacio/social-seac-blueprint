@@ -55,7 +55,6 @@ const membros = [
   { nome: "Pedro da Silva", nasc: "12/03/2016", parentesco: "Filho", tipo: "Criança", obs: "—" },
   { nome: "Ana da Silva", nasc: "08/09/2019", parentesco: "Filha", tipo: "Criança", obs: "—" },
   { nome: "José da Silva", nasc: "04/02/1952", parentesco: "Pai", tipo: "Idoso", obs: "Hipertenso." },
-  { nome: "Carla da Silva", nasc: "22/07/1990", parentesco: "Irmã", tipo: "PCD", obs: "Cadeirante." },
 ];
 
 const entregas = [
@@ -162,7 +161,7 @@ function FamiliaDetail() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
           <SummaryCard label="Moradores" value="5" />
           <SummaryCard label="Assistidos" value="2" />
-          <SummaryCard label="Membros" value="4" />
+          <SummaryCard label="Membros familiares" value="3" />
           <SummaryCard label="Crianças" value="2" />
           <SummaryCard label="Idosos" value="1" />
           <SummaryCard label="Gestantes" value="0" />
