@@ -27,7 +27,7 @@ const kpis = [
   { label: "Itens com estoque", value: "12", hint: "Saldo > 0", icon: PackageCheck, tone: "bg-emerald-100 text-emerald-700" },
   { label: "Itens em estoque baixo", value: "3", hint: "Atenção", icon: AlertTriangle, tone: "bg-amber-100 text-amber-700" },
   { label: "Itens sem estoque", value: "2", hint: "Sem saldo", icon: PackageX, tone: "bg-red-100 text-red-700" },
-  { label: "Valor total estimado", value: "R$ 24.350,00", hint: "Custo médio", icon: Wallet, tone: "bg-emerald-100 text-emerald-700" },
+  { label: "Valor total estimado", value: "R$ 24.350,00", hint: "Valor estimado do estoque", icon: Wallet, tone: "bg-emerald-100 text-emerald-700" },
 ];
 
 type StatusItem = "Em estoque" | "Atenção" | "Estoque baixo" | "Sem estoque" | "Inativo";
@@ -226,15 +226,15 @@ function EstoquePage() {
           <SheetHeader><SheetTitle>Nova entrada</SheetTitle></SheetHeader>
           <div className="grid gap-3 p-4">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Item"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="a">Arroz 5kg</SelectItem></SelectContent></Select></Field>
-              <Field label="Quantidade"><Input type="number" defaultValue={0} /></Field>
-              <Field label="Unidade"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="un">unidade</SelectItem><SelectItem value="pc">pacote</SelectItem></SelectContent></Select></Field>
-              <Field label="Origem"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="doacao">Doação</SelectItem><SelectItem value="compra">Compra</SelectItem><SelectItem value="invest">Investimento</SelectItem><SelectItem value="ajuste">Ajuste inicial</SelectItem></SelectContent></Select></Field>
+              <Field label="Item"><Select defaultValue="a"><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="a">Arroz 5kg</SelectItem><SelectItem value="b">Feijão 1kg</SelectItem><SelectItem value="c">Óleo 900ml</SelectItem></SelectContent></Select></Field>
+              <Field label="Quantidade"><Input type="number" placeholder="Informe a quantidade" /></Field>
+              <Field label="Unidade"><Select defaultValue="pc"><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="un">unidade</SelectItem><SelectItem value="pc">pacote</SelectItem><SelectItem value="cx">caixa</SelectItem><SelectItem value="kg">kg</SelectItem><SelectItem value="lt">litro</SelectItem></SelectContent></Select></Field>
+              <Field label="Origem"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="doacao">Doação</SelectItem><SelectItem value="compra">Compra</SelectItem><SelectItem value="invest">Investimento</SelectItem><SelectItem value="ajuste">Ajuste inicial</SelectItem><SelectItem value="transf">Transferência</SelectItem><SelectItem value="outro">Outro</SelectItem></SelectContent></Select></Field>
             </div>
             <Field label="Doador / Fornecedor"><Input placeholder="Digite o nome" /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Data"><Input type="date" /></Field>
-              <Field label="Valor estimado (R$)"><Input type="number" step="0.01" placeholder="0,00" /></Field>
+              <Field label="Data"><Input type="date" defaultValue="2025-05-21" /></Field>
+              <Field label="Valor unitário estimado (R$)"><Input type="number" step="0.01" placeholder="0,00" /></Field>
             </div>
             <Field label="Observação"><Textarea placeholder="Digite uma observação (opcional)" /></Field>
           </div>
@@ -251,11 +251,12 @@ function EstoquePage() {
           <SheetHeader><SheetTitle>Nova saída</SheetTitle></SheetHeader>
           <div className="grid gap-3 p-4">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Item"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="a">Macarrão</SelectItem></SelectContent></Select></Field>
-              <Field label="Quantidade"><Input type="number" defaultValue={0} /></Field>
-              <Field label="Motivo"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="manual">Entrega manual</SelectItem><SelectItem value="perda">Perda</SelectItem><SelectItem value="venc">Vencimento</SelectItem><SelectItem value="doa">Doação externa</SelectItem><SelectItem value="outro">Outro</SelectItem></SelectContent></Select></Field>
-              <Field label="Data"><Input type="date" /></Field>
+              <Field label="Item"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="a">Macarrão</SelectItem><SelectItem value="b">Arroz 5kg</SelectItem><SelectItem value="c">Óleo 900ml</SelectItem></SelectContent></Select></Field>
+              <Field label="Quantidade"><Input type="number" placeholder="Informe a quantidade" /></Field>
+              <Field label="Motivo"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="manual">Entrega manual</SelectItem><SelectItem value="perda">Perda</SelectItem><SelectItem value="venc">Vencimento</SelectItem><SelectItem value="desc">Descarte</SelectItem><SelectItem value="doa">Doação externa</SelectItem><SelectItem value="mont">Montagem de cesta</SelectItem><SelectItem value="int">Consumo interno</SelectItem><SelectItem value="outro">Outro</SelectItem></SelectContent></Select></Field>
+              <Field label="Destino (opcional)"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="atend">Atendimento</SelectItem><SelectItem value="mont">Montagem de cesta</SelectItem><SelectItem value="desc">Descarte</SelectItem><SelectItem value="doa">Doação externa</SelectItem><SelectItem value="int">Uso interno</SelectItem><SelectItem value="outro">Outro</SelectItem></SelectContent></Select></Field>
             </div>
+            <Field label="Data"><Input type="date" defaultValue="2025-05-21" /></Field>
             <Field label="Observação"><Textarea placeholder="Digite uma observação (opcional)" /></Field>
           </div>
           <SheetFooter>
@@ -270,7 +271,17 @@ function EstoquePage() {
         <SheetContent className="w-full sm:max-w-md">
           <SheetHeader><SheetTitle>Ajuste de estoque</SheetTitle></SheetHeader>
           <div className="grid gap-3 p-4">
-            <Field label="Item"><Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="a">Óleo 900ml</SelectItem></SelectContent></Select></Field>
+            <Field label="Item"><Select defaultValue="a"><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="a">Óleo 900ml</SelectItem><SelectItem value="b">Arroz 5kg</SelectItem><SelectItem value="c">Macarrão</SelectItem></SelectContent></Select></Field>
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Saldo atual</span>
+                <span className="font-medium">15</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between">
+                <span className="text-muted-foreground">Saldo após ajuste</span>
+                <span className="font-semibold text-emerald-700">20</span>
+              </div>
+            </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Tipo de ajuste</Label>
               <div className="flex gap-4 pt-1 text-sm">
@@ -278,7 +289,7 @@ function EstoquePage() {
                 <label className="flex items-center gap-2"><input type="radio" name="ajuste" /> Reduzir saldo</label>
               </div>
             </div>
-            <Field label="Quantidade"><Input type="number" defaultValue={0} /></Field>
+            <Field label="Quantidade"><Input type="number" placeholder="Informe a quantidade" /></Field>
             <Field label="Motivo (obrigatório)"><Input placeholder="Digite o motivo" /></Field>
             <Field label="Observação"><Textarea placeholder="Digite uma observação (opcional)" /></Field>
           </div>
