@@ -145,12 +145,9 @@ function RecebimentosPage() {
 
             {/* Itens recebidos */}
             <div className="rounded-md border">
-              <div className="flex items-center justify-between border-b p-3">
-                <div>
-                  <p className="text-sm font-semibold">Itens recebidos</p>
-                  <p className="text-xs text-muted-foreground">Um recebimento pode conter vários itens.</p>
-                </div>
-                <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar item</Button>
+              <div className="border-b p-3">
+                <p className="text-sm font-semibold">Itens recebidos</p>
+                <p className="text-xs text-muted-foreground">Um recebimento pode conter vários itens.</p>
               </div>
 
               <div className="border-b p-3">
