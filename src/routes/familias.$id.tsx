@@ -104,7 +104,7 @@ function FamiliaDetail() {
           </Button>
           <Button size="sm" variant="outline" className="gap-2"><Pencil className="h-4 w-4" /> Editar família</Button>
           <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar assistido</Button>
-          <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar membro</Button>
+          <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar membro familiar</Button>
           <Button asChild size="sm" className="gap-2">
             <Link to="/atendimento"><HeartHandshake className="h-4 w-4" /> Ir para atendimento</Link>
           </Button>
@@ -123,7 +123,6 @@ function FamiliaDetail() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-xl font-semibold">Família da Silva</h2>
                   <Badge className="bg-primary/15 text-primary hover:bg-primary/15">Ativa</Badge>
-                  <Badge variant="outline">Cadastro: Definitivo</Badge>
                 </div>
                 <div className="mt-4 grid gap-4 md:grid-cols-4">
                   <Info label="Endereço" value="Rua das Flores, 123" />
