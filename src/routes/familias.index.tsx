@@ -140,7 +140,7 @@ function FamiliasPage() {
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         <SummaryCard value={String(total)} label="Total de famílias" />
         <SummaryCard value={String(definitivos)} label="Cadastros definitivos" />
-        <SummaryCard value={String(extras)} label="Cadastros extra/em avaliação" className="border-l-secondary" />
+        <SummaryCard value={String(extras)} label="Cadastros em avaliação" className="border-l-secondary" />
         <SummaryCard value={String(aguardandoAvaliacao)} label="Aguardando avaliação definitiva" className="border-l-warning" />
         <SummaryCard value={String(semRetirada90)} label="Sem retirada 90 dias+" className="border-l-destructive" />
         <SummaryCard value={String(bloqueadasInativas)} label="Bloqueadas/inativas" className="border-l-destructive" />
