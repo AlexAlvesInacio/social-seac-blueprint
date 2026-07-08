@@ -5,6 +5,7 @@ import {
   ChevronRight,
   ClipboardList,
   HeartHandshake,
+  MoreHorizontal,
   Pencil,
   Plus,
   Users,
@@ -22,6 +23,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/familias/$id")({
   head: () => ({ meta: [{ title: "Detalhe da família — SEAC Social" }] }),
@@ -74,6 +81,36 @@ const bloqueios = [
     usuario: "Atendente teste",
     obs: "Tentativa registrada.",
   },
+  {
+    data: "18/05/2025",
+    assistido: "Maria da Silva",
+    motivo: "Falta de estoque",
+    tipo: "Cesta Extra",
+    proxima: "—",
+    liberacao: "Não",
+    usuario: "Atendente teste",
+    obs: "Sem saldo de Cesta Extra no momento.",
+  },
+  {
+    data: "05/05/2025",
+    assistido: "João da Silva",
+    motivo: "Antes dos 25 dias",
+    tipo: "Cesta Padrão",
+    proxima: "10/05/2025",
+    liberacao: "Sim",
+    usuario: "Administrador",
+    obs: "Liberação excepcional autorizada por admin.",
+  },
+  {
+    data: "12/04/2025",
+    assistido: "Maria da Silva",
+    motivo: "Antes dos 25 dias",
+    tipo: "Cesta Extra",
+    proxima: "20/04/2025",
+    liberacao: "Não",
+    usuario: "Atendente teste",
+    obs: "Tentativa sem liberação.",
+  },
 ];
 
 const observacoesSociais = [
@@ -98,17 +135,30 @@ function FamiliaDetail() {
         </div>
       }
       actions={
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2">
           <Button asChild size="sm" variant="ghost" className="gap-2">
             <Link to="/familias"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
           </Button>
           <Button size="sm" variant="outline" className="gap-2"><Pencil className="h-4 w-4" /> Editar família</Button>
           <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar assistido</Button>
-          <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar membro familiar</Button>
           <Button asChild size="sm" className="gap-2">
             <Link to="/atendimento"><HeartHandshake className="h-4 w-4" /> Ir para atendimento</Link>
           </Button>
-          <Button size="sm" variant="secondary" className="gap-2"><ClipboardList className="h-4 w-4" /> Registrar observação</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" className="gap-2">
+                <MoreHorizontal className="h-4 w-4" /> Mais ações
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem className="gap-2">
+                <Plus className="h-4 w-4" /> Adicionar membro familiar
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2">
+                <ClipboardList className="h-4 w-4" /> Registrar observação
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       }
     >
