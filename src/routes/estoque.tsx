@@ -88,7 +88,6 @@ function EstoquePage() {
   return (
     <AppShell
       title="Controle de estoque"
-      subtitle="Gerencie saldos, entradas, saídas e ajustes de estoque."
       actions={
         <div className="flex gap-2">
           <Button size="sm" className="gap-2" onClick={() => setOpenEntrada(true)}>
