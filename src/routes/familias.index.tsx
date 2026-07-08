@@ -282,8 +282,6 @@ function FamiliasPage() {
                           <span className="text-muted-foreground">—</span>
                         ) : familia.tipoCadastro === "definitivo" ? (
                           <span className="text-muted-foreground">—</span>
-                        ) : familia.progressoExtra === "novo" ? (
-                          <Badge variant="outline">Novo</Badge>
                         ) : (
                           <span className={familia.progressoExtra === "3/3" ? "text-warning font-medium" : "text-foreground font-medium"}>
                             {familia.progressoExtra}
