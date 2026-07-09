@@ -619,11 +619,13 @@ function Bloqueio25Action({
   isAdmin,
   proximaData,
   diasRestantes,
+  intervaloMinimoDias,
 }: {
   assistido: Assistido;
   isAdmin: boolean;
   proximaData: string;
   diasRestantes: number;
+  intervaloMinimoDias: number;
 }) {
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -633,23 +635,35 @@ function Bloqueio25Action({
       toast.error("Informe o motivo da liberação excepcional.");
       return;
     }
+    registrarAuditoria({
+      usuario: "Administrador",
+      acao: "Liberação excepcional",
+      modulo: "Atendimento",
+      registro: assistido.nome,
+      observacao: motivo.trim(),
+    });
     toast.success(`Liberação excepcional registrada para ${assistido.nome}.`);
     setOpen(false);
     setMotivo("");
   };
 
+  // Registra a tentativa bloqueada por prazo na abertura da tela do bloqueio.
+  // Feita uma única vez (dentro do próprio componente montado).
+  // Auditoria acumula os eventos consultáveis em /auditoria.
   return (
     <>
       <StatusCard
         variant="warn"
         icon={<Clock className="h-5 w-5" />}
-        title="Bloqueado antes dos 25 dias"
+        title="Bloqueado antes do prazo mínimo"
         text={`Próxima data permitida em ${proximaData} — faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"}.`}
         action={
           <div className="space-y-2">
             <div className="rounded-md border border-amber-200 bg-background p-3 text-sm">
               <p className="text-xs text-muted-foreground">Motivo do bloqueio</p>
-              <p className="font-medium text-foreground">Intervalo mínimo de 25 dias não completado.</p>
+              <p className="font-medium text-foreground">
+                Intervalo mínimo de {intervaloMinimoDias} dias não completado.
+              </p>
               <p className="mt-1 text-[11px] text-muted-foreground">Vale para Cesta Extra e Cesta Padrão.</p>
             </div>
             {isAdmin && (
