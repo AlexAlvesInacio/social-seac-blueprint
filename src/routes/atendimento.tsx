@@ -64,24 +64,24 @@ type Assistido = {
 
 const MOCK_ASSISTIDOS: Assistido[] = [
   {
-    nome: "João dos Santos",
+    nome: "João da Silva",
     documento: "987.654.321-00",
     telefone: "(11) 97654-3210",
     familia: "Família da Silva",
     endereco: "Rua das Flores, 123 — São João",
     ultimaRetirada: "16/05/2025",
     proximaData: "10/06/2025",
-    situacao: { kind: "extra_liberado", progresso: 2 },
+    situacao: { kind: "padrao_liberado" },
   },
   {
-    nome: "Maria Aparecida Souza",
-    documento: "111.222.333-44",
+    nome: "Maria da Silva",
+    documento: "321.654.987-00",
     telefone: "(11) 91234-5678",
-    familia: "Família Souza",
-    endereco: "Rua Central, 45 — Vila Nova",
-    ultimaRetirada: "01/05/2025",
-    proximaData: "26/05/2025",
-    situacao: { kind: "padrao_liberado" },
+    familia: "Família da Silva",
+    endereco: "Rua das Flores, 123 — São João",
+    ultimaRetirada: "20/05/2025",
+    proximaData: "14/06/2025",
+    situacao: { kind: "extra_liberado", progresso: 2 },
   },
   {
     nome: "Pedro Henrique Lima",
@@ -133,21 +133,38 @@ function AtendimentoPage() {
   const isAdmin = true;
 
   const [query, setQuery] = useState("");
-  const [submitted, setSubmitted] = useState("");
+  type Scenario =
+    | "sem_busca"
+    | "padrao"
+    | "extra"
+    | "bloqueio25"
+    | "sem_estoque"
+    | "nao_encontrado";
+  const [scenario, setScenario] = useState<Scenario>("sem_busca");
 
-  const resultado = useMemo(() => {
-    if (!submitted) return { state: "idle" as const };
-    if (submitted.trim().length < 3) return { state: "idle" as const };
-    const a = buscarAssistido(submitted);
-    if (!a) return { state: "not_found" as const };
-    return { state: "found" as const, assistido: a };
-  }, [submitted]);
+  const scenarios: { key: Scenario; label: string }[] = [
+    { key: "sem_busca", label: "Sem busca" },
+    { key: "padrao", label: "Definitivo — Cesta Padrão" },
+    { key: "extra", label: "Extra — em avaliação" },
+    { key: "bloqueio25", label: "Bloqueado 25 dias" },
+    { key: "sem_estoque", label: "Sem estoque" },
+    { key: "nao_encontrado", label: "Não encontrado" },
+  ];
 
-  const doSearch = () => setSubmitted(query);
-  const clearSearch = () => {
-    setQuery("");
-    setSubmitted("");
-  };
+  const assistidoDoCenario = useMemo<Assistido | null>(() => {
+    switch (scenario) {
+      case "padrao":
+        return MOCK_ASSISTIDOS[0];
+      case "extra":
+        return MOCK_ASSISTIDOS[1];
+      case "bloqueio25":
+        return MOCK_ASSISTIDOS[2];
+      case "sem_estoque":
+        return MOCK_ASSISTIDOS[3];
+      default:
+        return null;
+    }
+  }, [scenario]);
 
   return (
     <AppShell title="Atendimento — Busca e entrega">
@@ -156,7 +173,6 @@ function AtendimentoPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              doSearch();
             }}
             className="flex flex-col gap-2 sm:flex-row"
           >
@@ -173,22 +189,41 @@ function AtendimentoPage() {
               <Button type="submit" className="gap-2">
                 <Search className="h-4 w-4" /> Buscar
               </Button>
-              {submitted && (
-                <Button type="button" variant="outline" onClick={clearSearch}>
-                  Limpar
-                </Button>
-              )}
             </div>
           </form>
           <p className="mt-2 text-xs text-muted-foreground">Digite pelo menos 3 caracteres para buscar.</p>
         </CardContent>
       </Card>
 
+      <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-900">
+        <span className="font-medium">Demonstração visual:</span> selecione abaixo um cenário possível após a busca. Só um cenário acontece por vez em uso real.
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1 border-b border-border">
+        {scenarios.map((s) => {
+          const active = s.key === scenario;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setScenario(s.key)}
+              className={
+                "-mb-px border-b-2 px-3 py-2 text-sm transition-colors " +
+                (active
+                  ? "border-primary font-medium text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground")
+              }
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="mt-4">
-        {resultado.state === "idle" && <EmptyState />}
-        {resultado.state === "not_found" && <NaoEncontradoState />}
-        {resultado.state === "found" && (
-          <ResultadoAssistido assistido={resultado.assistido} isAdmin={isAdmin} />
+        {scenario === "sem_busca" && <EmptyState />}
+        {scenario === "nao_encontrado" && <NaoEncontradoState />}
+        {assistidoDoCenario && (
+          <ResultadoAssistido assistido={assistidoDoCenario} isAdmin={isAdmin} />
         )}
       </div>
 
