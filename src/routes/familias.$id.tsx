@@ -213,7 +213,7 @@ function FamiliaDetail() {
           </Card>
         )}
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9">
           <SummaryCard label="Moradores" value={String(contagens.moradores)} />
           <SummaryCard label="Assistidos" value={String(contagens.assistidosAtivos)} />
           <SummaryCard label="Crianças" value={String(contagens.criancas)} />
