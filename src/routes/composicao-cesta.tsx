@@ -2,14 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Calendar,
-  Coffee,
   Pencil,
   Plus,
   ShoppingBasket,
   Trash2,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +28,7 @@ export const Route = createFileRoute("/composicao-cesta")({
   component: ComposicaoPage,
 });
 
-type BeneficioKey = "padrao" | "extra" | "gestante" | "marmita";
+type BeneficioKey = "padrao" | "extra" | "gestante";
 
 type ItemComposicao = {
   item: string;
@@ -38,43 +37,46 @@ type ItemComposicao = {
   custo: number;
 };
 
-const composicoes: Record<BeneficioKey, { nome: string; itens: ItemComposicao[] }> = {
-  padrao: {
-    nome: "Cesta Padrão",
-    itens: [
-      { item: "Arroz 5kg", quantidade: 1, unidade: "pacote", custo: 24.0 },
-      { item: "Feijão 1kg", quantidade: 2, unidade: "pacote", custo: 17.0 },
-      { item: "Óleo 900ml", quantidade: 1, unidade: "unidade", custo: 7.5 },
-      { item: "Macarrão", quantidade: 2, unidade: "pacote", custo: 8.4 },
-      { item: "Açúcar 1kg", quantidade: 1, unidade: "pacote", custo: 5.5 },
-      { item: "Café 500g", quantidade: 1, unidade: "pacote", custo: 16.0 },
-      { item: "Leite em pó", quantidade: 1, unidade: "unidade", custo: 18.0 },
-    ],
-  },
-  extra: {
-    nome: "Cesta Extra",
-    itens: [
-      { item: "Arroz 5kg", quantidade: 1, unidade: "pacote", custo: 24.0 },
-      { item: "Feijão 1kg", quantidade: 1, unidade: "pacote", custo: 8.5 },
-      { item: "Macarrão", quantidade: 1, unidade: "pacote", custo: 4.2 },
-      { item: "Óleo 900ml", quantidade: 1, unidade: "unidade", custo: 7.5 },
-    ],
-  },
-  gestante: {
-    nome: "Kit Gestante",
-    itens: [
-      { item: "Leite em pó", quantidade: 2, unidade: "unidade", custo: 36.0 },
-      { item: "Sabonete", quantidade: 3, unidade: "unidade", custo: 9.0 },
-      { item: "Fralda descartável", quantidade: 1, unidade: "pacote", custo: 28.0 },
-    ],
-  },
-  marmita: {
-    nome: "Marmita",
-    itens: [
-      { item: "Marmita pronta", quantidade: 1, unidade: "unidade", custo: 5.0 },
-    ],
-  },
+const beneficioNomes: Record<BeneficioKey, string> = {
+  padrao: "Cesta Padrão",
+  extra: "Cesta Extra",
+  gestante: "Kit Gestante",
 };
+
+const composicoesIniciais: Record<BeneficioKey, ItemComposicao[]> = {
+  padrao: [
+    { item: "Arroz 5kg", quantidade: 1, unidade: "pacote", custo: 24.0 },
+    { item: "Feijão 1kg", quantidade: 2, unidade: "pacote", custo: 17.0 },
+    { item: "Óleo 900ml", quantidade: 1, unidade: "unidade", custo: 7.5 },
+    { item: "Macarrão", quantidade: 2, unidade: "pacote", custo: 8.4 },
+    { item: "Açúcar 1kg", quantidade: 1, unidade: "pacote", custo: 5.5 },
+    { item: "Café 500g", quantidade: 1, unidade: "pacote", custo: 16.0 },
+    { item: "Leite em pó", quantidade: 1, unidade: "unidade", custo: 18.0 },
+  ],
+  extra: [
+    { item: "Arroz 5kg", quantidade: 1, unidade: "pacote", custo: 24.0 },
+    { item: "Feijão 1kg", quantidade: 1, unidade: "pacote", custo: 8.5 },
+    { item: "Macarrão", quantidade: 1, unidade: "pacote", custo: 4.2 },
+    { item: "Óleo 900ml", quantidade: 1, unidade: "unidade", custo: 7.5 },
+  ],
+  gestante: [
+    { item: "Leite em pó", quantidade: 2, unidade: "unidade", custo: 36.0 },
+    { item: "Sabonete", quantidade: 3, unidade: "unidade", custo: 9.0 },
+    { item: "Fralda descartável", quantidade: 1, unidade: "pacote", custo: 28.0 },
+  ],
+};
+
+const catalogoItens: { nome: string; unidade: string; custo: number }[] = [
+  { nome: "Arroz 5kg", unidade: "pacote", custo: 24.0 },
+  { nome: "Feijão 1kg", unidade: "pacote", custo: 8.5 },
+  { nome: "Óleo 900ml", unidade: "unidade", custo: 7.5 },
+  { nome: "Macarrão", unidade: "pacote", custo: 4.2 },
+  { nome: "Açúcar 1kg", unidade: "pacote", custo: 5.5 },
+  { nome: "Café 500g", unidade: "pacote", custo: 16.0 },
+  { nome: "Leite em pó", unidade: "unidade", custo: 18.0 },
+  { nome: "Sabonete", unidade: "unidade", custo: 3.0 },
+  { nome: "Fralda descartável", unidade: "pacote", custo: 28.0 },
+];
 
 const saldoEstoque: Record<string, number> = {
   "Arroz 5kg": 200,
@@ -86,7 +88,6 @@ const saldoEstoque: Record<string, number> = {
   "Leite em pó": 25,
   Sabonete: 90,
   "Fralda descartável": 12,
-  "Marmita pronta": 45,
 };
 
 const brl = (n: number) =>
@@ -96,16 +97,89 @@ function ComposicaoPage() {
   const [beneficio, setBeneficio] = useState<BeneficioKey>("padrao");
   const [beneficioMontagem, setBeneficioMontagem] = useState<BeneficioKey>("padrao");
   const [quantidade, setQuantidade] = useState<number>(30);
+  const [composicoes, setComposicoes] =
+    useState<Record<BeneficioKey, ItemComposicao[]>>(composicoesIniciais);
 
-  const composicao = composicoes[beneficio];
+  const [novoItem, setNovoItem] = useState("");
+  const [novaQtd, setNovaQtd] = useState<string>("");
+  const [novaUnidade, setNovaUnidade] = useState("");
+  const [novoCusto, setNovoCusto] = useState<string>("");
+  const [editandoItem, setEditandoItem] = useState<string | null>(null);
+
+  const itens = composicoes[beneficio];
   const custoTotal = useMemo(
-    () => composicao.itens.reduce((s, i) => s + i.custo, 0),
-    [composicao],
+    () => itens.reduce((s, i) => s + i.custo * i.quantidade, 0),
+    [itens],
   );
+
+  const resetForm = () => {
+    setNovoItem("");
+    setNovaQtd("");
+    setNovaUnidade("");
+    setNovoCusto("");
+    setEditandoItem(null);
+  };
+
+  const handleSelectItem = (nome: string) => {
+    setNovoItem(nome);
+    const c = catalogoItens.find((i) => i.nome === nome);
+    if (c) {
+      if (!novaUnidade) setNovaUnidade(c.unidade);
+      if (!novoCusto) setNovoCusto(c.custo.toFixed(2));
+    }
+  };
+
+  const podeAdicionar =
+    novoItem.trim() !== "" && Number(novaQtd) > 0 && novaUnidade.trim() !== "";
+
+  const handleAdicionar = () => {
+    if (!podeAdicionar) return;
+    const jaExiste = itens.some((i) => i.item === novoItem);
+    if (jaExiste && editandoItem !== novoItem) {
+      toast.error("Item já existe na composição deste benefício.");
+      return;
+    }
+    const novo: ItemComposicao = {
+      item: novoItem,
+      quantidade: Number(novaQtd),
+      unidade: novaUnidade,
+      custo: Number(novoCusto) || 0,
+    };
+    setComposicoes((prev) => {
+      const list = prev[beneficio];
+      const next = editandoItem
+        ? list.map((i) => (i.item === editandoItem ? novo : i))
+        : [...list, novo];
+      return { ...prev, [beneficio]: next };
+    });
+    toast.success(editandoItem ? "Item atualizado." : "Item adicionado à composição.");
+    resetForm();
+  };
+
+  const handleEditar = (item: ItemComposicao) => {
+    setEditandoItem(item.item);
+    setNovoItem(item.item);
+    setNovaQtd(String(item.quantidade));
+    setNovaUnidade(item.unidade);
+    setNovoCusto(item.custo.toFixed(2));
+  };
+
+  const handleExcluir = (nome: string) => {
+    setComposicoes((prev) => ({
+      ...prev,
+      [beneficio]: prev[beneficio].filter((i) => i.item !== nome),
+    }));
+    if (editandoItem === nome) resetForm();
+    toast("Item removido da composição.");
+  };
+
+  const handleSalvar = () => {
+    toast.success("Composição salva no modo demonstração.");
+  };
 
   const preview = useMemo(() => {
     const c = composicoes[beneficioMontagem];
-    return c.itens.map((i) => {
+    return c.map((i) => {
       const total = i.quantidade * quantidade;
       const saldo = saldoEstoque[i.item] ?? 0;
       const depois = saldo - total;
@@ -114,7 +188,7 @@ function ComposicaoPage() {
       else if (depois <= total * 0.5) status = "atencao";
       return { ...i, total, saldo, depois, status };
     });
-  }, [beneficioMontagem, quantidade]);
+  }, [beneficioMontagem, quantidade, composicoes]);
 
   const temFalta = preview.some((p) => p.status === "sem");
 
@@ -126,11 +200,11 @@ function ComposicaoPage() {
 
       {/* Cards de resumo */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Benefícios configurados" value="4" hint="benefícios" tone="emerald" />
-        <ResumoCard icon={<Users className="h-5 w-5" />} label="Itens na Cesta Padrão" value="7" hint="itens" tone="teal" />
-        <ResumoCard icon={<Users className="h-5 w-5" />} label="Itens na Cesta Extra" value="4" hint="itens" tone="teal" />
+        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Benefícios configurados" value="3" hint="benefícios" tone="emerald" />
+        <ResumoCard icon={<Users className="h-5 w-5" />} label="Itens na Cesta Padrão" value={String(composicoes.padrao.length)} hint="itens" tone="teal" />
+        <ResumoCard icon={<Users className="h-5 w-5" />} label="Itens na Cesta Extra" value={String(composicoes.extra.length)} hint="itens" tone="teal" />
         <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Custo médio Cesta Padrão" value="R$ 85,00" hint="por cesta" tone="emerald" />
-        <ResumoCard icon={<Coffee className="h-5 w-5" />} label="Custo médio Cesta Extra" value="R$ 60,00" hint="por cesta" tone="emerald" />
+        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Custo médio Cesta Extra" value="R$ 60,00" hint="por cesta" tone="emerald" />
         <ResumoCard icon={<AlertTriangle className="h-5 w-5" />} label="Alertas de estoque" value="2" hint="itens com atenção" tone="amber" />
       </div>
 
@@ -149,27 +223,23 @@ function ComposicaoPage() {
                   <div>
                     <p className="text-sm font-semibold">Composição do benefício</p>
                     <p className="text-xs text-muted-foreground">
-                      Defina os itens e quantidades que compõem cada benefício. Esta configuração não movimenta estoque.
+                      Esta configuração define os itens que compõem cada benefício. A alteração não movimenta estoque automaticamente.
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Plus className="h-4 w-4" /> Adicionar item
-                    </Button>
-                    <Button size="sm">Salvar composição</Button>
+                    <Button size="sm" onClick={handleSalvar}>Salvar composição</Button>
                   </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Benefício</Label>
-                    <Select value={beneficio} onValueChange={(v) => setBeneficio(v as BeneficioKey)}>
+                    <Select value={beneficio} onValueChange={(v) => { setBeneficio(v as BeneficioKey); resetForm(); }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="padrao">Cesta Padrão</SelectItem>
                         <SelectItem value="extra">Cesta Extra</SelectItem>
                         <SelectItem value="gestante">Kit Gestante</SelectItem>
-                        <SelectItem value="marmita">Marmita</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -187,7 +257,13 @@ function ComposicaoPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {composicao.itens.map((i) => (
+                      {itens.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                            Nenhum item na composição. Use o formulário abaixo para adicionar.
+                          </TableCell>
+                        </TableRow>
+                      ) : itens.map((i) => (
                         <TableRow key={i.item}>
                           <TableCell className="font-medium">{i.item}</TableCell>
                           <TableCell>{i.quantidade}</TableCell>
@@ -195,8 +271,8 @@ function ComposicaoPage() {
                           <TableCell>{brl(i.custo)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditar(i)}><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleExcluir(i.item)}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -206,44 +282,55 @@ function ComposicaoPage() {
                 </div>
 
                 <div className="rounded-md border bg-muted/40 px-4 py-3 text-sm">
-                  Custo estimado da {composicao.nome}:{" "}
+                  Custo estimado da {beneficioNomes[beneficio]}:{" "}
                   <span className="font-semibold text-primary">{brl(custoTotal)}</span>
                 </div>
 
                 {/* Adicionar item à composição */}
                 <div className="rounded-md border p-3">
-                  <p className="mb-2 text-xs font-semibold">Adicionar item à composição</p>
+                  <p className="mb-2 text-xs font-semibold">
+                    {editandoItem ? `Editar item: ${editandoItem}` : "Adicionar item à composição"}
+                  </p>
                   <div className="grid gap-3 md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Item</Label>
-                      <Select><SelectTrigger><SelectValue placeholder="Selecione o item" /></SelectTrigger>
+                      <Select value={novoItem} onValueChange={handleSelectItem}>
+                        <SelectTrigger><SelectValue placeholder="Selecione o item" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="arroz">Arroz 5kg</SelectItem>
-                          <SelectItem value="feijao">Feijão 1kg</SelectItem>
-                          <SelectItem value="oleo">Óleo 900ml</SelectItem>
+                          {catalogoItens.map((c) => (
+                            <SelectItem key={c.nome} value={c.nome}>{c.nome}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Quantidade</Label>
-                      <Input type="number" placeholder="Ex.: 1" />
+                      <Input type="number" min={1} placeholder="Ex.: 1" value={novaQtd} onChange={(e) => setNovaQtd(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Unidade</Label>
-                      <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <Select value={novaUnidade} onValueChange={setNovaUnidade}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="un">unidade</SelectItem>
-                          <SelectItem value="pc">pacote</SelectItem>
-                          <SelectItem value="cx">caixa</SelectItem>
+                          <SelectItem value="unidade">unidade</SelectItem>
+                          <SelectItem value="pacote">pacote</SelectItem>
+                          <SelectItem value="caixa">caixa</SelectItem>
+                          <SelectItem value="kg">kg</SelectItem>
+                          <SelectItem value="litro">litro</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Custo estimado</Label>
-                      <Input type="text" placeholder="R$ 0,00" />
+                      <Input type="number" step="0.01" min={0} placeholder="0,00" value={novoCusto} onChange={(e) => setNovoCusto(e.target.value)} />
                     </div>
-                    <div className="flex items-end">
-                      <Button className="w-full gap-2"><Plus className="h-4 w-4" /> Adicionar</Button>
+                    <div className="flex items-end gap-2">
+                      {editandoItem && (
+                        <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
+                      )}
+                      <Button className="w-full gap-2" disabled={!podeAdicionar} onClick={handleAdicionar}>
+                        <Plus className="h-4 w-4" /> {editandoItem ? "Salvar" : "Adicionar"}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -254,10 +341,9 @@ function ComposicaoPage() {
             <Card>
               <CardContent className="space-y-3 p-4">
                 <p className="text-sm font-semibold">Comparativo dos benefícios</p>
-                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Padrão" tag="Cadastro definitivo" itens={7} custo="R$ 96,40" tone="emerald" />
-                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Extra" tag="Cadastro em avaliação" itens={4} custo="R$ 44,20" tone="amber" />
-                <BeneficioMini icon={<Users className="h-4 w-4" />} nome="Kit Gestante" tag="Benefício específico" itens={5} custo="R$ 75,00" tone="violet" />
-                <BeneficioMini icon={<Coffee className="h-4 w-4" />} nome="Marmita" tag="Comida de Rua" itens={1} custo="R$ 5,00" tone="sky" />
+                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Padrão" tag="Cadastro definitivo" itens={composicoes.padrao.length} custo={brl(composicoes.padrao.reduce((s, i) => s + i.custo * i.quantidade, 0))} tone="emerald" />
+                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Extra" tag="Cadastro em avaliação" itens={composicoes.extra.length} custo={brl(composicoes.extra.reduce((s, i) => s + i.custo * i.quantidade, 0))} tone="amber" />
+                <BeneficioMini icon={<Users className="h-4 w-4" />} nome="Kit Gestante" tag="Benefício específico" itens={composicoes.gestante.length} custo={brl(composicoes.gestante.reduce((s, i) => s + i.custo * i.quantidade, 0))} tone="violet" />
               </CardContent>
             </Card>
           </div>
@@ -283,7 +369,6 @@ function ComposicaoPage() {
                       <SelectItem value="padrao">Cesta Padrão</SelectItem>
                       <SelectItem value="extra">Cesta Extra</SelectItem>
                       <SelectItem value="gestante">Kit Gestante</SelectItem>
-                      <SelectItem value="marmita">Marmita</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -438,6 +523,3 @@ function StatusBadge({ status }: { status: "ok" | "atencao" | "sem" }) {
   if (status === "atencao") return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Atenção</Badge>;
   return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Sem estoque suficiente</Badge>;
 }
-
-// unused reserved for future use
-void Calendar;
