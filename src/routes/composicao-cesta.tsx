@@ -100,6 +100,19 @@ function ComposicaoPage() {
   const [composicoes, setComposicoes] =
     useState<Record<BeneficioKey, ItemComposicao[]>>(composicoesIniciais);
 
+  const custoPadrao = useMemo(
+    () => composicoes.padrao.reduce((s, i) => s + i.custo * i.quantidade, 0),
+    [composicoes.padrao],
+  );
+  const custoExtra = useMemo(
+    () => composicoes.extra.reduce((s, i) => s + i.custo * i.quantidade, 0),
+    [composicoes.extra],
+  );
+  const custoGestante = useMemo(
+    () => composicoes.gestante.reduce((s, i) => s + i.custo * i.quantidade, 0),
+    [composicoes.gestante],
+  );
+
   const [novoItem, setNovoItem] = useState("");
   const [novaQtd, setNovaQtd] = useState<string>("");
   const [novaUnidade, setNovaUnidade] = useState("");
@@ -203,8 +216,8 @@ function ComposicaoPage() {
         <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Benefícios configurados" value="3" hint="benefícios" tone="emerald" />
         <ResumoCard icon={<Users className="h-5 w-5" />} label="Itens na Cesta Padrão" value={String(composicoes.padrao.length)} hint="itens" tone="teal" />
         <ResumoCard icon={<Users className="h-5 w-5" />} label="Itens na Cesta Extra" value={String(composicoes.extra.length)} hint="itens" tone="teal" />
-        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Custo médio Cesta Padrão" value="R$ 85,00" hint="por cesta" tone="emerald" />
-        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Custo médio Cesta Extra" value="R$ 60,00" hint="por cesta" tone="emerald" />
+        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Custo estimado Cesta Padrão" value={brl(custoPadrao)} hint="por cesta" tone="emerald" />
+        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Custo estimado Cesta Extra" value={brl(custoExtra)} hint="por cesta" tone="emerald" />
         <ResumoCard icon={<AlertTriangle className="h-5 w-5" />} label="Alertas de estoque" value="2" hint="itens com atenção" tone="amber" />
       </div>
 
@@ -341,9 +354,9 @@ function ComposicaoPage() {
             <Card>
               <CardContent className="space-y-3 p-4">
                 <p className="text-sm font-semibold">Comparativo dos benefícios</p>
-                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Padrão" tag="Cadastro definitivo" itens={composicoes.padrao.length} custo={brl(composicoes.padrao.reduce((s, i) => s + i.custo * i.quantidade, 0))} tone="emerald" />
-                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Extra" tag="Cadastro em avaliação" itens={composicoes.extra.length} custo={brl(composicoes.extra.reduce((s, i) => s + i.custo * i.quantidade, 0))} tone="amber" />
-                <BeneficioMini icon={<Users className="h-4 w-4" />} nome="Kit Gestante" tag="Benefício específico" itens={composicoes.gestante.length} custo={brl(composicoes.gestante.reduce((s, i) => s + i.custo * i.quantidade, 0))} tone="violet" />
+                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Padrão" tag="Cadastro definitivo" itens={composicoes.padrao.length} custo={brl(custoPadrao)} tone="emerald" />
+                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Extra" tag="Cadastro em avaliação" itens={composicoes.extra.length} custo={brl(custoExtra)} tone="amber" />
+                <BeneficioMini icon={<Users className="h-4 w-4" />} nome="Kit Gestante" tag="Benefício específico" itens={composicoes.gestante.length} custo={brl(custoGestante)} tone="violet" />
               </CardContent>
             </Card>
           </div>
@@ -454,6 +467,9 @@ function ComposicaoPage() {
               <p className="text-xs text-muted-foreground">
                 A montagem de cestas consumirá itens do estoque e aumentará o saldo do benefício montado futuramente. Nesta etapa, é apenas visual.
               </p>
+              <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700">
+                Preview visual. A montagem real e a movimentação de estoque serão implementadas futuramente.
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
