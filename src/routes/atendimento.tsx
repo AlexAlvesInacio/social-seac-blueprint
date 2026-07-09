@@ -537,6 +537,19 @@ function LiberadoAction({
   const [open, setOpen] = useState(false);
 
   const confirmar = () => {
+    registrarAuditoria({
+      usuario: "Administrador",
+      acao: "Entrega realizada",
+      modulo: "Atendimento",
+      registro: `${assistido.nome} — ${beneficio}`,
+    });
+    registrarAuditoria({
+      usuario: "Sistema",
+      acao: "Baixa automática",
+      modulo: "Estoque",
+      registro: `${beneficio} (−1)`,
+      observacao: `Vinculada a ${assistido.nome} — ${assistido.familia}`,
+    });
     toast.success(`${beneficio} entregue para ${assistido.nome}.`, {
       description:
         "Registrado: assistido, família, benefício, data/hora, usuário responsável, tipo de entrega, baixa no estoque e histórico da família.",
@@ -712,10 +725,17 @@ function Bloqueio25Action({
 }
 
 function SemEstoqueAction({ assistido }: { assistido: Assistido }) {
-  const registrar = () =>
+  const registrar = () => {
+    registrarAuditoria({
+      usuario: "Administrador",
+      acao: "Tentativa bloqueada por estoque",
+      modulo: "Atendimento",
+      registro: assistido.nome,
+    });
     toast.success(`Tentativa bloqueada registrada para ${assistido.nome}.`, {
       description: "Motivo: falta de estoque. Registro adicionado ao histórico da família.",
     });
+  };
 
   return (
     <StatusCard
