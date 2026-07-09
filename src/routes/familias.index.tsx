@@ -16,101 +16,18 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useParametros } from "@/lib/config-store";
+import { useFamilias } from "@/lib/familias-store";
+import { NovaFamiliaDialog } from "@/components/nova-familia-dialog";
 
 export const Route = createFileRoute("/familias/")({
   head: () => ({ meta: [{ title: "Famílias — SEAC Social" }] }),
   component: FamiliasPage,
 });
 
-const exemploFamilias = [
-  {
-    id: 15,
-    nome: "Família da Silva",
-    responsavel: "João da Silva",
-    documento: "987.654.321-00",
-    telefone: "(11) 97654-3210",
-    bairro: "São João",
-    tipoCadastro: "definitivo" as const,
-    progressoExtra: null,
-    ultimaRetirada: "16/05/2025",
-    proximaData: "10/06/2025 (Faltam 18 dias)",
-    acompanhamento: "em_dia" as const,
-    status: "liberado" as const,
-  },
-  {
-    id: 23,
-    nome: "Família Santos",
-    responsavel: "Maria Santos",
-    documento: "321.654.987-00",
-    telefone: "(11) 91234-5678",
-    bairro: "Vila Nova",
-    tipoCadastro: "extra" as const,
-    progressoExtra: "2/3" as const,
-    ultimaRetirada: "20/05/2025",
-    proximaData: "13/06/2025 (Faltam 21 dias)",
-    acompanhamento: "em_dia" as const,
-    status: "liberado" as const,
-  },
-  {
-    id: 31,
-    nome: "Família Oliveira",
-    responsavel: "Carlos Oliveira",
-    documento: "123.987.654-00",
-    telefone: "(11) 99876-5432",
-    bairro: "Jardim Esperança",
-    tipoCadastro: "extra" as const,
-    progressoExtra: "3/3" as const,
-    ultimaRetirada: "18/05/2025",
-    proximaData: "11/06/2025 (Faltam 19 dias)",
-    acompanhamento: "em_dia" as const,
-    status: "avaliar" as const,
-  },
-  {
-    id: 42,
-    nome: "Família Souza",
-    responsavel: "Ana Souza",
-    documento: "456.123.789-00",
-    telefone: "(11) 95555-1212",
-    bairro: "Cidade Alta",
-    tipoCadastro: "definitivo" as const,
-    progressoExtra: null,
-    ultimaRetirada: "05/05/2025",
-    proximaData: "30/05/2025 (Atrasado)",
-    acompanhamento: "atencao_60" as const,
-    status: "bloqueado" as const,
-  },
-  {
-    id: 57,
-    nome: "Família Lima",
-    responsavel: "Pedro Lima",
-    documento: "789.321.456-00",
-    telefone: "(11) 93333-4444",
-    bairro: "São José",
-    tipoCadastro: "extra" as const,
-    progressoExtra: "1/3" as const,
-    ultimaRetirada: "10/02/2025",
-    proximaData: "04/06/2025 (Faltam 12 dias)",
-    acompanhamento: "sem_retirada_90" as const,
-    status: "liberado" as const,
-  },
-  {
-    id: 68,
-    nome: "Família Martins",
-    responsavel: "Luciana Martins",
-    documento: "654.987.321-00",
-    telefone: "(11) 94444-5555",
-    bairro: "Vila Esperança",
-    tipoCadastro: "extra" as const,
-    progressoExtra: "novo" as const,
-    ultimaRetirada: "—",
-    proximaData: "—",
-    acompanhamento: "inativo" as const,
-    status: "inativo" as const,
-  },
-];
-
 function FamiliasPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [novaOpen, setNovaOpen] = useState(false);
+  const exemploFamilias = useFamilias((s) => s.familias);
   const selected = exemploFamilias.find((f) => f.id === selectedId) ?? null;
   const params = useParametros((s) => s.params);
   const toggleSelect = (id: number) =>
@@ -134,11 +51,12 @@ function FamiliasPage() {
         </span>
       }
       actions={
-        <Button size="sm" className="gap-2">
+        <Button size="sm" className="gap-2" onClick={() => setNovaOpen(true)}>
           <Plus className="h-4 w-4" /> Nova família
         </Button>
       }
     >
+      <NovaFamiliaDialog open={novaOpen} onOpenChange={setNovaOpen} />
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         <SummaryCard value={String(total)} label="Total de famílias" />
         <SummaryCard value={String(definitivos)} label="Cadastros definitivos" />
