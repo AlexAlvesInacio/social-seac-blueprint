@@ -331,6 +331,9 @@ function ItensTab() {
                       registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Item excluído", modulo: "Configurações › Itens", registro: `${r.codigo} — ${r.nome}` });
                       toast.success("Item excluído");
                     }}
+                    onDeleteBlocked={() => {
+                      registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Itens", registro: `${r.codigo} — ${r.nome}`, observacao: "Registro possui vínculo com movimentações ou histórico" });
+                    }}
                   />
                 </TableCell>
               </TableRow>
@@ -438,6 +441,9 @@ function UnidadesTab() {
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Unidade excluída", modulo: "Configurações › Unidades", registro: `${r.codigo} — ${r.nome}` });
                     toast.success("Unidade excluída");
                   }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Unidades", registro: `${r.codigo} — ${r.nome}`, observacao: "Unidade está em uso por itens cadastrados" });
+                  }}
                 />
               </TableCell>
             </TableRow>
@@ -528,6 +534,9 @@ function CategoriasTab() {
                   onDelete={() => {
                     remove(r.codigo);
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Categoria excluída", modulo: "Configurações › Categorias", registro: `${r.codigo} — ${r.nome}` });
+                  }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Categorias", registro: `${r.codigo} — ${r.nome}`, observacao: "Categoria em uso por itens cadastrados" });
                   }}
                 />
               </TableCell>
@@ -631,6 +640,9 @@ function BeneficiosTab() {
                   onDelete={() => {
                     remove(r.codigo);
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Benefício excluído", modulo: "Configurações › Benefícios", registro: `${r.codigo} — ${r.nome}` });
+                  }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Benefícios", registro: `${r.codigo} — ${r.nome}`, observacao: "Benefício possui vínculo com entregas ou estoque" });
                   }}
                 />
               </TableCell>
@@ -751,6 +763,9 @@ function DoadoresTab() {
                     remove(r.codigo);
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Doador excluído", modulo: "Configurações › Doadores", registro: r.nome });
                   }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Doadores", registro: r.nome, observacao: "Doador possui doações registradas" });
+                  }}
                 />
               </TableCell>
             </TableRow>
@@ -858,6 +873,9 @@ function FornecedoresTab() {
                   onDelete={() => {
                     remove(r.codigo);
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Fornecedor excluído", modulo: "Configurações › Fornecedores", registro: r.nome });
+                  }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Fornecedores", registro: r.nome, observacao: "Fornecedor possui recebimentos registrados" });
                   }}
                 />
               </TableCell>
