@@ -897,15 +897,29 @@ function ParametrosTab() {
           <p className="text-xs text-muted-foreground">Valores usados pelas regras de atendimento, estoque e auditoria.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <ParamNum label="Intervalo mínimo entre retiradas (dias)" value={form.intervaloMinimoDias} onChange={(v) => setForm({ ...form, intervaloMinimoDias: v })} />
-          <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-card p-3">
-            <div className="col-span-2 text-sm font-medium">Janela de acompanhamento (dias)</div>
-            <div><Label className="text-xs text-muted-foreground">De</Label><Input type="number" min={0} value={form.janelaMinDias} onChange={(e) => setForm({ ...form, janelaMinDias: Number(e.target.value) })} /></div>
-            <div><Label className="text-xs text-muted-foreground">Até</Label><Input type="number" min={0} value={form.janelaMaxDias} onChange={(e) => setForm({ ...form, janelaMaxDias: Number(e.target.value) })} /></div>
-          </div>
+          <ParamNum
+            label="Prazo mínimo para nova retirada"
+            unidade="dias"
+            value={form.intervaloMinimoDias}
+            onChange={(v) => setForm({ ...form, intervaloMinimoDias: v })}
+            descricao="Antes desse prazo, a entrega fica bloqueada, exceto liberação excepcional por Administrador."
+          />
+          <ParamNum
+            label="Alerta após liberação sem retirada"
+            unidade="dias"
+            value={form.alertaLiberadoSemRetiradaDias}
+            onChange={(v) => setForm({ ...form, alertaLiberadoSemRetiradaDias: v })}
+            descricao="A partir desse prazo, o cadastro continua liberado, mas aparece como atenção/acompanhamento."
+          />
+          <ParamNum
+            label="Contato necessário por inatividade"
+            unidade="dias"
+            value={form.inatividadeContatoDias}
+            onChange={(v) => setForm({ ...form, inatividadeContatoDias: v })}
+            descricao="A partir desse prazo, sinalizar contato necessário. Não bloquear automaticamente e não tornar inativo automaticamente."
+          />
           <ParamNum label="Limite de Cesta Extra (retiradas)" value={form.limiteExtra} onChange={(v) => setForm({ ...form, limiteExtra: v })} />
           <ParamText label="Após limite de retiradas extras" value={form.aposLimiteExtra} onChange={(v) => setForm({ ...form, aposLimiteExtra: v })} />
-          <ParamNum label="Inatividade para contato (dias)" value={form.inatividadeContatoDias} onChange={(v) => setForm({ ...form, inatividadeContatoDias: v })} />
           <div className="flex items-center justify-between rounded-md border border-border bg-card p-3">
             <div className="pr-3">
               <div className="text-sm font-medium">Liberação excepcional</div>
@@ -932,11 +946,29 @@ function ParametrosTab() {
   );
 }
 
-function ParamNum({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function ParamNum({
+  label,
+  value,
+  onChange,
+  unidade,
+  descricao,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  unidade?: string;
+  descricao?: string;
+}) {
   return (
-    <div className="flex items-center justify-between rounded-md border border-border bg-card p-3">
-      <div className="pr-3 text-sm font-medium">{label}</div>
-      <Input type="number" min={0} className="w-28" value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    <div className="rounded-md border border-border bg-card p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="pr-3 text-sm font-medium">{label}</div>
+        <div className="flex items-center gap-2">
+          <Input type="number" min={0} className="w-24" value={value} onChange={(e) => onChange(Number(e.target.value))} />
+          {unidade && <span className="text-xs text-muted-foreground">{unidade}</span>}
+        </div>
+      </div>
+      {descricao && <p className="mt-2 text-xs text-muted-foreground">{descricao}</p>}
     </div>
   );
 }

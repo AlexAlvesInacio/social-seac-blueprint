@@ -63,8 +63,7 @@ export type Fornecedor = {
 
 export type Parametros = {
   intervaloMinimoDias: number;
-  janelaMinDias: number;
-  janelaMaxDias: number;
+  alertaLiberadoSemRetiradaDias: number;
   limiteExtra: number;
   aposLimiteExtra: string;
   inatividadeContatoDias: number;
@@ -127,8 +126,7 @@ const SEED_FORNECEDORES: Fornecedor[] = [
 
 const SEED_PARAMETROS: Parametros = {
   intervaloMinimoDias: 25,
-  janelaMinDias: 25,
-  janelaMaxDias: 30,
+  alertaLiberadoSemRetiradaDias: 45,
   limiteExtra: 3,
   aposLimiteExtra: "Avaliar cadastro definitivo",
   inatividadeContatoDias: 90,
