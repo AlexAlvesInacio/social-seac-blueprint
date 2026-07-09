@@ -36,31 +36,34 @@ import {
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  verificarElegibilidadeAtendimento,
+  formatBR,
+  type AssistidoRegra,
+  type EstoqueBeneficio,
+  type Elegibilidade,
+} from "@/lib/atendimento-regras";
 
 export const Route = createFileRoute("/atendimento")({
   head: () => ({ meta: [{ title: "Atendimento — SEAC Social" }] }),
   component: AtendimentoPage,
 });
 
-/* ---------- Mock lookup (demo, sem backend) ---------- */
+/* ---------- Mock lookup (sem backend) ----------
+ * Dados brutos por assistido. O cenário exibido é sempre derivado pela
+ * função central `verificarElegibilidadeAtendimento` (regras oficiais).
+ */
 
-type Situacao =
-  | { kind: "extra_liberado"; progresso: 1 | 2 }
-  | { kind: "extra_completou" }
-  | { kind: "padrao_liberado" }
-  | { kind: "bloqueio25" }
-  | { kind: "sem_estoque" };
+type Assistido = AssistidoRegra;
 
-type Assistido = {
-  nome: string;
-  documento: string;
-  telefone: string;
-  familia: string;
-  endereco: string;
-  ultimaRetirada: string;
-  proximaData: string;
-  situacao: Situacao;
-};
+// Estoque atual dos benefícios (mock; futuramente virá do módulo Estoque).
+const ESTOQUE: EstoqueBeneficio = { cestaPadrao: 120, cestaExtra: 25 };
+
+function daysAgoISO(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
 
 const MOCK_ASSISTIDOS: Assistido[] = [
   {
@@ -69,9 +72,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     telefone: "(11) 97654-3210",
     familia: "Família da Silva",
     endereco: "Rua das Flores, 123 — São João",
-    ultimaRetirada: "16/05/2025",
-    proximaData: "10/06/2025",
-    situacao: { kind: "padrao_liberado" },
+    tipoCadastro: "definitivo",
+    ultimaRetiradaISO: daysAgoISO(60),
+    retiradasExtras: 0,
   },
   {
     nome: "Maria da Silva",
@@ -79,9 +82,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     telefone: "(11) 91234-5678",
     familia: "Família da Silva",
     endereco: "Rua das Flores, 123 — São João",
-    ultimaRetirada: "20/05/2025",
-    proximaData: "14/06/2025",
-    situacao: { kind: "extra_liberado", progresso: 2 },
+    tipoCadastro: "extra",
+    ultimaRetiradaISO: daysAgoISO(40),
+    retiradasExtras: 1,
   },
   {
     nome: "Pedro Henrique Lima",
@@ -89,9 +92,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     telefone: "(11) 99876-1234",
     familia: "Família Lima",
     endereco: "Av. Brasil, 900 — Centro",
-    ultimaRetirada: "05/06/2025",
-    proximaData: "30/06/2025",
-    situacao: { kind: "bloqueio25" },
+    tipoCadastro: "definitivo",
+    ultimaRetiradaISO: daysAgoISO(5),
+    retiradasExtras: 0,
   },
   {
     nome: "Ana Paula Rodrigues",
@@ -99,9 +102,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     telefone: "(11) 98888-2222",
     familia: "Família Rodrigues",
     endereco: "Rua das Palmeiras, 77 — Jardim",
-    ultimaRetirada: "20/04/2025",
-    proximaData: "15/05/2025",
-    situacao: { kind: "sem_estoque" },
+    tipoCadastro: "extra",
+    ultimaRetiradaISO: daysAgoISO(60),
+    retiradasExtras: 3,
   },
 ];
 
@@ -226,32 +229,83 @@ function AtendimentoPage() {
 /* ---------- Resultado ---------- */
 
 function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
-  const s = assistido.situacao;
+  // Aplica a lógica central de regras oficiais (REGRAS_ATENDIMENTO_SEAC.md).
+  const el = verificarElegibilidadeAtendimento(assistido, ESTOQUE);
   const tipo: "padrao" | "extra" =
-    s.kind === "padrao_liberado" || s.kind === "bloqueio25" ? "padrao" : "extra";
-  const progresso =
-    s.kind === "extra_liberado" ? s.progresso : s.kind === "extra_completou" ? 3 : undefined;
-
-  const beneficio: "Cesta Padrão" | "Cesta Extra" = tipo === "padrao" ? "Cesta Padrão" : "Cesta Extra";
+    assistido.tipoCadastro === "definitivo" ? "padrao" : "extra";
+  const progressoAtual =
+    el.cenario === "liberado_extra"
+      ? el.progresso
+      : assistido.tipoCadastro === "extra"
+        ? (Math.min(3, assistido.retiradasExtras) as 1 | 2 | 3)
+        : undefined;
+  const proximaData =
+    el.cenario === "bloqueio_25dias"
+      ? formatBR(el.proximaDataISO)
+      : assistido.ultimaRetiradaISO
+        ? formatBR(
+            new Date(
+              new Date(assistido.ultimaRetiradaISO + "T00:00:00").getTime() +
+                25 * 24 * 60 * 60 * 1000,
+            )
+              .toISOString()
+              .slice(0, 10),
+          )
+        : "—";
 
   return (
     <ScenarioLayout
-      person={<PersonCard assistido={assistido} tipo={tipo} progresso={progresso} />}
-      action={
-        s.kind === "padrao_liberado" ? (
-          <LiberadoAction assistido={assistido} beneficio="Cesta Padrão" />
-        ) : s.kind === "extra_liberado" ? (
-          <LiberadoAction assistido={assistido} beneficio="Cesta Extra" progresso={s.progresso} />
-        ) : s.kind === "extra_completou" ? (
-          <LiberadoAction assistido={assistido} beneficio={beneficio} progresso={3} />
-        ) : s.kind === "bloqueio25" ? (
-          <Bloqueio25Action assistido={assistido} isAdmin={isAdmin} />
-        ) : (
-          <SemEstoqueAction assistido={assistido} />
-        )
+      person={
+        <PersonCard
+          assistido={assistido}
+          tipo={tipo}
+          progresso={progressoAtual}
+          ultimaRetirada={formatBR(assistido.ultimaRetiradaISO)}
+          proximaData={proximaData}
+        />
       }
+      action={renderAcao(el, assistido, isAdmin, proximaData)}
     />
   );
+}
+
+function renderAcao(
+  el: Elegibilidade,
+  assistido: Assistido,
+  isAdmin: boolean,
+  proximaData: string,
+) {
+  switch (el.cenario) {
+    case "liberado_padrao":
+      return <LiberadoAction assistido={assistido} beneficio="Cesta Padrão" />;
+    case "liberado_extra":
+      return (
+        <LiberadoAction
+          assistido={assistido}
+          beneficio="Cesta Extra"
+          progresso={el.progresso === 3 ? 2 : el.progresso}
+        />
+      );
+    case "extra_completou":
+      return (
+        <LiberadoAction
+          assistido={assistido}
+          beneficio="Cesta Extra"
+          progresso={3}
+        />
+      );
+    case "bloqueio_25dias":
+      return (
+        <Bloqueio25Action
+          assistido={assistido}
+          isAdmin={isAdmin}
+          proximaData={proximaData}
+          diasRestantes={el.diasRestantes}
+        />
+      );
+    case "bloqueio_estoque":
+      return <SemEstoqueAction assistido={assistido} />;
+  }
 }
 
 function ScenarioLayout({ person, action }: { person: React.ReactNode; action: React.ReactNode }) {
@@ -322,10 +376,14 @@ function PersonCard({
   assistido,
   tipo,
   progresso,
+  ultimaRetirada,
+  proximaData,
 }: {
   assistido: Assistido;
   tipo: "padrao" | "extra";
   progresso?: number;
+  ultimaRetirada: string;
+  proximaData: string;
 }) {
   const isExtra = tipo === "extra";
   return (
@@ -358,8 +416,8 @@ function PersonCard({
           <Info label="Família" value={assistido.familia} />
           <Info label="Telefone" value={assistido.telefone} />
           <Info label="Endereço" value={assistido.endereco} />
-          <Info label="Última retirada" value={assistido.ultimaRetirada} />
-          <Info label="Próxima data permitida" value={assistido.proximaData} />
+          <Info label="Última retirada" value={ultimaRetirada} />
+          <Info label="Próxima data permitida" value={proximaData} />
         </div>
 
         <div className="mt-5">
@@ -496,7 +554,17 @@ function LiberadoAction({
   );
 }
 
-function Bloqueio25Action({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
+function Bloqueio25Action({
+  assistido,
+  isAdmin,
+  proximaData,
+  diasRestantes,
+}: {
+  assistido: Assistido;
+  isAdmin: boolean;
+  proximaData: string;
+  diasRestantes: number;
+}) {
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
 
@@ -516,7 +584,7 @@ function Bloqueio25Action({ assistido, isAdmin }: { assistido: Assistido; isAdmi
         variant="warn"
         icon={<Clock className="h-5 w-5" />}
         title="Bloqueado antes dos 25 dias"
-        text={`Próxima data permitida em ${assistido.proximaData}.`}
+        text={`Próxima data permitida em ${proximaData} — faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"}.`}
         action={
           <div className="space-y-2">
             <div className="rounded-md border border-amber-200 bg-background p-3 text-sm">
