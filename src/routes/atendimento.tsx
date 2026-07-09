@@ -151,7 +151,10 @@ function AtendimentoPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setResult({ status: "idle" });
+                }}
                 placeholder="Buscar por CPF, RG, nome ou telefone"
                 className="pl-9"
               />
@@ -285,9 +288,9 @@ function NaoEncontradoState() {
             <SearchX className="h-6 w-6 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium">Nenhum assistido encontrado para este documento.</p>
+              <p className="text-sm font-medium">Nenhum assistido encontrado para os dados informados.</p>
             <p className="text-xs text-muted-foreground">
-              É possível criar um pré-cadastro e, se necessário, já entregar a primeira Cesta Extra.
+                É possível criar um pré-cadastro e, se necessário, entregar a primeira Cesta Extra.
             </p>
           </div>
         </div>
