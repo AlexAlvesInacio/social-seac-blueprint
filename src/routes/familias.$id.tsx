@@ -16,112 +16,46 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useFamilias } from "@/lib/familias-store";
 
 export const Route = createFileRoute("/familias/$id")({
   head: () => ({ meta: [{ title: "Detalhe da família — SEAC Social" }] }),
   component: FamiliaDetail,
 });
 
-const assistidos = [
-  {
-    nome: "João da Silva",
-    documento: "987.654.321-00",
-    status: "Ativo",
-    tipoCadastro: "Definitivo",
-    beneficio: "Cesta Padrão",
-    ultimaRetirada: "16/05/2025",
-    proximaData: "10/06/2025",
-    progresso: "—",
-  },
-  {
-    nome: "Maria da Silva",
-    documento: "321.654.987-00",
-    status: "Ativa",
-    tipoCadastro: "Avaliação",
-    beneficio: "Cesta Extra",
-    ultimaRetirada: "20/05/2025",
-    proximaData: "14/06/2025",
-    progresso: "2/3",
-  },
-];
-
-const membros = [
-  { nome: "Pedro da Silva", nasc: "12/03/2016", parentesco: "Filho", tipo: "Criança", obs: "—" },
-  { nome: "Ana da Silva", nasc: "08/09/2019", parentesco: "Filha", tipo: "Criança", obs: "—" },
-  { nome: "José da Silva", nasc: "04/02/1952", parentesco: "Pai", tipo: "Idoso", obs: "Hipertenso." },
-];
-
-const entregas = [
-  { data: "20/05/2025", assistido: "Maria da Silva", beneficio: "Cesta Extra", status: "Entrega realizada", usuario: "Atendente teste", obs: "—" },
-  { data: "16/05/2025", assistido: "João da Silva", beneficio: "Cesta Padrão", status: "Entrega realizada", usuario: "Atendente teste", obs: "—" },
-  { data: "15/04/2025", assistido: "João da Silva", beneficio: "Cesta Padrão", status: "Entrega realizada", usuario: "Atendente teste", obs: "—" },
-];
-
-const bloqueios = [
-  {
-    data: "25/05/2025",
-    assistido: "João da Silva",
-    motivo: "Antes dos 25 dias",
-    tipo: "Cesta Padrão",
-    proxima: "10/06/2025",
-    liberacao: "Não",
-    usuario: "Atendente teste",
-    obs: "Tentativa registrada.",
-  },
-  {
-    data: "18/05/2025",
-    assistido: "Maria da Silva",
-    motivo: "Falta de estoque",
-    tipo: "Cesta Extra",
-    proxima: "—",
-    liberacao: "Não",
-    usuario: "Atendente teste",
-    obs: "Sem saldo de Cesta Extra no momento.",
-  },
-  {
-    data: "05/05/2025",
-    assistido: "João da Silva",
-    motivo: "Antes dos 25 dias",
-    tipo: "Cesta Padrão",
-    proxima: "10/05/2025",
-    liberacao: "Sim",
-    usuario: "Administrador",
-    obs: "Liberação excepcional autorizada por admin.",
-  },
-  {
-    data: "12/04/2025",
-    assistido: "Maria da Silva",
-    motivo: "Antes dos 25 dias",
-    tipo: "Cesta Extra",
-    proxima: "20/04/2025",
-    liberacao: "Não",
-    usuario: "Atendente teste",
-    obs: "Tentativa sem liberação.",
-  },
-];
-
-const observacoesSociais = [
-  { obs: "Família acompanhada pelo SEAC. Priorizar atendimento mensal.", data: "01/05/2025", usuario: "Assistente social" },
-  { obs: "Visita domiciliar realizada. Condições estáveis.", data: "10/04/2025", usuario: "Atendente teste" },
-];
-
 function FamiliaDetail() {
-  const alertaAvaliacao = assistidos.some(
-    (a) => a.tipoCadastro === "Avaliação" && a.progresso === "3/3",
-  );
+  const { id } = Route.useParams();
+  const familia = useFamilias((s) => s.familias.find((f) => String(f.id) === id));
+
+  if (!familia) {
+    return (
+      <AppShell
+        title="Detalhe da família"
+        actions={
+          <Button asChild size="sm" variant="ghost" className="gap-2">
+            <Link to="/familias"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+          </Button>
+        }
+      >
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-muted-foreground">
+            Família não encontrada.
+          </CardContent>
+        </Card>
+      </AppShell>
+    );
+  }
+
+  const alertaAvaliacao = false;
+  const statusLabel =
+    familia.status === "liberado" ? "Ativa" :
+    familia.status === "bloqueado" ? "Bloqueada" :
+    familia.status === "inativo" ? "Inativa" : "Em avaliação";
 
   return (
     <AppShell
@@ -131,7 +65,7 @@ function FamiliaDetail() {
           <ChevronRight className="h-3 w-3" />
           <Link to="/familias" className="hover:text-foreground">Famílias</Link>
           <ChevronRight className="h-3 w-3" />
-          <span className="text-foreground">Família da Silva</span>
+          <span className="text-foreground">{familia.nome}</span>
         </div>
       }
       actions={
@@ -171,25 +105,28 @@ function FamiliaDetail() {
               </div>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl font-semibold">Família da Silva</h2>
-                  <Badge className="bg-primary/15 text-primary hover:bg-primary/15">Ativa</Badge>
+                  <h2 className="text-xl font-semibold">{familia.nome}</h2>
+                  <Badge className="bg-primary/15 text-primary hover:bg-primary/15">{statusLabel}</Badge>
                 </div>
                 <div className="mt-4 grid gap-4 md:grid-cols-4">
-                  <Info label="Endereço" value="Rua das Flores, 123" />
-                  <Info label="Bairro" value="São João" />
-                  <Info label="Cidade" value="São Paulo" />
-                  <Info label="UF" value="SP" />
-                  <Info label="CEP" value="00000-000" />
-                  <Info label="Telefone / WhatsApp" value="(11) 97654-3210" />
-                  <Info label="Moradores" value="5" />
-                  <Info label="Crianças" value="2" />
-                  <Info label="Idosos" value="1" />
-                  <Info label="Gestantes" value="0" />
-                  <Info label="PCD" value="1" />
+                  <Info label="Responsável" value={familia.responsavel} />
+                  <Info label="CPF / RG" value={familia.documento} />
+                  <Info label="Endereço" value={[familia.endereco, familia.numero].filter(Boolean).join(", ") || "—"} />
+                  <Info label="Bairro" value={familia.bairro || "—"} />
+                  <Info label="Cidade" value={familia.cidade || "—"} />
+                  <Info label="UF" value={familia.uf || "—"} />
+                  <Info label="CEP" value={familia.cep || "—"} />
+                  <Info label="Telefone / WhatsApp" value={familia.telefone || "—"} />
+                  <Info label="Moradores" value={String(familia.moradores ?? 0)} />
+                  <Info label="Crianças" value={String(familia.criancas ?? 0)} />
+                  <Info label="Idosos" value={String(familia.idosos ?? 0)} />
+                  <Info label="Gestantes" value={String(familia.gestantes ?? 0)} />
+                  <Info label="PCD" value={String(familia.pcd ?? 0)} />
+                  <Info label="Tipo de cadastro" value={familia.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"} />
                 </div>
                 <div className="mt-4">
                   <p className="text-xs text-muted-foreground">Observações</p>
-                  <p className="text-sm">Família acompanhada pelo SEAC. Priorizar atendimento mensal.</p>
+                  <p className="text-sm">{familia.observacoes || "—"}</p>
                 </div>
               </div>
             </div>
@@ -208,15 +145,15 @@ function FamiliaDetail() {
         )}
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
-          <SummaryCard label="Moradores" value="5" />
-          <SummaryCard label="Assistidos" value="2" />
-          <SummaryCard label="Membros familiares" value="3" />
-          <SummaryCard label="Crianças" value="2" />
-          <SummaryCard label="Idosos" value="1" />
-          <SummaryCard label="Gestantes" value="0" />
-          <SummaryCard label="PCD" value="1" />
-          <SummaryCard label="Última retirada" value="16/05/2025" />
-          <SummaryCard label="Acompanhamento" value="Em dia" tone="success" />
+          <SummaryCard label="Moradores" value={String(familia.moradores ?? 0)} />
+          <SummaryCard label="Assistidos" value="0" />
+          <SummaryCard label="Membros familiares" value="0" />
+          <SummaryCard label="Crianças" value={String(familia.criancas ?? 0)} />
+          <SummaryCard label="Idosos" value={String(familia.idosos ?? 0)} />
+          <SummaryCard label="Gestantes" value={String(familia.gestantes ?? 0)} />
+          <SummaryCard label="PCD" value={String(familia.pcd ?? 0)} />
+          <SummaryCard label="Última retirada" value={familia.ultimaRetirada || "—"} />
+          <SummaryCard label="Acompanhamento" value={familia.acompanhamento === "em_dia" ? "Em dia" : "—"} tone="success" />
         </div>
 
         <Tabs defaultValue="assistidos">
@@ -230,136 +167,32 @@ function FamiliaDetail() {
 
           <TabsContent value="assistidos">
             <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>CPF/RG</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Tipo de cadastro</TableHead>
-                      <TableHead>Benefício</TableHead>
-                      <TableHead>Progresso</TableHead>
-                      <TableHead>Última retirada</TableHead>
-                      <TableHead>Próxima permitida</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assistidos.map((a) => (
-                      <TableRow key={a.documento}>
-                        <TableCell className="font-medium">{a.nome}</TableCell>
-                        <TableCell>{a.documento}</TableCell>
-                        <TableCell><Badge variant="outline">{a.status}</Badge></TableCell>
-                        <TableCell>
-                          {a.tipoCadastro === "Definitivo" ? (
-                            <Badge>Definitivo</Badge>
-                          ) : (
-                            <Badge variant="warning">Avaliação</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{a.beneficio}</TableCell>
-                        <TableCell>{a.progresso}</TableCell>
-                        <TableCell>{a.ultimaRetirada}</TableCell>
-                        <TableCell>{a.proximaData}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                Nenhum assistido vinculado.
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="membros">
             <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Data de nascimento</TableHead>
-                      <TableHead>Parentesco</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Observações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {membros.map((m) => (
-                      <TableRow key={m.nome}>
-                        <TableCell className="font-medium">{m.nome}</TableCell>
-                        <TableCell>{m.nasc}</TableCell>
-                        <TableCell>{m.parentesco}</TableCell>
-                        <TableCell><Badge variant="outline">{m.tipo}</Badge></TableCell>
-                        <TableCell className="text-muted-foreground">{m.obs}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                Nenhum membro vinculado.
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="entregas">
             <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Assistido</TableHead>
-                      <TableHead>Benefício</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Usuário responsável</TableHead>
-                      <TableHead>Observação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {entregas.map((e, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{e.data}</TableCell>
-                        <TableCell className="font-medium">{e.assistido}</TableCell>
-                        <TableCell>{e.beneficio}</TableCell>
-                        <TableCell><Badge className="bg-primary/15 text-primary hover:bg-primary/15">{e.status}</Badge></TableCell>
-                        <TableCell>{e.usuario}</TableCell>
-                        <TableCell className="text-muted-foreground">{e.obs}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                Nenhuma entrega registrada.
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="bloqueios">
             <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Assistido</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead>Tipo de cesta tentada</TableHead>
-                      <TableHead>Próxima permitida</TableHead>
-                      <TableHead>Liberação excepcional</TableHead>
-                      <TableHead>Usuário responsável</TableHead>
-                      <TableHead>Observação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bloqueios.map((b, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{b.data}</TableCell>
-                        <TableCell className="font-medium">{b.assistido}</TableCell>
-                        <TableCell><Badge variant="destructive">{b.motivo}</Badge></TableCell>
-                        <TableCell>{b.tipo}</TableCell>
-                        <TableCell>{b.proxima}</TableCell>
-                        <TableCell>{b.liberacao}</TableCell>
-                        <TableCell>{b.usuario}</TableCell>
-                        <TableCell className="text-muted-foreground">{b.obs}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                Nenhuma tentativa bloqueada.
               </CardContent>
             </Card>
           </TabsContent>
@@ -370,25 +203,8 @@ function FamiliaDetail() {
                 <CardTitle className="text-base">Observações sociais</CardTitle>
                 <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Nova observação</Button>
               </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Observação</TableHead>
-                      <TableHead className="w-32">Data</TableHead>
-                      <TableHead className="w-48">Usuário responsável</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {observacoesSociais.map((o, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{o.obs}</TableCell>
-                        <TableCell>{o.data}</TableCell>
-                        <TableCell>{o.usuario}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                Nenhuma observação social registrada.
               </CardContent>
             </Card>
           </TabsContent>
