@@ -1,20 +1,17 @@
-# Limpar o logo: sem fundo cinza e sem a palavra "SEAC"
+# Remover bloco redundante da tela de login
 
-O fundo cinza claro e a palavra "SEAC" fazem parte do próprio arquivo PNG do logo — não vêm de CSS. Preciso gerar uma nova versão da imagem.
+No lado direito de `/auth` (src/routes/auth.tsx), remover:
 
-## Passos
+- `<h2>SEAC</h2>` (título grande)
+- `<p>Sopa, Esperança, Amor e Caridade</p>` (linha em verde)
 
-1. Usar `imagegen--edit_image` sobre `/mnt/user-uploads/image-5.png` com prompt para:
-   - Remover a palavra "SEAC" (o retângulo azul-marinho com o texto)
-   - Manter apenas a casinha (telhado com chaminé) e as 4 figuras coloridas de pessoas (azul, laranja, amarelo, vermelho)
-   - Fundo totalmente transparente (sem o retângulo cinza/branco arredondado)
-   - Salvar em `/tmp/seac-logo-clean.png`
-2. Subir a nova imagem para o CDN via `lovable-assets create`, sobrescrevendo `src/assets/seac-logo.png.asset.json`.
-3. Nada no CSS muda — a sidebar e a tela de login continuam apontando para `seacLogo.url` e passam a exibir apenas a casinha com as pessoas, sem fundo e sem texto.
+Motivo: a imagem institucional acima já mostra "SEAC" e a frase, então repetir logo abaixo é redundante.
 
-## O que não muda
+## Fica mantido
 
-- Layout, tamanhos e posições das telas.
-- Imagem institucional grande do SEAC no lado direito da tela de login (continua igual).
+- Imagem institucional do SEAC no topo
+- Frase em destaque: "Sopa, Esperança, Amor e Caridade em ação."
+- Subfrase: "Organizando o cuidado, fortalecendo famílias e levando solidariedade com respeito."
+- Os 6 badges de projetos (Cesta Básica, Comida de Rua, etc.)
 
-Confirma?
+Nada mais muda.
