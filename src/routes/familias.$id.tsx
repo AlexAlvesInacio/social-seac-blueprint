@@ -56,6 +56,12 @@ function FamiliaDetail() {
     const assistidosAtivos = assistidos.filter((a) => a.status === "ativo");
     type Pessoa = { documento?: string; nascimento?: string; pcd?: boolean; gestante?: boolean };
     const pessoas: Pessoa[] = [
+      {
+        documento: familia?.documento,
+        nascimento: undefined,
+        pcd: false,
+        gestante: false,
+      },
       ...assistidosAtivos.map((a) => ({
         documento: a.documento, nascimento: a.nascimento, pcd: a.pcd, gestante: false,
       })),
@@ -89,7 +95,7 @@ function FamiliaDetail() {
       membrosAtivos: membros.length,
       criancas, adolescentes, adultos, idosos, gestantes, pcd,
     };
-  }, [assistidos, membros]);
+  }, [assistidos, membros, familia?.documento]);
   const [openEditar, setOpenEditar] = useState(false);
   const [openAssistido, setOpenAssistido] = useState(false);
   const [openMembro, setOpenMembro] = useState(false);
