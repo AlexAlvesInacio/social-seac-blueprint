@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFamilias } from "@/lib/familias-store";
+import { useShallow } from "zustand/react/shallow";
 import {
   EditarFamiliaDialog, AdicionarAssistidoDialog,
   AdicionarMembroDialog, RegistrarObservacaoDialog,
@@ -39,9 +40,15 @@ export const Route = createFileRoute("/familias/$id")({
 function FamiliaDetail() {
   const { id } = Route.useParams();
   const familia = useFamilias((s) => s.familias.find((f) => String(f.id) === id));
-  const assistidos = useFamilias((s) => s.assistidos.filter((a) => String(a.familiaId) === id));
-  const membros = useFamilias((s) => s.membros.filter((m) => String(m.familiaId) === id));
-  const observacoes = useFamilias((s) => s.observacoes.filter((o) => String(o.familiaId) === id));
+  const assistidos = useFamilias(
+    useShallow((s) => s.assistidos.filter((a) => String(a.familiaId) === id)),
+  );
+  const membros = useFamilias(
+    useShallow((s) => s.membros.filter((m) => String(m.familiaId) === id)),
+  );
+  const observacoes = useFamilias(
+    useShallow((s) => s.observacoes.filter((o) => String(o.familiaId) === id)),
+  );
   const [openEditar, setOpenEditar] = useState(false);
   const [openAssistido, setOpenAssistido] = useState(false);
   const [openMembro, setOpenMembro] = useState(false);
