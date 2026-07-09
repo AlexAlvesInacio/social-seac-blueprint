@@ -25,7 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useFamilias } from "@/lib/familias-store";
+import { useFamilias, calcularIdade, calcularFaixaEtaria, rotuloFaixaEtaria } from "@/lib/familias-store";
 import {
   EditarFamiliaDialog, AdicionarAssistidoDialog,
   AdicionarMembroDialog, RegistrarObservacaoDialog,
@@ -52,6 +52,18 @@ function FamiliaDetail() {
   const observacoes = useMemo(
     () => allObs.filter((o) => String(o.familiaId) === id), [allObs, id],
   );
+  const contagens = useMemo(() => {
+    let criancas = 0, adolescentes = 0, idosos = 0, gestantes = 0, pcd = 0;
+    for (const m of membros) {
+      const faixa = calcularFaixaEtaria(m.nascimento);
+      if (faixa === "crianca") criancas++;
+      else if (faixa === "adolescente") adolescentes++;
+      else if (faixa === "idoso") idosos++;
+      if (m.gestante) gestantes++;
+      if (m.pcd) pcd++;
+    }
+    return { criancas, adolescentes, idosos, gestantes, pcd };
+  }, [membros]);
   const [openEditar, setOpenEditar] = useState(false);
   const [openAssistido, setOpenAssistido] = useState(false);
   const [openMembro, setOpenMembro] = useState(false);
@@ -147,10 +159,11 @@ function FamiliaDetail() {
                   <Info label="CEP" value={familia.cep || "—"} />
                   <Info label="Telefone / WhatsApp" value={familia.telefone || "—"} />
                   <Info label="Moradores" value={String(familia.moradores ?? 0)} />
-                  <Info label="Crianças" value={String(familia.criancas ?? 0)} />
-                  <Info label="Idosos" value={String(familia.idosos ?? 0)} />
-                  <Info label="Gestantes" value={String(familia.gestantes ?? 0)} />
-                  <Info label="PCD" value={String(familia.pcd ?? 0)} />
+                  <Info label="Crianças" value={String(contagens.criancas)} />
+                  <Info label="Adolescentes" value={String(contagens.adolescentes)} />
+                  <Info label="Idosos" value={String(contagens.idosos)} />
+                  <Info label="Gestantes" value={String(contagens.gestantes)} />
+                  <Info label="PCD" value={String(contagens.pcd)} />
                   <Info label="Tipo de cadastro" value={familia.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"} />
                 </div>
                 <div className="mt-4">
@@ -177,10 +190,10 @@ function FamiliaDetail() {
           <SummaryCard label="Moradores" value={String(familia.moradores ?? 0)} />
           <SummaryCard label="Assistidos" value={String(assistidos.length)} />
           <SummaryCard label="Membros familiares" value={String(membros.length)} />
-          <SummaryCard label="Crianças" value={String(familia.criancas ?? 0)} />
-          <SummaryCard label="Idosos" value={String(familia.idosos ?? 0)} />
-          <SummaryCard label="Gestantes" value={String(familia.gestantes ?? 0)} />
-          <SummaryCard label="PCD" value={String(familia.pcd ?? 0)} />
+          <SummaryCard label="Crianças" value={String(contagens.criancas)} />
+          <SummaryCard label="Idosos" value={String(contagens.idosos)} />
+          <SummaryCard label="Gestantes" value={String(contagens.gestantes)} />
+          <SummaryCard label="PCD" value={String(contagens.pcd)} />
           <SummaryCard label="Última retirada" value={familia.ultimaRetirada || "—"} />
           <SummaryCard label="Acompanhamento" value={familia.acompanhamento === "em_dia" ? "Em dia" : "—"} tone="success" />
         </div>
@@ -233,19 +246,28 @@ function FamiliaDetail() {
                   <Table>
                     <TableHeader><TableRow>
                       <TableHead>Nome</TableHead><TableHead>Parentesco</TableHead>
-                      <TableHead>Doc.</TableHead><TableHead>Marcadores</TableHead>
+                      <TableHead>Doc.</TableHead>
+                      <TableHead>Faixa etária</TableHead>
+                      <TableHead>Marcadores</TableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                      {membros.map((m) => (
+                      {membros.map((m) => {
+                        const idade = calcularIdade(m.nascimento);
+                        const faixa = calcularFaixaEtaria(m.nascimento);
+                        return (
                         <TableRow key={m.id}>
                           <TableCell className="text-sm">{m.nome}</TableCell>
                           <TableCell className="text-sm">{m.parentesco}</TableCell>
                           <TableCell className="text-sm">{m.documento || "—"}</TableCell>
+                          <TableCell className="text-sm">
+                            {faixa ? `${rotuloFaixaEtaria(faixa)}${idade !== null ? ` (${idade})` : ""}` : "—"}
+                          </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {[m.crianca && "Criança", m.idoso && "Idoso", m.gestante && "Gestante", m.pcd && "PCD"].filter(Boolean).join(" · ") || "—"}
+                            {[m.gestante && "Gestante", m.pcd && "PCD"].filter(Boolean).join(" · ") || "—"}
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </CardContent>

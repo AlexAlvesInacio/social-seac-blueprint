@@ -14,6 +14,8 @@ import {
 import {
   useFamilias, type Familia, type FamiliaStatus, type TipoCadastro,
 } from "@/lib/familias-store";
+import { calcularIdade, calcularFaixaEtaria, rotuloFaixaEtaria } from "@/lib/familias-store";
+import { Badge } from "@/components/ui/badge";
 import { registrarAuditoria } from "@/lib/auditoria-store";
 
 function F({ label, erro, children }: { label: string; erro?: string; children: React.ReactNode }) {
@@ -199,7 +201,7 @@ export function AdicionarAssistidoDialog({
         documento: form.documento.trim(),
         telefone: form.telefone.trim() || undefined,
         nascimento: form.nascimento || undefined,
-        crianca: false, idoso: false, gestante: false, pcd: form.pcd,
+        gestante: false, pcd: form.pcd,
         assistidoId: novo.id,
       });
     }
@@ -285,7 +287,7 @@ export function AdicionarAssistidoDialog({
 /* ============ Adicionar membro familiar ============ */
 const membroEmpty = {
   nome: "", parentesco: "", documento: "", telefone: "", nascimento: "",
-  crianca: false, idoso: false, gestante: false, pcd: false,
+  gestante: false, pcd: false,
   observacoes: "",
   tambemAssistido: false,
   tipoCadastro: "extra" as TipoCadastro,
@@ -310,6 +312,12 @@ export function AdicionarMembroDialog({
   const salvar = () => {
     const e: Record<string, string> = {};
     if (!form.nome.trim()) e.nome = "Informe o nome.";
+    if (form.nascimento) {
+      const d = new Date(form.nascimento);
+      if (Number.isNaN(d.getTime()) || d.getTime() > Date.now()) {
+        e.nascimento = "Data de nascimento inválida.";
+      }
+    }
     if (form.tambemAssistido) {
       if (!form.documento.trim()) e.documento = "CPF/RG obrigatório para assistido.";
       else if (existsAssistidoDoc(form.documento)) e.documento = "Já existe assistido com este documento.";
@@ -340,16 +348,15 @@ export function AdicionarMembroDialog({
       documento: form.documento.trim() || undefined,
       telefone: form.telefone.trim() || undefined,
       nascimento: form.nascimento || undefined,
-      crianca: form.crianca, idoso: form.idoso, gestante: form.gestante, pcd: form.pcd,
+      gestante: form.gestante, pcd: form.pcd,
       observacoes: form.observacoes.trim() || undefined,
       assistidoId,
     });
 
-    // Atualiza contadores da família
+    // Contadores de moradores continuam manuais; crianças/adolescentes/idosos
+    // são derivados da lista de membros na tela de detalhe.
     update(familia.id, {
       moradores: (familia.moradores ?? 0) + 1,
-      criancas: (familia.criancas ?? 0) + (form.crianca ? 1 : 0),
-      idosos: (familia.idosos ?? 0) + (form.idoso ? 1 : 0),
       gestantes: (familia.gestantes ?? 0) + (form.gestante ? 1 : 0),
       pcd: (familia.pcd ?? 0) + (form.pcd ? 1 : 0),
     });
@@ -392,11 +399,26 @@ export function AdicionarMembroDialog({
               <Input value={form.documento} onChange={(e) => set("documento", e.target.value)} />
             </F>
             <F label="Telefone (opcional)"><Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} /></F>
-            <F label="Data de nascimento"><Input type="date" value={form.nascimento} onChange={(e) => set("nascimento", e.target.value)} /></F>
+            <F label="Data de nascimento" erro={erros.nascimento}>
+              <div className="space-y-1">
+                <Input type="date" value={form.nascimento} onChange={(e) => set("nascimento", e.target.value)} />
+                {form.nascimento && !erros.nascimento && (() => {
+                  const idade = calcularIdade(form.nascimento);
+                  const faixa = calcularFaixaEtaria(form.nascimento);
+                  if (idade === null || !faixa) return null;
+                  return (
+                    <Badge variant="outline" className="text-xs">
+                      Classificação automática: {rotuloFaixaEtaria(faixa)} ({idade} {idade === 1 ? "ano" : "anos"})
+                    </Badge>
+                  );
+                })()}
+              </div>
+            </F>
           </section>
+          <p className="text-xs text-muted-foreground">
+            Criança (0–12), Adolescente (13–17) e Idoso (60+) são definidos automaticamente pela data de nascimento.
+          </p>
           <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Toggle label="Criança" checked={form.crianca} onChange={(v) => set("crianca", v)} />
-            <Toggle label="Idoso" checked={form.idoso} onChange={(v) => set("idoso", v)} />
             <Toggle label="Gestante" checked={form.gestante} onChange={(v) => set("gestante", v)} />
             <Toggle label="PCD" checked={form.pcd} onChange={(v) => set("pcd", v)} />
           </section>
