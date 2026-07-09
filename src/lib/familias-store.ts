@@ -133,7 +133,7 @@ type State = {
   existsDocumento: (doc: string) => boolean;
   existsAssistidoDoc: (doc: string) => boolean;
   addAssistido: (a: Omit<Assistido, "id">) => Assistido;
-  addMembro: (m: Omit<Membro, "id">) => Membro;
+  addMembro: (m: Omit<Membro, "id" | "crianca" | "adolescente" | "idoso">) => Membro;
   addObservacao: (o: Omit<Observacao, "id" | "data" | "usuario"> & { usuario?: string }) => Observacao;
 };
 
