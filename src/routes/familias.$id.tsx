@@ -16,14 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -35,89 +27,6 @@ export const Route = createFileRoute("/familias/$id")({
   head: () => ({ meta: [{ title: "Detalhe da família — SEAC Social" }] }),
   component: FamiliaDetail,
 });
-
-const assistidos = [
-  {
-    nome: "João da Silva",
-    documento: "987.654.321-00",
-    status: "Ativo",
-    tipoCadastro: "Definitivo",
-    beneficio: "Cesta Padrão",
-    ultimaRetirada: "16/05/2025",
-    proximaData: "10/06/2025",
-    progresso: "—",
-  },
-  {
-    nome: "Maria da Silva",
-    documento: "321.654.987-00",
-    status: "Ativa",
-    tipoCadastro: "Avaliação",
-    beneficio: "Cesta Extra",
-    ultimaRetirada: "20/05/2025",
-    proximaData: "14/06/2025",
-    progresso: "2/3",
-  },
-];
-
-const membros = [
-  { nome: "Pedro da Silva", nasc: "12/03/2016", parentesco: "Filho", tipo: "Criança", obs: "—" },
-  { nome: "Ana da Silva", nasc: "08/09/2019", parentesco: "Filha", tipo: "Criança", obs: "—" },
-  { nome: "José da Silva", nasc: "04/02/1952", parentesco: "Pai", tipo: "Idoso", obs: "Hipertenso." },
-];
-
-const entregas = [
-  { data: "20/05/2025", assistido: "Maria da Silva", beneficio: "Cesta Extra", status: "Entrega realizada", usuario: "Atendente teste", obs: "—" },
-  { data: "16/05/2025", assistido: "João da Silva", beneficio: "Cesta Padrão", status: "Entrega realizada", usuario: "Atendente teste", obs: "—" },
-  { data: "15/04/2025", assistido: "João da Silva", beneficio: "Cesta Padrão", status: "Entrega realizada", usuario: "Atendente teste", obs: "—" },
-];
-
-const bloqueios = [
-  {
-    data: "25/05/2025",
-    assistido: "João da Silva",
-    motivo: "Antes dos 25 dias",
-    tipo: "Cesta Padrão",
-    proxima: "10/06/2025",
-    liberacao: "Não",
-    usuario: "Atendente teste",
-    obs: "Tentativa registrada.",
-  },
-  {
-    data: "18/05/2025",
-    assistido: "Maria da Silva",
-    motivo: "Falta de estoque",
-    tipo: "Cesta Extra",
-    proxima: "—",
-    liberacao: "Não",
-    usuario: "Atendente teste",
-    obs: "Sem saldo de Cesta Extra no momento.",
-  },
-  {
-    data: "05/05/2025",
-    assistido: "João da Silva",
-    motivo: "Antes dos 25 dias",
-    tipo: "Cesta Padrão",
-    proxima: "10/05/2025",
-    liberacao: "Sim",
-    usuario: "Administrador",
-    obs: "Liberação excepcional autorizada por admin.",
-  },
-  {
-    data: "12/04/2025",
-    assistido: "Maria da Silva",
-    motivo: "Antes dos 25 dias",
-    tipo: "Cesta Extra",
-    proxima: "20/04/2025",
-    liberacao: "Não",
-    usuario: "Atendente teste",
-    obs: "Tentativa sem liberação.",
-  },
-];
-
-const observacoesSociais = [
-  { obs: "Família acompanhada pelo SEAC. Priorizar atendimento mensal.", data: "01/05/2025", usuario: "Assistente social" },
-  { obs: "Visita domiciliar realizada. Condições estáveis.", data: "10/04/2025", usuario: "Atendente teste" },
-];
 
 function FamiliaDetail() {
   const { id } = Route.useParams();
