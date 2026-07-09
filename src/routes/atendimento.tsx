@@ -18,96 +18,179 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/atendimento")({
   head: () => ({ meta: [{ title: "Atendimento — SEAC Social" }] }),
   component: AtendimentoPage,
 });
 
+/* ---------- Mock lookup (demo, sem backend) ---------- */
+
+type Situacao =
+  | { kind: "extra_liberado"; progresso: 1 | 2 }
+  | { kind: "extra_completou" }
+  | { kind: "padrao_liberado" }
+  | { kind: "bloqueio25" }
+  | { kind: "sem_estoque" };
+
+type Assistido = {
+  nome: string;
+  documento: string;
+  telefone: string;
+  familia: string;
+  endereco: string;
+  ultimaRetirada: string;
+  proximaData: string;
+  situacao: Situacao;
+};
+
+const MOCK_ASSISTIDOS: Assistido[] = [
+  {
+    nome: "João dos Santos",
+    documento: "987.654.321-00",
+    telefone: "(11) 97654-3210",
+    familia: "Família da Silva",
+    endereco: "Rua das Flores, 123 — São João",
+    ultimaRetirada: "16/05/2025",
+    proximaData: "10/06/2025",
+    situacao: { kind: "extra_liberado", progresso: 2 },
+  },
+  {
+    nome: "Maria Aparecida Souza",
+    documento: "111.222.333-44",
+    telefone: "(11) 91234-5678",
+    familia: "Família Souza",
+    endereco: "Rua Central, 45 — Vila Nova",
+    ultimaRetirada: "01/05/2025",
+    proximaData: "26/05/2025",
+    situacao: { kind: "padrao_liberado" },
+  },
+  {
+    nome: "Pedro Henrique Lima",
+    documento: "222.333.444-55",
+    telefone: "(11) 99876-1234",
+    familia: "Família Lima",
+    endereco: "Av. Brasil, 900 — Centro",
+    ultimaRetirada: "05/06/2025",
+    proximaData: "30/06/2025",
+    situacao: { kind: "bloqueio25" },
+  },
+  {
+    nome: "Ana Paula Rodrigues",
+    documento: "333.444.555-66",
+    telefone: "(11) 98888-2222",
+    familia: "Família Rodrigues",
+    endereco: "Rua das Palmeiras, 77 — Jardim",
+    ultimaRetirada: "20/04/2025",
+    proximaData: "15/05/2025",
+    situacao: { kind: "sem_estoque" },
+  },
+];
+
+function normalize(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function buscarAssistido(q: string): Assistido | null {
+  const nq = normalize(q);
+  if (nq.length < 3) return null;
+  return (
+    MOCK_ASSISTIDOS.find(
+      (a) =>
+        normalize(a.nome).includes(nq) ||
+        normalize(a.documento).includes(nq) ||
+        normalize(a.telefone).includes(nq),
+    ) ?? null
+  );
+}
+
+/* ---------- Page ---------- */
+
 function AtendimentoPage() {
+  // Perfil simulado apenas para exibir a ação restrita a Administrador.
+  const isAdmin = true;
+
+  const [query, setQuery] = useState("");
+  const [submitted, setSubmitted] = useState("");
+
+  const resultado = useMemo(() => {
+    if (!submitted) return { state: "idle" as const };
+    if (submitted.trim().length < 3) return { state: "idle" as const };
+    const a = buscarAssistido(submitted);
+    if (!a) return { state: "not_found" as const };
+    return { state: "found" as const, assistido: a };
+  }, [submitted]);
+
+  const doSearch = () => setSubmitted(query);
+  const clearSearch = () => {
+    setQuery("");
+    setSubmitted("");
+  };
+
   return (
     <AppShell title="Atendimento — Busca e entrega">
       <Card>
         <CardContent className="p-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Buscar por CPF, RG, nome ou telefone" className="pl-9" />
-          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              doSearch();
+            }}
+            className="flex flex-col gap-2 sm:flex-row"
+          >
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por CPF, RG, nome ou telefone"
+                className="pl-9"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" className="gap-2">
+                <Search className="h-4 w-4" /> Buscar
+              </Button>
+              {submitted && (
+                <Button type="button" variant="outline" onClick={clearSearch}>
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </form>
           <p className="mt-2 text-xs text-muted-foreground">Digite pelo menos 3 caracteres para buscar.</p>
         </CardContent>
       </Card>
 
-      <div className="mt-4 rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
-        <span className="font-medium text-foreground">Demonstração visual:</span> selecione abaixo um cenário possível após a busca. Só um cenário acontece por vez em uso real.
+      <div className="mt-4">
+        {resultado.state === "idle" && <EmptyState />}
+        {resultado.state === "not_found" && <NaoEncontradoState />}
+        {resultado.state === "found" && (
+          <ResultadoAssistido assistido={resultado.assistido} isAdmin={isAdmin} />
+        )}
       </div>
-
-      <Tabs defaultValue="empty" className="mt-3">
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="empty">Sem busca</TabsTrigger>
-          <TabsTrigger value="padrao">Definitivo — Cesta Padrão</TabsTrigger>
-          <TabsTrigger value="extra">Extra — em avaliação</TabsTrigger>
-          <TabsTrigger value="bloqueio25">Bloqueado 25 dias</TabsTrigger>
-          <TabsTrigger value="semEstoque">Sem estoque</TabsTrigger>
-          <TabsTrigger value="naoEncontrado">Não encontrado</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="empty" className="mt-4">
-          <EmptyState />
-        </TabsContent>
-
-        <TabsContent value="padrao" className="mt-4">
-          <ScenarioLayout
-            person={<PersonCard tipo="padrao" />}
-            action={<PadraoAction />}
-          />
-        </TabsContent>
-
-        <TabsContent value="extra" className="mt-4">
-          <Tabs defaultValue="2">
-            <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Progresso simulado:</span>
-              <TabsList className="h-8 bg-muted/50 p-0.5">
-                <TabsTrigger value="1" className="text-xs">1/3</TabsTrigger>
-                <TabsTrigger value="2" className="text-xs">2/3</TabsTrigger>
-                <TabsTrigger value="3" className="text-xs">3/3</TabsTrigger>
-              </TabsList>
-            </div>
-            {[1, 2, 3].map((n) => (
-              <TabsContent key={n} value={String(n)}>
-                <ScenarioLayout
-                  person={<PersonCard tipo="extra" progresso={n} />}
-                  action={<ExtraAction progresso={n} />}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        </TabsContent>
-
-        <TabsContent value="bloqueio25" className="mt-4">
-          <ScenarioLayout
-            person={<PersonCard tipo="padrao" />}
-            action={<Bloqueio25Action />}
-          />
-        </TabsContent>
-
-        <TabsContent value="semEstoque" className="mt-4">
-          <ScenarioLayout
-            person={<PersonCard tipo="extra" progresso={1} />}
-            action={<SemEstoqueAction />}
-          />
-        </TabsContent>
-
-        <TabsContent value="naoEncontrado" className="mt-4">
-          <NaoEncontradoState />
-        </TabsContent>
-      </Tabs>
 
       <Accordion type="single" collapsible className="mt-6">
         <AccordionItem value="regras" className="rounded-md border border-border bg-background px-4">
@@ -146,7 +229,36 @@ function AtendimentoPage() {
   );
 }
 
-/* ---------- Scenarios ---------- */
+/* ---------- Resultado ---------- */
+
+function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
+  const s = assistido.situacao;
+  const tipo: "padrao" | "extra" =
+    s.kind === "padrao_liberado" || s.kind === "bloqueio25" ? "padrao" : "extra";
+  const progresso =
+    s.kind === "extra_liberado" ? s.progresso : s.kind === "extra_completou" ? 3 : undefined;
+
+  const beneficio: "Cesta Padrão" | "Cesta Extra" = tipo === "padrao" ? "Cesta Padrão" : "Cesta Extra";
+
+  return (
+    <ScenarioLayout
+      person={<PersonCard assistido={assistido} tipo={tipo} progresso={progresso} />}
+      action={
+        s.kind === "padrao_liberado" ? (
+          <LiberadoAction assistido={assistido} beneficio="Cesta Padrão" />
+        ) : s.kind === "extra_liberado" ? (
+          <LiberadoAction assistido={assistido} beneficio="Cesta Extra" progresso={s.progresso} />
+        ) : s.kind === "extra_completou" ? (
+          <LiberadoAction assistido={assistido} beneficio={beneficio} progresso={3} />
+        ) : s.kind === "bloqueio25" ? (
+          <Bloqueio25Action assistido={assistido} isAdmin={isAdmin} />
+        ) : (
+          <SemEstoqueAction assistido={assistido} />
+        )
+      }
+    />
+  );
+}
 
 function ScenarioLayout({ person, action }: { person: React.ReactNode; action: React.ReactNode }) {
   return (
@@ -166,7 +278,7 @@ function EmptyState() {
         </div>
         <p className="text-sm font-medium">Nenhuma busca realizada</p>
         <p className="max-w-md text-xs text-muted-foreground">
-          Informe CPF, RG, nome ou telefone acima para localizar o assistido e verificar a elegibilidade da entrega.
+          Informe CPF, RG, nome ou telefone para localizar o assistido e verificar a elegibilidade da entrega.
         </p>
       </CardContent>
     </Card>
@@ -189,10 +301,19 @@ function NaoEncontradoState() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => toast.success("Pré-cadastro iniciado (demonstração).")}
+          >
             <UserPlus className="h-4 w-4" /> Criar pré-cadastro
           </Button>
-          <Button className="gap-2">
+          <Button
+            className="gap-2"
+            onClick={() =>
+              toast.success("Pré-cadastro criado e Cesta Extra entregue (demonstração).")
+            }
+          >
             <ShoppingBasket className="h-4 w-4" /> Criar pré-cadastro e entregar Cesta Extra
           </Button>
         </div>
@@ -203,7 +324,15 @@ function NaoEncontradoState() {
 
 /* ---------- Person card ---------- */
 
-function PersonCard({ tipo, progresso }: { tipo: "padrao" | "extra"; progresso?: number }) {
+function PersonCard({
+  assistido,
+  tipo,
+  progresso,
+}: {
+  assistido: Assistido;
+  tipo: "padrao" | "extra";
+  progresso?: number;
+}) {
   const isExtra = tipo === "extra";
   return (
     <Card>
@@ -215,7 +344,7 @@ function PersonCard({ tipo, progresso }: { tipo: "padrao" | "extra"; progresso?:
               <UserCheck className="h-6 w-6 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-lg font-semibold">João dos Santos</p>
+              <p className="text-lg font-semibold">{assistido.nome}</p>
               <Badge className="bg-primary/15 text-primary hover:bg-primary/15">Ativo</Badge>
             </div>
           </div>
@@ -231,12 +360,12 @@ function PersonCard({ tipo, progresso }: { tipo: "padrao" | "extra"; progresso?:
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <Info label="Documento" value="987.654.321-00" />
-          <Info label="Família" value="Família da Silva" />
-          <Info label="Telefone" value="(11) 97654-3210" />
-          <Info label="Endereço" value="Rua das Flores, 123 — São João" />
-          <Info label="Última retirada" value="16/05/2025" />
-          <Info label="Próxima data permitida" value="10/06/2025" />
+          <Info label="Documento" value={assistido.documento} />
+          <Info label="Família" value={assistido.familia} />
+          <Info label="Telefone" value={assistido.telefone} />
+          <Info label="Endereço" value={assistido.endereco} />
+          <Info label="Última retirada" value={assistido.ultimaRetirada} />
+          <Info label="Próxima data permitida" value={assistido.proximaData} />
         </div>
 
         <div className="mt-5">
@@ -248,7 +377,7 @@ function PersonCard({ tipo, progresso }: { tipo: "padrao" | "extra"; progresso?:
                 <div>
                   <p className="text-sm font-medium text-amber-800">Cadastro Extra / em avaliação</p>
                   <p className="text-xs text-amber-700">
-                    Recebendo <span className="font-medium">Cesta Extra</span> enquanto o cadastro definitivo não é aprovado.
+                    Assistido realizando retiradas extras antes da avaliação definitiva.
                   </p>
                 </div>
               </div>
@@ -258,6 +387,9 @@ function PersonCard({ tipo, progresso }: { tipo: "padrao" | "extra"; progresso?:
                 </p>
                 <ExtraProgress current={progresso ?? 0} />
               </div>
+              <p className="mt-3 rounded-md border border-sky-200 bg-sky-50 p-2 text-[11px] text-sky-800">
+                Após a 3ª retirada extra, o assistido deverá ser avaliado para cadastro definitivo e terá direito à Cesta Padrão no próximo mês.
+              </p>
             </div>
           ) : (
             <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 p-4">
@@ -280,46 +412,49 @@ function PersonCard({ tipo, progresso }: { tipo: "padrao" | "extra"; progresso?:
 
 /* ---------- Actions ---------- */
 
-function PadraoAction() {
-  return (
-    <StatusCard
-      variant="ok"
-      icon={<CheckCircle2 className="h-5 w-5" />}
-      title="Assistido liberado — Cesta Padrão"
-      text="Pode retirar a Cesta Padrão hoje."
-      action={
-        <div className="space-y-3">
-          <TipoBeneficio nome="Cesta Padrão" />
-          <Button size="lg" className="w-full gap-2">
-            <ShoppingBasket className="h-4 w-4" /> Entregar Cesta Padrão
-          </Button>
-          <p className="rounded-md bg-primary/5 p-2 text-xs text-foreground/70">
-            Entrega mensal. Próxima data permitida respeita o intervalo mínimo de 25 dias.
-          </p>
-        </div>
-      }
-    />
-  );
-}
+function LiberadoAction({
+  assistido,
+  beneficio,
+  progresso,
+}: {
+  assistido: Assistido;
+  beneficio: "Cesta Padrão" | "Cesta Extra";
+  progresso?: number;
+}) {
+  const completou = progresso === 3;
+  const [open, setOpen] = useState(false);
 
-function ExtraAction({ progresso }: { progresso: number }) {
-  const completou = progresso >= 3;
+  const confirmar = () => {
+    toast.success(`${beneficio} entregue para ${assistido.nome}.`, {
+      description:
+        "Registrado: assistido, família, benefício, data/hora, usuário responsável, tipo de entrega, baixa no estoque e histórico da família.",
+    });
+    setOpen(false);
+  };
+
   return (
     <div className="space-y-4">
       <StatusCard
         variant="ok"
         icon={<CheckCircle2 className="h-5 w-5" />}
-        title="Assistido liberado — Cesta Extra"
-        text={`Progresso atual: ${progresso}/3 retiradas extras.`}
+        title="Assistido liberado"
+        text="Pode retirar a cesta hoje."
         action={
           <div className="space-y-3">
-            <TipoBeneficio nome="Cesta Extra" />
-            <Button size="lg" className="w-full gap-2" disabled={completou}>
+            <TipoBeneficio nome={beneficio} />
+            <Button
+              size="lg"
+              className="w-full gap-2"
+              disabled={completou}
+              onClick={() => setOpen(true)}
+            >
               <ShoppingBasket className="h-4 w-4" />
-              {completou ? "Aguardar avaliação da coordenação" : "Entregar Cesta Extra"}
+              {completou ? "Aguardar avaliação da coordenação" : `Entregar ${beneficio}`}
             </Button>
             <p className="rounded-md bg-primary/5 p-2 text-xs text-foreground/70">
-              Após completar 3 retiradas extras consecutivas, o assistido deve ser avaliado pela coordenação para cadastro definitivo. Se aprovado, passa a receber <span className="font-medium">Cesta Padrão</span> no próximo mês.
+              {beneficio === "Cesta Padrão"
+                ? "Entrega mensal. Próxima data permitida respeita o intervalo mínimo de 25 dias."
+                : "Após completar 3 retiradas extras, o assistido deve ser avaliado para cadastro definitivo."}
             </p>
           </div>
         }
@@ -338,37 +473,114 @@ function ExtraAction({ progresso }: { progresso: number }) {
           </Button>
         </div>
       )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar entrega — {beneficio}</DialogTitle>
+            <DialogDescription>
+              A entrega registrará automaticamente as informações abaixo e dará baixa no estoque.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-xs text-foreground/85">
+            <li>• Assistido: <span className="font-medium">{assistido.nome}</span></li>
+            <li>• Família: <span className="font-medium">{assistido.familia}</span></li>
+            <li>• Benefício: <span className="font-medium">{beneficio}</span></li>
+            <li>• Data/hora: <span className="font-medium">agora</span></li>
+            <li>• Usuário responsável: <span className="font-medium">Administrador</span></li>
+            <li>• Tipo de entrega: <span className="font-medium">Retirada no local</span></li>
+            <li>• Baixa automática no estoque</li>
+            <li>• Registro no histórico da família</li>
+          </ul>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={confirmar}>Confirmar entrega</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function Bloqueio25Action() {
+function Bloqueio25Action({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [motivo, setMotivo] = useState("");
+
+  const liberar = () => {
+    if (motivo.trim().length < 5) {
+      toast.error("Informe o motivo da liberação excepcional.");
+      return;
+    }
+    toast.success(`Liberação excepcional registrada para ${assistido.nome}.`);
+    setOpen(false);
+    setMotivo("");
+  };
+
   return (
-    <StatusCard
-      variant="warn"
-      icon={<Clock className="h-5 w-5" />}
-      title="Bloqueado antes dos 25 dias"
-      text="Próxima data permitida em 10/06/2025."
-      action={
-        <div className="space-y-2">
-          <div className="rounded-md border border-amber-200 bg-background p-3 text-sm">
-            <p className="text-xs text-muted-foreground">Motivo do bloqueio</p>
-            <p className="font-medium text-foreground">Intervalo mínimo de 25 dias não completado.</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Vale para Cesta Extra e Cesta Padrão.</p>
+    <>
+      <StatusCard
+        variant="warn"
+        icon={<Clock className="h-5 w-5" />}
+        title="Bloqueado antes dos 25 dias"
+        text={`Próxima data permitida em ${assistido.proximaData}.`}
+        action={
+          <div className="space-y-2">
+            <div className="rounded-md border border-amber-200 bg-background p-3 text-sm">
+              <p className="text-xs text-muted-foreground">Motivo do bloqueio</p>
+              <p className="font-medium text-foreground">Intervalo mínimo de 25 dias não completado.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Vale para Cesta Extra e Cesta Padrão.</p>
+            </div>
+            {isAdmin && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setOpen(true)}
+              >
+                <ShieldAlert className="h-4 w-4" /> Liberar excepcionalmente
+              </Button>
+            )}
+            <p className="text-[11px] text-amber-700">
+              Ação restrita a perfil <span className="font-medium">Administrador</span>. Exige observação obrigatória.
+            </p>
           </div>
-          <Button size="lg" variant="outline" className="w-full gap-2">
-            <ShieldAlert className="h-4 w-4" /> Liberar excepcionalmente
-          </Button>
-          <p className="text-[11px] text-amber-700">
-            Ação restrita a perfil <span className="font-medium">Administrador</span>. Exige observação obrigatória.
-          </p>
-        </div>
-      }
-    />
+        }
+      />
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Liberação excepcional</DialogTitle>
+            <DialogDescription>
+              Informe o motivo da liberação antes dos 25 dias. Esta ação ficará registrada no histórico da família.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="motivo">Motivo (obrigatório)</Label>
+            <Textarea
+              id="motivo"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Descreva a justificativa para a liberação excepcional…"
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={liberar}>Confirmar liberação</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
-function SemEstoqueAction() {
+function SemEstoqueAction({ assistido }: { assistido: Assistido }) {
+  const registrar = () =>
+    toast.success(`Tentativa bloqueada registrada para ${assistido.nome}.`, {
+      description: "Motivo: falta de estoque. Registro adicionado ao histórico da família.",
+    });
+
   return (
     <StatusCard
       variant="danger"
@@ -377,7 +589,12 @@ function SemEstoqueAction() {
       text="Não é possível liberar entrega sem saldo em estoque."
       action={
         <div className="space-y-2">
-          <Button size="lg" variant="outline" className="w-full gap-2 border-destructive/40 text-destructive">
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full gap-2 border-destructive/40 text-destructive"
+            onClick={registrar}
+          >
             <ShieldAlert className="h-4 w-4" /> Registrar tentativa bloqueada
           </Button>
           <p className="text-[11px] text-destructive/80">
