@@ -14,6 +14,7 @@ import {
 import {
   useFamilias, type Familia, type FamiliaStatus, type TipoCadastro,
 } from "@/lib/familias-store";
+import { useShallow } from "zustand/react/shallow";
 import { registrarAuditoria } from "@/lib/auditoria-store";
 
 function F({ label, erro, children }: { label: string; erro?: string; children: React.ReactNode }) {
@@ -158,7 +159,9 @@ export function AdicionarAssistidoDialog({
   const addAssistido = useFamilias((s) => s.addAssistido);
   const addMembro = useFamilias((s) => s.addMembro);
   const existsAssistidoDoc = useFamilias((s) => s.existsAssistidoDoc);
-  const membros = useFamilias((s) => s.membros.filter((m) => m.familiaId === familia.id));
+  const membros = useFamilias(
+    useShallow((s) => s.membros.filter((m) => m.familiaId === familia.id)),
+  );
   const [form, setForm] = useState(assistidoEmpty);
   const [erros, setErros] = useState<Record<string, string>>({});
 
