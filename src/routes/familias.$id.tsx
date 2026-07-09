@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -16,12 +17,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFamilias } from "@/lib/familias-store";
+import {
+  EditarFamiliaDialog, AdicionarAssistidoDialog,
+  AdicionarMembroDialog, RegistrarObservacaoDialog,
+} from "@/components/familia-detail-dialogs";
 
 export const Route = createFileRoute("/familias/$id")({
   head: () => ({ meta: [{ title: "Detalhe da família — SEAC Social" }] }),
@@ -31,6 +39,13 @@ export const Route = createFileRoute("/familias/$id")({
 function FamiliaDetail() {
   const { id } = Route.useParams();
   const familia = useFamilias((s) => s.familias.find((f) => String(f.id) === id));
+  const assistidos = useFamilias((s) => s.assistidos.filter((a) => String(a.familiaId) === id));
+  const membros = useFamilias((s) => s.membros.filter((m) => String(m.familiaId) === id));
+  const observacoes = useFamilias((s) => s.observacoes.filter((o) => String(o.familiaId) === id));
+  const [openEditar, setOpenEditar] = useState(false);
+  const [openAssistido, setOpenAssistido] = useState(false);
+  const [openMembro, setOpenMembro] = useState(false);
+  const [openObs, setOpenObs] = useState(false);
 
   if (!familia) {
     return (
@@ -73,8 +88,8 @@ function FamiliaDetail() {
           <Button asChild size="sm" variant="ghost" className="gap-2">
             <Link to="/familias"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
           </Button>
-          <Button size="sm" variant="outline" className="gap-2"><Pencil className="h-4 w-4" /> Editar família</Button>
-          <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Adicionar assistido</Button>
+          <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenEditar(true)}><Pencil className="h-4 w-4" /> Editar família</Button>
+          <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenAssistido(true)}><Plus className="h-4 w-4" /> Adicionar assistido</Button>
           <Button asChild size="sm" className="gap-2">
             <Link to="/atendimento"><HeartHandshake className="h-4 w-4" /> Ir para atendimento</Link>
           </Button>
@@ -85,10 +100,10 @@ function FamiliaDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem className="gap-2">
+              <DropdownMenuItem className="gap-2" onSelect={() => setOpenMembro(true)}>
                 <Plus className="h-4 w-4" /> Adicionar membro familiar
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2">
+              <DropdownMenuItem className="gap-2" onSelect={() => setOpenObs(true)}>
                 <ClipboardList className="h-4 w-4" /> Registrar observação
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -96,6 +111,10 @@ function FamiliaDetail() {
         </div>
       }
     >
+      <EditarFamiliaDialog open={openEditar} onOpenChange={setOpenEditar} familia={familia} />
+      <AdicionarAssistidoDialog open={openAssistido} onOpenChange={setOpenAssistido} familia={familia} />
+      <AdicionarMembroDialog open={openMembro} onOpenChange={setOpenMembro} familia={familia} />
+      <RegistrarObservacaoDialog open={openObs} onOpenChange={setOpenObs} familia={familia} />
       <div className="space-y-6">
         <Card>
           <CardContent className="p-6">
@@ -146,8 +165,8 @@ function FamiliaDetail() {
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
           <SummaryCard label="Moradores" value={String(familia.moradores ?? 0)} />
-          <SummaryCard label="Assistidos" value="0" />
-          <SummaryCard label="Membros familiares" value="0" />
+          <SummaryCard label="Assistidos" value={String(assistidos.length)} />
+          <SummaryCard label="Membros familiares" value={String(membros.length)} />
           <SummaryCard label="Crianças" value={String(familia.criancas ?? 0)} />
           <SummaryCard label="Idosos" value={String(familia.idosos ?? 0)} />
           <SummaryCard label="Gestantes" value={String(familia.gestantes ?? 0)} />
@@ -167,17 +186,60 @@ function FamiliaDetail() {
 
           <TabsContent value="assistidos">
             <Card>
-              <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Nenhum assistido vinculado.
-              </CardContent>
+              {assistidos.length === 0 ? (
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum assistido vinculado.</CardContent>
+              ) : (
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Nome</TableHead><TableHead>CPF/RG</TableHead>
+                      <TableHead>Tipo</TableHead><TableHead>Benefício</TableHead>
+                      <TableHead>Status</TableHead><TableHead>PCD</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {assistidos.map((a) => (
+                        <TableRow key={a.id}>
+                          <TableCell className="text-sm">{a.nome}</TableCell>
+                          <TableCell className="text-sm">{a.documento}</TableCell>
+                          <TableCell className="text-sm">{a.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"}</TableCell>
+                          <TableCell className="text-sm">{a.beneficio}</TableCell>
+                          <TableCell className="text-sm capitalize">{a.status}</TableCell>
+                          <TableCell className="text-sm">{a.pcd ? "Sim" : "Não"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              )}
             </Card>
           </TabsContent>
 
           <TabsContent value="membros">
             <Card>
-              <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Nenhum membro vinculado.
-              </CardContent>
+              {membros.length === 0 ? (
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum membro vinculado.</CardContent>
+              ) : (
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Nome</TableHead><TableHead>Parentesco</TableHead>
+                      <TableHead>Doc.</TableHead><TableHead>Marcadores</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {membros.map((m) => (
+                        <TableRow key={m.id}>
+                          <TableCell className="text-sm">{m.nome}</TableCell>
+                          <TableCell className="text-sm">{m.parentesco}</TableCell>
+                          <TableCell className="text-sm">{m.documento || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {[m.crianca && "Criança", m.idoso && "Idoso", m.gestante && "Gestante", m.pcd && "PCD"].filter(Boolean).join(" · ") || "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              )}
             </Card>
           </TabsContent>
 
@@ -201,11 +263,25 @@ function FamiliaDetail() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Observações sociais</CardTitle>
-                <Button size="sm" variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Nova observação</Button>
+                <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenObs(true)}><Plus className="h-4 w-4" /> Nova observação</Button>
               </CardHeader>
-              <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Nenhuma observação social registrada.
-              </CardContent>
+              {observacoes.length === 0 ? (
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma observação social registrada.</CardContent>
+              ) : (
+                <CardContent className="space-y-3">
+                  {observacoes.map((o) => (
+                    <div key={o.id} className="rounded-md border p-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <Badge variant="outline">{o.tipo}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(o.data).toLocaleString("pt-BR")} · {o.usuario}
+                        </span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{o.texto}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              )}
             </Card>
           </TabsContent>
         </Tabs>

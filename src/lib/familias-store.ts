@@ -5,6 +5,46 @@ export type FamiliaStatus = "liberado" | "bloqueado" | "inativo" | "avaliar";
 export type TipoCadastro = "definitivo" | "extra";
 export type Acompanhamento = "em_dia" | "atencao_45" | "atencao_60" | "sem_retirada_90" | "inativo";
 
+export type Assistido = {
+  id: string;
+  familiaId: number;
+  nome: string;
+  documento: string;
+  telefone?: string;
+  nascimento?: string;
+  tipoCadastro: TipoCadastro;
+  beneficio: string;
+  status: "ativo" | "inativo" | "bloqueado";
+  pcd: boolean;
+  observacoes?: string;
+  origemMembroId?: string;
+};
+
+export type Membro = {
+  id: string;
+  familiaId: number;
+  nome: string;
+  parentesco: string;
+  documento?: string;
+  telefone?: string;
+  nascimento?: string;
+  crianca: boolean;
+  idoso: boolean;
+  gestante: boolean;
+  pcd: boolean;
+  observacoes?: string;
+  assistidoId?: string;
+};
+
+export type Observacao = {
+  id: string;
+  familiaId: number;
+  tipo: "Social" | "Atendimento" | "Documento" | "Endereço" | "Saúde/PCD" | "Outro";
+  texto: string;
+  data: string;
+  usuario: string;
+};
+
 export type Familia = {
   id: number;
   nome: string;
@@ -43,24 +83,64 @@ const SEED: Familia[] = [
 
 type State = {
   familias: Familia[];
+  assistidos: Assistido[];
+  membros: Membro[];
+  observacoes: Observacao[];
   add: (f: Omit<Familia, "id">) => Familia;
+  update: (id: number, patch: Partial<Omit<Familia, "id">>) => void;
   existsDocumento: (doc: string) => boolean;
+  existsAssistidoDoc: (doc: string) => boolean;
+  addAssistido: (a: Omit<Assistido, "id">) => Assistido;
+  addMembro: (m: Omit<Membro, "id">) => Membro;
+  addObservacao: (o: Omit<Observacao, "id" | "data" | "usuario"> & { usuario?: string }) => Observacao;
 };
 
 export const useFamilias = create<State>()(
   persist(
     (set, get) => ({
       familias: SEED,
+      assistidos: [],
+      membros: [],
+      observacoes: [],
       add: (f) => {
         const id = Math.max(0, ...get().familias.map((x) => x.id)) + 1;
         const nova: Familia = { ...f, id };
         set((s) => ({ familias: [nova, ...s.familias] }));
         return nova;
       },
+      update: (id, patch) =>
+        set((s) => ({
+          familias: s.familias.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+        })),
       existsDocumento: (doc) => {
         const norm = doc.replace(/\D/g, "");
         if (!norm) return false;
         return get().familias.some((x) => x.documento.replace(/\D/g, "") === norm);
+      },
+      existsAssistidoDoc: (doc) => {
+        const norm = doc.replace(/\D/g, "");
+        if (!norm) return false;
+        return get().assistidos.some((x) => x.documento.replace(/\D/g, "") === norm);
+      },
+      addAssistido: (a) => {
+        const novo: Assistido = { ...a, id: crypto.randomUUID() };
+        set((s) => ({ assistidos: [novo, ...s.assistidos] }));
+        return novo;
+      },
+      addMembro: (m) => {
+        const novo: Membro = { ...m, id: crypto.randomUUID() };
+        set((s) => ({ membros: [novo, ...s.membros] }));
+        return novo;
+      },
+      addObservacao: (o) => {
+        const novo: Observacao = {
+          ...o,
+          id: crypto.randomUUID(),
+          data: new Date().toISOString(),
+          usuario: o.usuario ?? "operador",
+        };
+        set((s) => ({ observacoes: [novo, ...s.observacoes] }));
+        return novo;
       },
     }),
     { name: "seac.familias.v1" },
