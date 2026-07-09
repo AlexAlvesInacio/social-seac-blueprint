@@ -112,49 +112,41 @@ function AtendimentoPage() {
   const isAdmin = true;
 
   const [query, setQuery] = useState("");
-  type Scenario =
-    | "sem_busca"
-    | "padrao"
-    | "extra"
-    | "bloqueio25"
-    | "sem_estoque"
-    | "nao_encontrado";
-  const [scenario, setScenario] = useState<Scenario>("sem_busca");
+  type SearchResult =
+    | { status: "idle" }
+    | { status: "invalid" }
+    | { status: "found"; assistido: Assistido }
+    | { status: "not_found" };
+  const [result, setResult] = useState<SearchResult>({ status: "idle" });
 
-  const scenarios: { key: Scenario; label: string }[] = [
-    { key: "sem_busca", label: "Sem busca" },
-    { key: "padrao", label: "Definitivo — Cesta Padrão" },
-    { key: "extra", label: "Extra — em avaliação" },
-    { key: "bloqueio25", label: "Bloqueado 25 dias" },
-    { key: "sem_estoque", label: "Sem estoque" },
-    { key: "nao_encontrado", label: "Não encontrado" },
-  ];
+  const normalize = (s: string) => s.toLowerCase().trim();
+  const onlyDigits = (s: string) => s.replace(/\D/g, "");
 
-  const assistidoDoCenario = useMemo<Assistido | null>(() => {
-    switch (scenario) {
-      case "padrao":
-        return MOCK_ASSISTIDOS[0];
-      case "extra":
-        return MOCK_ASSISTIDOS[1];
-      case "bloqueio25":
-        return MOCK_ASSISTIDOS[2];
-      case "sem_estoque":
-        return MOCK_ASSISTIDOS[3];
-      default:
-        return null;
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (q.length < 3) {
+      setResult({ status: "invalid" });
+      return;
     }
-  }, [scenario]);
+    const qNorm = normalize(q);
+    const qDigits = onlyDigits(q);
+    const match = MOCK_ASSISTIDOS.find((a) => {
+      const nameHit = normalize(a.nome).includes(qNorm);
+      const docHit =
+        qDigits.length >= 3 && onlyDigits(a.documento).includes(qDigits);
+      const telHit =
+        qDigits.length >= 3 && onlyDigits(a.telefone).includes(qDigits);
+      return nameHit || docHit || telHit;
+    });
+    setResult(match ? { status: "found", assistido: match } : { status: "not_found" });
+  };
 
   return (
     <AppShell title="Atendimento — Busca e entrega">
       <Card>
         <CardContent className="p-4">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-            }}
-            className="flex flex-col gap-2 sm:flex-row"
-          >
+          <form onSubmit={handleSearch} className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -170,39 +162,24 @@ function AtendimentoPage() {
               </Button>
             </div>
           </form>
-          <p className="mt-2 text-xs text-muted-foreground">Digite pelo menos 3 caracteres para buscar.</p>
+          <p
+            className={
+              "mt-2 text-xs " +
+              (result.status === "invalid"
+                ? "text-destructive"
+                : "text-muted-foreground")
+            }
+          >
+            Digite pelo menos 3 caracteres para buscar.
+          </p>
         </CardContent>
       </Card>
 
-      <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-900">
-        <span className="font-medium">Demonstração visual:</span> selecione abaixo um cenário possível após a busca. Só um cenário acontece por vez em uso real.
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1 border-b border-border">
-        {scenarios.map((s) => {
-          const active = s.key === scenario;
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setScenario(s.key)}
-              className={
-                "-mb-px border-b-2 px-3 py-2 text-sm transition-colors " +
-                (active
-                  ? "border-primary font-medium text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground")
-              }
-            >
-              {s.label}
-            </button>
-          );
-        })}
-      </div>
-
       <div className="mt-4">
-        {scenario === "sem_busca" && <EmptyState />}
-        {scenario === "nao_encontrado" && <NaoEncontradoState />}
-        {assistidoDoCenario && (
-          <ResultadoAssistido assistido={assistidoDoCenario} isAdmin={isAdmin} />
+        {(result.status === "idle" || result.status === "invalid") && <EmptyState />}
+        {result.status === "not_found" && <NaoEncontradoState />}
+        {result.status === "found" && (
+          <ResultadoAssistido assistido={result.assistido} isAdmin={isAdmin} />
         )}
       </div>
 
