@@ -34,7 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   verificarElegibilidadeAtendimento,
@@ -642,6 +642,17 @@ function Bloqueio25Action({
 }) {
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
+
+  useEffect(() => {
+    registrarAuditoria({
+      usuario: "Administrador",
+      acao: "Tentativa bloqueada por prazo",
+      modulo: "Atendimento",
+      registro: assistido.nome,
+      observacao: `Faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"} — próxima ${proximaData}.`,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const liberar = () => {
     if (motivo.trim().length < 5) {
