@@ -53,17 +53,43 @@ function FamiliaDetail() {
     () => allObs.filter((o) => String(o.familiaId) === id), [allObs, id],
   );
   const contagens = useMemo(() => {
-    let criancas = 0, adolescentes = 0, idosos = 0, gestantes = 0, pcd = 0;
-    for (const m of membros) {
-      const faixa = calcularFaixaEtaria(m.nascimento);
+    const assistidosAtivos = assistidos.filter((a) => a.status === "ativo");
+    type Pessoa = { documento?: string; nascimento?: string; pcd?: boolean; gestante?: boolean };
+    const pessoas: Pessoa[] = [
+      ...assistidosAtivos.map((a) => ({
+        documento: a.documento, nascimento: a.nascimento, pcd: a.pcd, gestante: false,
+      })),
+      ...membros.map((m) => ({
+        documento: m.documento, nascimento: m.nascimento, pcd: m.pcd, gestante: m.gestante,
+      })),
+    ];
+    const vistos = new Set<string>();
+    const unicos: Pessoa[] = [];
+    for (const p of pessoas) {
+      const chave = (p.documento ?? "").replace(/\D/g, "");
+      if (chave) {
+        if (vistos.has(chave)) continue;
+        vistos.add(chave);
+      }
+      unicos.push(p);
+    }
+    let criancas = 0, adolescentes = 0, adultos = 0, idosos = 0, gestantes = 0, pcd = 0;
+    for (const p of unicos) {
+      const faixa = calcularFaixaEtaria(p.nascimento);
       if (faixa === "crianca") criancas++;
       else if (faixa === "adolescente") adolescentes++;
+      else if (faixa === "adulto") adultos++;
       else if (faixa === "idoso") idosos++;
-      if (m.gestante) gestantes++;
-      if (m.pcd) pcd++;
+      if (p.gestante) gestantes++;
+      if (p.pcd) pcd++;
     }
-    return { criancas, adolescentes, idosos, gestantes, pcd };
-  }, [membros]);
+    return {
+      moradores: unicos.length,
+      assistidosAtivos: assistidosAtivos.length,
+      membrosAtivos: membros.length,
+      criancas, adolescentes, adultos, idosos, gestantes, pcd,
+    };
+  }, [assistidos, membros]);
   const [openEditar, setOpenEditar] = useState(false);
   const [openAssistido, setOpenAssistido] = useState(false);
   const [openMembro, setOpenMembro] = useState(false);
@@ -158,9 +184,10 @@ function FamiliaDetail() {
                   <Info label="UF" value={familia.uf || "—"} />
                   <Info label="CEP" value={familia.cep || "—"} />
                   <Info label="Telefone / WhatsApp" value={familia.telefone || "—"} />
-                  <Info label="Moradores" value={String(familia.moradores ?? 0)} />
+                  <Info label="Moradores" value={String(contagens.moradores)} />
                   <Info label="Crianças" value={String(contagens.criancas)} />
                   <Info label="Adolescentes" value={String(contagens.adolescentes)} />
+                  <Info label="Adultos" value={String(contagens.adultos)} />
                   <Info label="Idosos" value={String(contagens.idosos)} />
                   <Info label="Gestantes" value={String(contagens.gestantes)} />
                   <Info label="PCD" value={String(contagens.pcd)} />
@@ -186,15 +213,16 @@ function FamiliaDetail() {
           </Card>
         )}
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
-          <SummaryCard label="Moradores" value={String(familia.moradores ?? 0)} />
-          <SummaryCard label="Assistidos" value={String(assistidos.length)} />
-          <SummaryCard label="Membros familiares" value={String(membros.length)} />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10">
+          <SummaryCard label="Moradores" value={String(contagens.moradores)} />
+          <SummaryCard label="Assistidos" value={String(contagens.assistidosAtivos)} />
+          <SummaryCard label="Membros familiares" value={String(contagens.membrosAtivos)} />
           <SummaryCard label="Crianças" value={String(contagens.criancas)} />
+          <SummaryCard label="Adolescentes" value={String(contagens.adolescentes)} />
+          <SummaryCard label="Adultos" value={String(contagens.adultos)} />
           <SummaryCard label="Idosos" value={String(contagens.idosos)} />
           <SummaryCard label="Gestantes" value={String(contagens.gestantes)} />
           <SummaryCard label="PCD" value={String(contagens.pcd)} />
-          <SummaryCard label="Última retirada" value={familia.ultimaRetirada || "—"} />
           <SummaryCard label="Acompanhamento" value={familia.acompanhamento === "em_dia" ? "Em dia" : "—"} tone="success" />
         </div>
 
