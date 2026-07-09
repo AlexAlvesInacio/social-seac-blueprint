@@ -419,12 +419,16 @@ function PersonCard({
   progresso,
   ultimaRetirada,
   proximaData,
+  acompanhamento,
+  params,
 }: {
   assistido: Assistido;
   tipo: "padrao" | "extra";
   progresso?: number;
   ultimaRetirada: string;
   proximaData: string;
+  acompanhamento: "em_dia" | "atencao_45" | "contato_90";
+  params: ReturnType<typeof useParametros.getState>["params"];
 }) {
   const isExtra = tipo === "extra";
   return (
@@ -451,6 +455,21 @@ function PersonCard({
             </Badge>
           )}
         </div>
+
+        {acompanhamento !== "em_dia" && (
+          <div
+            className={
+              "mt-3 rounded-md border p-3 text-xs " +
+              (acompanhamento === "contato_90"
+                ? "border-destructive/30 bg-destructive/5 text-destructive"
+                : "border-amber-300 bg-amber-50 text-amber-800")
+            }
+          >
+            {acompanhamento === "contato_90"
+              ? `Contato necessário por inatividade — sem retirada há ${params.inatividadeContatoDias} dias ou mais.`
+              : `Atenção: sem retirada há ${params.alertaLiberadoSemRetiradaDias} dias ou mais.`}
+          </div>
+        )}
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
           <Info label="Documento" value={assistido.documento} />
