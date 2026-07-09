@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { useAuditoria } from "@/lib/auditoria-store";
 
 export const Route = createFileRoute("/auditoria")({
   head: () => ({ meta: [{ title: "Auditoria — SEAC Social" }] }),
@@ -17,17 +19,62 @@ export const Route = createFileRoute("/auditoria")({
 });
 
 function AuditoriaPage() {
+  const eventos = useAuditoria((s) => s.eventos);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [usuario, setUsuario] = useState("all");
+  const [acao, setAcao] = useState("all");
+  const [modulo, setModulo] = useState("all");
+
+  const usuarios = useMemo(() => Array.from(new Set(eventos.map((e) => e.usuario))), [eventos]);
+  const acoes = useMemo(() => Array.from(new Set(eventos.map((e) => e.acao))), [eventos]);
+  const modulos = useMemo(() => Array.from(new Set(eventos.map((e) => e.modulo))), [eventos]);
+
+  const filtered = useMemo(() => eventos.filter((e) => {
+    if (de && e.datahora.slice(0, 10) < de) return false;
+    if (ate && e.datahora.slice(0, 10) > ate) return false;
+    if (usuario !== "all" && e.usuario !== usuario) return false;
+    if (acao !== "all" && e.acao !== acao) return false;
+    if (modulo !== "all" && e.modulo !== modulo) return false;
+    return true;
+  }), [eventos, de, ate, usuario, acao, modulo]);
+
   return (
     <AppShell title="Histórico de ações">
       <p className="mb-3 text-sm text-muted-foreground">Registro de atividades realizadas no sistema.</p>
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-5">
-          <F label="Período de"><Input type="date" /></F>
-          <F label="até"><Input type="date" /></F>
-          <F label="Usuário"><Select><SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem></SelectContent></Select></F>
-          <F label="Tipo de ação"><Select><SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem></SelectContent></Select></F>
-          <F label="Módulo"><Select><SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem></SelectContent></Select></F>
-          <div className="md:col-span-5 flex justify-end"><Button>Buscar</Button></div>
+          <F label="Período de"><Input type="date" value={de} onChange={(e) => setDe(e.target.value)} /></F>
+          <F label="até"><Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></F>
+          <F label="Usuário">
+            <Select value={usuario} onValueChange={setUsuario}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos</SelectItem>
+                {usuarios.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </F>
+          <F label="Tipo de ação">
+            <Select value={acao} onValueChange={setAcao}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos</SelectItem>
+                {acoes.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </F>
+          <F label="Módulo">
+            <Select value={modulo} onValueChange={setModulo}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos</SelectItem>
+                {modulos.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </F>
+          <div className="md:col-span-5 flex justify-end">
+            <Button variant="outline" onClick={() => { setDe(""); setAte(""); setUsuario("all"); setAcao("all"); setModulo("all"); }}>Limpar filtros</Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -45,7 +92,19 @@ function AuditoriaPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow><TableCell colSpan={6} className="py-16 text-center text-sm text-muted-foreground">Nenhum evento registrado.</TableCell></TableRow>
+              {mounted && filtered.map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell className="whitespace-nowrap text-xs">{new Date(e.datahora).toLocaleString("pt-BR")}</TableCell>
+                  <TableCell className="text-sm">{e.usuario}</TableCell>
+                  <TableCell className="text-sm">{e.acao}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{e.modulo}</TableCell>
+                  <TableCell className="text-sm">{e.registro}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{e.observacao ?? "—"}</TableCell>
+                </TableRow>
+              ))}
+              {mounted && filtered.length === 0 && (
+                <TableRow><TableCell colSpan={6} className="py-16 text-center text-sm text-muted-foreground">Nenhum evento registrado.</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

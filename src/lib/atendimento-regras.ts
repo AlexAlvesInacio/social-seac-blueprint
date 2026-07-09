@@ -70,14 +70,17 @@ export function verificarElegibilidadeAtendimento(
   assistido: AssistidoRegra,
   estoque: EstoqueBeneficio,
   hojeISO: string = new Date().toISOString().slice(0, 10),
+  overrides?: { intervaloMinimoDias?: number; limiteExtra?: number },
 ): Elegibilidade {
+  const intervaloMinimo = overrides?.intervaloMinimoDias ?? INTERVALO_MINIMO_DIAS;
+  const limiteExtra = overrides?.limiteExtra ?? LIMITE_RETIRADAS_EXTRA;
   const beneficio: "Cesta Padrão" | "Cesta Extra" =
     assistido.tipoCadastro === "definitivo" ? "Cesta Padrão" : "Cesta Extra";
 
   // 1) Extra que já completou 3 retiradas: aguardar avaliação, não entrega.
   if (
     assistido.tipoCadastro === "extra" &&
-    assistido.retiradasExtras >= LIMITE_RETIRADAS_EXTRA
+    assistido.retiradasExtras >= limiteExtra
   ) {
     return { cenario: "extra_completou", beneficio: "Cesta Extra" };
   }
@@ -86,7 +89,7 @@ export function verificarElegibilidadeAtendimento(
   if (assistido.ultimaRetiradaISO) {
     const proximaDataISO = addDays(
       assistido.ultimaRetiradaISO,
-      INTERVALO_MINIMO_DIAS,
+      intervaloMinimo,
     );
     const diasRestantes = diffDays(hojeISO, proximaDataISO);
     if (diasRestantes > 0) {
@@ -111,7 +114,7 @@ export function verificarElegibilidadeAtendimento(
     return { cenario: "liberado_padrao", beneficio: "Cesta Padrão" };
   }
   const progresso = Math.min(
-    LIMITE_RETIRADAS_EXTRA,
+    limiteExtra,
     assistido.retiradasExtras + 1,
   ) as 1 | 2 | 3;
   return { cenario: "liberado_extra", beneficio: "Cesta Extra", progresso };
