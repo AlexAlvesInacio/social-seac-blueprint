@@ -29,6 +29,7 @@ export type Membro = {
   telefone?: string;
   nascimento?: string;
   crianca: boolean;
+  adolescente: boolean;
   idoso: boolean;
   gestante: boolean;
   pcd: boolean;
@@ -128,7 +129,14 @@ export const useFamilias = create<State>()(
         return novo;
       },
       addMembro: (m) => {
-        const novo: Membro = { ...m, id: crypto.randomUUID() };
+        const faixa = calcularFaixaEtaria(m.nascimento);
+        const novo: Membro = {
+          ...m,
+          id: crypto.randomUUID(),
+          crianca: faixa === "crianca",
+          adolescente: faixa === "adolescente",
+          idoso: faixa === "idoso",
+        };
         set((s) => ({ membros: [novo, ...s.membros] }));
         return novo;
       },
