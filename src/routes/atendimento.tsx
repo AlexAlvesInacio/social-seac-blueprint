@@ -229,32 +229,83 @@ function AtendimentoPage() {
 /* ---------- Resultado ---------- */
 
 function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
-  const s = assistido.situacao;
+  // Aplica a lógica central de regras oficiais (REGRAS_ATENDIMENTO_SEAC.md).
+  const el = verificarElegibilidadeAtendimento(assistido, ESTOQUE);
   const tipo: "padrao" | "extra" =
-    s.kind === "padrao_liberado" || s.kind === "bloqueio25" ? "padrao" : "extra";
-  const progresso =
-    s.kind === "extra_liberado" ? s.progresso : s.kind === "extra_completou" ? 3 : undefined;
-
-  const beneficio: "Cesta Padrão" | "Cesta Extra" = tipo === "padrao" ? "Cesta Padrão" : "Cesta Extra";
+    assistido.tipoCadastro === "definitivo" ? "padrao" : "extra";
+  const progressoAtual =
+    el.cenario === "liberado_extra"
+      ? el.progresso
+      : assistido.tipoCadastro === "extra"
+        ? (Math.min(3, assistido.retiradasExtras) as 1 | 2 | 3)
+        : undefined;
+  const proximaData =
+    el.cenario === "bloqueio_25dias"
+      ? formatBR(el.proximaDataISO)
+      : assistido.ultimaRetiradaISO
+        ? formatBR(
+            new Date(
+              new Date(assistido.ultimaRetiradaISO + "T00:00:00").getTime() +
+                25 * 24 * 60 * 60 * 1000,
+            )
+              .toISOString()
+              .slice(0, 10),
+          )
+        : "—";
 
   return (
     <ScenarioLayout
-      person={<PersonCard assistido={assistido} tipo={tipo} progresso={progresso} />}
-      action={
-        s.kind === "padrao_liberado" ? (
-          <LiberadoAction assistido={assistido} beneficio="Cesta Padrão" />
-        ) : s.kind === "extra_liberado" ? (
-          <LiberadoAction assistido={assistido} beneficio="Cesta Extra" progresso={s.progresso} />
-        ) : s.kind === "extra_completou" ? (
-          <LiberadoAction assistido={assistido} beneficio={beneficio} progresso={3} />
-        ) : s.kind === "bloqueio25" ? (
-          <Bloqueio25Action assistido={assistido} isAdmin={isAdmin} />
-        ) : (
-          <SemEstoqueAction assistido={assistido} />
-        )
+      person={
+        <PersonCard
+          assistido={assistido}
+          tipo={tipo}
+          progresso={progressoAtual}
+          ultimaRetirada={formatBR(assistido.ultimaRetiradaISO)}
+          proximaData={proximaData}
+        />
       }
+      action={renderAcao(el, assistido, isAdmin, proximaData)}
     />
   );
+}
+
+function renderAcao(
+  el: Elegibilidade,
+  assistido: Assistido,
+  isAdmin: boolean,
+  proximaData: string,
+) {
+  switch (el.cenario) {
+    case "liberado_padrao":
+      return <LiberadoAction assistido={assistido} beneficio="Cesta Padrão" />;
+    case "liberado_extra":
+      return (
+        <LiberadoAction
+          assistido={assistido}
+          beneficio="Cesta Extra"
+          progresso={el.progresso === 3 ? 2 : el.progresso}
+        />
+      );
+    case "extra_completou":
+      return (
+        <LiberadoAction
+          assistido={assistido}
+          beneficio="Cesta Extra"
+          progresso={3}
+        />
+      );
+    case "bloqueio_25dias":
+      return (
+        <Bloqueio25Action
+          assistido={assistido}
+          isAdmin={isAdmin}
+          proximaData={proximaData}
+          diasRestantes={el.diasRestantes}
+        />
+      );
+    case "bloqueio_estoque":
+      return <SemEstoqueAction assistido={assistido} />;
+  }
 }
 
 function ScenarioLayout({ person, action }: { person: React.ReactNode; action: React.ReactNode }) {
@@ -325,10 +376,14 @@ function PersonCard({
   assistido,
   tipo,
   progresso,
+  ultimaRetirada,
+  proximaData,
 }: {
   assistido: Assistido;
   tipo: "padrao" | "extra";
   progresso?: number;
+  ultimaRetirada: string;
+  proximaData: string;
 }) {
   const isExtra = tipo === "extra";
   return (
@@ -361,8 +416,8 @@ function PersonCard({
           <Info label="Família" value={assistido.familia} />
           <Info label="Telefone" value={assistido.telefone} />
           <Info label="Endereço" value={assistido.endereco} />
-          <Info label="Última retirada" value={assistido.ultimaRetirada} />
-          <Info label="Próxima data permitida" value={assistido.proximaData} />
+          <Info label="Última retirada" value={ultimaRetirada} />
+          <Info label="Próxima data permitida" value={proximaData} />
         </div>
 
         <div className="mt-5">
@@ -499,7 +554,17 @@ function LiberadoAction({
   );
 }
 
-function Bloqueio25Action({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
+function Bloqueio25Action({
+  assistido,
+  isAdmin,
+  proximaData,
+  diasRestantes,
+}: {
+  assistido: Assistido;
+  isAdmin: boolean;
+  proximaData: string;
+  diasRestantes: number;
+}) {
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
 
@@ -519,7 +584,7 @@ function Bloqueio25Action({ assistido, isAdmin }: { assistido: Assistido; isAdmi
         variant="warn"
         icon={<Clock className="h-5 w-5" />}
         title="Bloqueado antes dos 25 dias"
-        text={`Próxima data permitida em ${assistido.proximaData}.`}
+        text={`Próxima data permitida em ${proximaData} — faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"}.`}
         action={
           <div className="space-y-2">
             <div className="rounded-md border border-amber-200 bg-background p-3 text-sm">
