@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -38,10 +38,20 @@ export const Route = createFileRoute("/familias/$id")({
 
 function FamiliaDetail() {
   const { id } = Route.useParams();
-  const familia = useFamilias((s) => s.familias.find((f) => String(f.id) === id));
-  const assistidos = useFamilias((s) => s.assistidos.filter((a) => String(a.familiaId) === id));
-  const membros = useFamilias((s) => s.membros.filter((m) => String(m.familiaId) === id));
-  const observacoes = useFamilias((s) => s.observacoes.filter((o) => String(o.familiaId) === id));
+  const familias = useFamilias((s) => s.familias);
+  const allAssistidos = useFamilias((s) => s.assistidos);
+  const allMembros = useFamilias((s) => s.membros);
+  const allObs = useFamilias((s) => s.observacoes);
+  const familia = useMemo(() => familias.find((f) => String(f.id) === id), [familias, id]);
+  const assistidos = useMemo(
+    () => allAssistidos.filter((a) => String(a.familiaId) === id), [allAssistidos, id],
+  );
+  const membros = useMemo(
+    () => allMembros.filter((m) => String(m.familiaId) === id), [allMembros, id],
+  );
+  const observacoes = useMemo(
+    () => allObs.filter((o) => String(o.familiaId) === id), [allObs, id],
+  );
   const [openEditar, setOpenEditar] = useState(false);
   const [openAssistido, setOpenAssistido] = useState(false);
   const [openMembro, setOpenMembro] = useState(false);

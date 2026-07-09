@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -158,7 +158,11 @@ export function AdicionarAssistidoDialog({
   const addAssistido = useFamilias((s) => s.addAssistido);
   const addMembro = useFamilias((s) => s.addMembro);
   const existsAssistidoDoc = useFamilias((s) => s.existsAssistidoDoc);
-  const membros = useFamilias((s) => s.membros.filter((m) => m.familiaId === familia.id));
+  const allMembros = useFamilias((s) => s.membros);
+  const membros = useMemo(
+    () => allMembros.filter((m) => m.familiaId === familia.id),
+    [allMembros, familia.id],
+  );
   const [form, setForm] = useState(assistidoEmpty);
   const [erros, setErros] = useState<Record<string, string>>({});
 
