@@ -1,27 +1,26 @@
-## Refinar /familias — remover coluna Ações, adicionar seleção e barra de ações
+# Substituir ícone de coração pelo logo SEAC
 
-Arquivo único: `src/routes/familias.index.tsx` (nenhuma outra tela é tocada).
+O ícone `Heart` (coração) usado como logo da marca aparece em 2 lugares:
 
-### Mudanças
+1. **Sidebar** (`src/components/app-sidebar.tsx`, linha 86) — quadradinho verde com coração no topo do menu lateral, ao lado de "SEAC Social".
+2. **Tela de login** (`src/routes/auth.tsx`, linha 30) — quadradinho verde com coração acima do título "Acesse o SEAC Social".
 
-1. **Estado local de seleção** — `const [selectedId, setSelectedId] = useState<number | null>(null)`. Seleção única.
+Observação: os ícones `HandHeart` e `HeartHandshake` NÃO serão alterados — eles representam ações (Atendimento, Doações) e não a marca.
 
-2. **Coluna de seleção (checkbox)** — nova primeira coluna estreita (`w-10`) com `<Checkbox>` (`@/components/ui/checkbox`). Marcar troca `selectedId`; clicar em outra desmarca a anterior. Linha selecionada recebe fundo suave (`bg-muted/40`).
+## Passos
 
-3. **Nome da família clicável** — envolver o nome em `<Link to="/familias/$id" params={{ id: String(familia.id) }}>` com estilo de link discreto (hover underline, cor `text-foreground`). Remover a linha `ID: {familia.id}`.
+1. Fazer upload do logo SEAC (image-5.png — casinha com famílias e "SEAC") como asset CDN via `lovable-assets`, salvando em `src/assets/seac-logo.png.asset.json`.
+2. Em `src/components/app-sidebar.tsx`:
+   - Substituir o bloco `<div className="...bg-primary..."><Heart /></div>` por `<img src={seacLogo.url} alt="SEAC Social" />` mantendo o mesmo tamanho (~40px) e cantos arredondados, sem fundo verde (o logo já tem identidade própria).
+   - Remover import `Heart`.
+3. Em `src/routes/auth.tsx`:
+   - Substituir o bloco `<div className="...bg-primary..."><Heart /></div>` acima do título por `<img src={seacLogo.url} alt="SEAC Social" />` com tamanho ~56px.
+   - Remover import `Heart`.
 
-4. **Remover coluna Ações** e remover as duas linhas de botões dentro de cada `<TableRow>`.
+## O que NÃO muda
 
-5. **Colunas finais visíveis** (10): seleção · Nome · Responsável · CPF/RG · Telefone · Bairro · Tipo de cadastro · Progresso Extra · Acompanhamento · Status. Sem "Última retirada"/"Próxima data permitida" como colunas — texto pequeno já vive dentro de "Acompanhamento" (mantido).
+- Layout, cores, tipografia, cards, textos e demais ícones.
+- A imagem grande do SEAC no lado direito da tela de login continua igual.
+- `HandHeart` no menu (Atendimento) e `HeartHandshake` em Doações/Configurações/Famílias permanecem.
 
-6. **Barra de ações da família selecionada** — renderizada **acima da tabela** (dentro do mesmo Card, antes da `<Table>`, ou como Card próprio logo acima) apenas quando `selectedId !== null`:
-   - Texto: `Família selecionada: <Nome>`.
-   - Botões: **Ver detalhes** (link para `/familias/$id`), **Ir para atendimento** (link `/atendimento` — desabilitado se `status === "inativo"`), **Avaliar cadastro definitivo** (variant `warning`, só quando `progressoExtra === "3/3"`), **Registrar observação** (variant `ghost`, discreto).
-   - Fecha com um botão pequeno "Limpar seleção".
-
-7. **Layout** — manter `min-w-0` já aplicado no shell. Reduzir `min-w` da tabela para `min-w-[900px]` já que não há mais coluna Ações. `overflow-x-auto` no wrapper permanece, garantindo rolagem só dentro do card.
-
-8. **Cards de resumo, badges e mensagem informativa** — sem alteração (grid já responsivo, cores já corretas).
-
-### Fora do escopo
-Banco, Supabase, lógica real, outras telas, `AppShell` (já corrigido em turno anterior).
+Confirma que quer aplicar assim?
