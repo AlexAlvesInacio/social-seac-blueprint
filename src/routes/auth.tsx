@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Heart, Mail, Lock, Eye, ShoppingBasket, Utensils, Baby, Shirt, Palette, HandHeart } from "lucide-react";
+import { Mail, Lock, Eye, ShoppingBasket, Utensils, Baby, Shirt, Palette, HandHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import seacBrand from "@/assets/seac-brand.jpeg.asset.json";
+import seacLogo from "@/assets/seac-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -26,9 +27,11 @@ function AuthPage() {
           <Card className="w-full max-w-md border-border/60 shadow-lg">
             <CardContent className="p-8">
             <div className="mb-6 flex flex-col items-center gap-3 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                <Heart className="h-7 w-7" strokeWidth={2.5} />
-              </div>
+              <img
+                src={seacLogo.url}
+                alt="SEAC Social"
+                className="h-14 w-14 rounded-2xl object-contain"
+              />
               <div>
                 <h1 className="text-2xl font-semibold text-foreground">
                   Acesse o <span className="text-primary">SEAC Social</span>
