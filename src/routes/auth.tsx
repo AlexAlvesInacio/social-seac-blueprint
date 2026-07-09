@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Heart, Mail, Lock, Eye, ShieldCheck, Clock, UserX, ShoppingBasket, Utensils, Baby, Shirt, Palette, HandHeart } from "lucide-react";
+import { Heart, Mail, Lock, Eye, ShoppingBasket, Utensils, Baby, Shirt, Palette, HandHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,27 +74,6 @@ function AuthPage() {
                 </Link>
               </p>
             </form>
-
-              <div className="mt-6 space-y-3 border-t border-border pt-5">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Status de acesso
-                </h2>
-                <StatusRow
-                  icon={<ShieldCheck className="h-4 w-4 text-primary" />}
-                  title="Administrador"
-                  text="Acesso total ao sistema."
-                />
-                <StatusRow
-                  icon={<Clock className="h-4 w-4 text-warning" />}
-                  title="Pendente"
-                  text="Cadastro aguardando aprovação."
-                />
-                <StatusRow
-                  icon={<UserX className="h-4 w-4 text-destructive" />}
-                  title="Inativo"
-                  text="Usuário desativado."
-                />
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -133,18 +112,6 @@ function AuthPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function StatusRow({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <div className="mt-0.5">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground">{text}</p>
       </div>
     </div>
   );
