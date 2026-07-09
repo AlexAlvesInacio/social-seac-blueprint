@@ -304,14 +304,14 @@ function NaoEncontradoState() {
           <Button
             variant="outline"
             className="gap-2"
-            onClick={() => toast.success("Pré-cadastro iniciado (demonstração).")}
+            onClick={() => toast.success("Pré-cadastro iniciado.")}
           >
             <UserPlus className="h-4 w-4" /> Criar pré-cadastro
           </Button>
           <Button
             className="gap-2"
             onClick={() =>
-              toast.success("Pré-cadastro criado e Cesta Extra entregue (demonstração).")
+              toast.success("Pré-cadastro criado e Cesta Extra entregue.")
             }
           >
             <ShoppingBasket className="h-4 w-4" /> Criar pré-cadastro e entregar Cesta Extra
