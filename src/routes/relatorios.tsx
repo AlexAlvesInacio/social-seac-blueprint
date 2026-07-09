@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Users, UserRound, Truck, ShieldAlert, Package, HeartHandshake, KeyRound, Download } from "lucide-react";
+import { Users, UserRound, Truck, Package, HeartHandshake, KeyRound, Download, Clock, PackageX, AlertTriangle, PhoneCall } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,10 @@ const reports = [
   { icon: Users, title: "Famílias", desc: "Cadastros e situação das famílias." },
   { icon: UserRound, title: "Assistidos", desc: "Lista de assistidos e benefícios." },
   { icon: Truck, title: "Entregas", desc: "Entregas realizadas no período." },
-  { icon: ShieldAlert, title: "Bloqueios", desc: "Famílias ou assistidos bloqueados." },
+  { icon: Clock, title: "Retiradas bloqueadas por prazo", desc: "Tentativas antes do prazo mínimo." },
+  { icon: PackageX, title: "Retiradas bloqueadas por estoque", desc: "Tentativas sem saldo disponível." },
+  { icon: AlertTriangle, title: "Famílias em atenção 45 dias+", desc: "Liberadas e sem retirada recente." },
+  { icon: PhoneCall, title: "Famílias com contato necessário 90 dias+", desc: "Inatividade prolongada." },
   { icon: Package, title: "Estoque", desc: "Entradas, saídas e saldo." },
   { icon: HeartHandshake, title: "Doações / recebimentos", desc: "Doações recebidas e origem." },
   { icon: KeyRound, title: "Liberações excepcionais", desc: "Liberações fora do padrão." },

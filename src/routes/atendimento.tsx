@@ -34,7 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   verificarElegibilidadeAtendimento,
@@ -43,6 +43,8 @@ import {
   type EstoqueBeneficio,
   type Elegibilidade,
 } from "@/lib/atendimento-regras";
+import { useParametros } from "@/lib/config-store";
+import { registrarAuditoria } from "@/lib/auditoria-store";
 
 export const Route = createFileRoute("/atendimento")({
   head: () => ({ meta: [{ title: "Atendimento — SEAC Social" }] }),
@@ -118,6 +120,7 @@ const MOCK_ASSISTIDOS: Assistido[] = [
 function AtendimentoPage() {
   // Perfil simulado apenas para exibir a ação restrita a Administrador.
   const isAdmin = true;
+  const params = useParametros((s) => s.params);
 
   const [query, setQuery] = useState("");
   type SearchResult =
@@ -190,7 +193,7 @@ function AtendimentoPage() {
         {(result.status === "idle" || result.status === "invalid") && <EmptyState />}
         {result.status === "not_found" && <NaoEncontradoState />}
         {result.status === "found" && (
-          <ResultadoAssistido assistido={result.assistido} isAdmin={isAdmin} />
+          <ResultadoAssistido assistido={result.assistido} isAdmin={isAdmin} params={params} />
         )}
       </div>
 
@@ -233,10 +236,21 @@ function AtendimentoPage() {
 
 /* ---------- Resultado ---------- */
 
-function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
+function ResultadoAssistido({
+  assistido,
+  isAdmin,
+  params,
+}: {
+  assistido: Assistido;
+  isAdmin: boolean;
+  params: ReturnType<typeof useParametros.getState>["params"];
+}) {
   // Aplica a lógica central de regras oficiais (REGRAS_ATENDIMENTO_SEAC.md).
   const estoque: EstoqueBeneficio = { ...ESTOQUE, ...(assistido.estoqueOverride ?? {}) };
-  const el = verificarElegibilidadeAtendimento(assistido, estoque);
+  const el = verificarElegibilidadeAtendimento(assistido, estoque, undefined, {
+    intervaloMinimoDias: params.intervaloMinimoDias,
+    limiteExtra: params.limiteExtra,
+  });
   const tipo: "padrao" | "extra" =
     assistido.tipoCadastro === "definitivo" ? "padrao" : "extra";
   const progressoAtual =
@@ -252,12 +266,29 @@ function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAd
         ? formatBR(
             new Date(
               new Date(assistido.ultimaRetiradaISO + "T00:00:00").getTime() +
-                25 * 24 * 60 * 60 * 1000,
+                params.intervaloMinimoDias * 24 * 60 * 60 * 1000,
             )
               .toISOString()
               .slice(0, 10),
           )
         : "—";
+
+  // Acompanhamento por inatividade (não bloqueia entrega).
+  const diasDesdeUltima = assistido.ultimaRetiradaISO
+    ? Math.floor(
+        (Date.now() -
+          new Date(assistido.ultimaRetiradaISO + "T00:00:00").getTime()) /
+          86400000,
+      )
+    : null;
+  const acompanhamento: "em_dia" | "atencao_45" | "contato_90" =
+    diasDesdeUltima === null
+      ? "em_dia"
+      : diasDesdeUltima >= params.inatividadeContatoDias
+        ? "contato_90"
+        : diasDesdeUltima >= params.alertaLiberadoSemRetiradaDias
+          ? "atencao_45"
+          : "em_dia";
 
   return (
     <ScenarioLayout
@@ -268,9 +299,11 @@ function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAd
           progresso={progressoAtual}
           ultimaRetirada={formatBR(assistido.ultimaRetiradaISO)}
           proximaData={proximaData}
+          acompanhamento={acompanhamento}
+          params={params}
         />
       }
-      action={renderAcao(el, assistido, isAdmin, proximaData)}
+      action={renderAcao(el, assistido, isAdmin, proximaData, params)}
     />
   );
 }
@@ -280,6 +313,7 @@ function renderAcao(
   assistido: Assistido,
   isAdmin: boolean,
   proximaData: string,
+  params: ReturnType<typeof useParametros.getState>["params"],
 ) {
   switch (el.cenario) {
     case "liberado_padrao":
@@ -307,6 +341,7 @@ function renderAcao(
           isAdmin={isAdmin}
           proximaData={proximaData}
           diasRestantes={el.diasRestantes}
+          intervaloMinimoDias={params.intervaloMinimoDias}
         />
       );
     case "bloqueio_estoque":
@@ -384,12 +419,16 @@ function PersonCard({
   progresso,
   ultimaRetirada,
   proximaData,
+  acompanhamento,
+  params,
 }: {
   assistido: Assistido;
   tipo: "padrao" | "extra";
   progresso?: number;
   ultimaRetirada: string;
   proximaData: string;
+  acompanhamento: "em_dia" | "atencao_45" | "contato_90";
+  params: ReturnType<typeof useParametros.getState>["params"];
 }) {
   const isExtra = tipo === "extra";
   return (
@@ -416,6 +455,21 @@ function PersonCard({
             </Badge>
           )}
         </div>
+
+        {acompanhamento !== "em_dia" && (
+          <div
+            className={
+              "mt-3 rounded-md border p-3 text-xs " +
+              (acompanhamento === "contato_90"
+                ? "border-destructive/30 bg-destructive/5 text-destructive"
+                : "border-amber-300 bg-amber-50 text-amber-800")
+            }
+          >
+            {acompanhamento === "contato_90"
+              ? `Contato necessário por inatividade — sem retirada há ${params.inatividadeContatoDias} dias ou mais.`
+              : `Atenção: sem retirada há ${params.alertaLiberadoSemRetiradaDias} dias ou mais.`}
+          </div>
+        )}
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
           <Info label="Documento" value={assistido.documento} />
@@ -483,6 +537,19 @@ function LiberadoAction({
   const [open, setOpen] = useState(false);
 
   const confirmar = () => {
+    registrarAuditoria({
+      usuario: "Administrador",
+      acao: "Entrega realizada",
+      modulo: "Atendimento",
+      registro: `${assistido.nome} — ${beneficio}`,
+    });
+    registrarAuditoria({
+      usuario: "Sistema",
+      acao: "Baixa automática",
+      modulo: "Estoque",
+      registro: `${beneficio} (−1)`,
+      observacao: `Vinculada a ${assistido.nome} — ${assistido.familia}`,
+    });
     toast.success(`${beneficio} entregue para ${assistido.nome}.`, {
       description:
         "Registrado: assistido, família, benefício, data/hora, usuário responsável, tipo de entrega, baixa no estoque e histórico da família.",
@@ -565,37 +632,62 @@ function Bloqueio25Action({
   isAdmin,
   proximaData,
   diasRestantes,
+  intervaloMinimoDias,
 }: {
   assistido: Assistido;
   isAdmin: boolean;
   proximaData: string;
   diasRestantes: number;
+  intervaloMinimoDias: number;
 }) {
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
+
+  useEffect(() => {
+    registrarAuditoria({
+      usuario: "Administrador",
+      acao: "Tentativa bloqueada por prazo",
+      modulo: "Atendimento",
+      registro: assistido.nome,
+      observacao: `Faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"} — próxima ${proximaData}.`,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const liberar = () => {
     if (motivo.trim().length < 5) {
       toast.error("Informe o motivo da liberação excepcional.");
       return;
     }
+    registrarAuditoria({
+      usuario: "Administrador",
+      acao: "Liberação excepcional",
+      modulo: "Atendimento",
+      registro: assistido.nome,
+      observacao: motivo.trim(),
+    });
     toast.success(`Liberação excepcional registrada para ${assistido.nome}.`);
     setOpen(false);
     setMotivo("");
   };
 
+  // Registra a tentativa bloqueada por prazo na abertura da tela do bloqueio.
+  // Feita uma única vez (dentro do próprio componente montado).
+  // Auditoria acumula os eventos consultáveis em /auditoria.
   return (
     <>
       <StatusCard
         variant="warn"
         icon={<Clock className="h-5 w-5" />}
-        title="Bloqueado antes dos 25 dias"
+        title="Bloqueado antes do prazo mínimo"
         text={`Próxima data permitida em ${proximaData} — faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"}.`}
         action={
           <div className="space-y-2">
             <div className="rounded-md border border-amber-200 bg-background p-3 text-sm">
               <p className="text-xs text-muted-foreground">Motivo do bloqueio</p>
-              <p className="font-medium text-foreground">Intervalo mínimo de 25 dias não completado.</p>
+              <p className="font-medium text-foreground">
+                Intervalo mínimo de {intervaloMinimoDias} dias não completado.
+              </p>
               <p className="mt-1 text-[11px] text-muted-foreground">Vale para Cesta Extra e Cesta Padrão.</p>
             </div>
             {isAdmin && (
@@ -644,10 +736,17 @@ function Bloqueio25Action({
 }
 
 function SemEstoqueAction({ assistido }: { assistido: Assistido }) {
-  const registrar = () =>
+  const registrar = () => {
+    registrarAuditoria({
+      usuario: "Administrador",
+      acao: "Tentativa bloqueada por estoque",
+      modulo: "Atendimento",
+      registro: assistido.nome,
+    });
     toast.success(`Tentativa bloqueada registrada para ${assistido.nome}.`, {
       description: "Motivo: falta de estoque. Registro adicionado ao histórico da família.",
     });
+  };
 
   return (
     <StatusCard
