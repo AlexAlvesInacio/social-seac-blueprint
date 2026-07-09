@@ -36,31 +36,34 @@ import {
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  verificarElegibilidadeAtendimento,
+  formatBR,
+  type AssistidoRegra,
+  type EstoqueBeneficio,
+  type Elegibilidade,
+} from "@/lib/atendimento-regras";
 
 export const Route = createFileRoute("/atendimento")({
   head: () => ({ meta: [{ title: "Atendimento — SEAC Social" }] }),
   component: AtendimentoPage,
 });
 
-/* ---------- Mock lookup (demo, sem backend) ---------- */
+/* ---------- Mock lookup (sem backend) ----------
+ * Dados brutos por assistido. O cenário exibido é sempre derivado pela
+ * função central `verificarElegibilidadeAtendimento` (regras oficiais).
+ */
 
-type Situacao =
-  | { kind: "extra_liberado"; progresso: 1 | 2 }
-  | { kind: "extra_completou" }
-  | { kind: "padrao_liberado" }
-  | { kind: "bloqueio25" }
-  | { kind: "sem_estoque" };
+type Assistido = AssistidoRegra;
 
-type Assistido = {
-  nome: string;
-  documento: string;
-  telefone: string;
-  familia: string;
-  endereco: string;
-  ultimaRetirada: string;
-  proximaData: string;
-  situacao: Situacao;
-};
+// Estoque atual dos benefícios (mock; futuramente virá do módulo Estoque).
+const ESTOQUE: EstoqueBeneficio = { cestaPadrao: 120, cestaExtra: 25 };
+
+function daysAgoISO(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
 
 const MOCK_ASSISTIDOS: Assistido[] = [
   {
@@ -69,9 +72,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     telefone: "(11) 97654-3210",
     familia: "Família da Silva",
     endereco: "Rua das Flores, 123 — São João",
-    ultimaRetirada: "16/05/2025",
-    proximaData: "10/06/2025",
-    situacao: { kind: "padrao_liberado" },
+    tipoCadastro: "definitivo",
+    ultimaRetiradaISO: daysAgoISO(60),
+    retiradasExtras: 0,
   },
   {
     nome: "Maria da Silva",
@@ -79,9 +82,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     telefone: "(11) 91234-5678",
     familia: "Família da Silva",
     endereco: "Rua das Flores, 123 — São João",
-    ultimaRetirada: "20/05/2025",
-    proximaData: "14/06/2025",
-    situacao: { kind: "extra_liberado", progresso: 2 },
+    tipoCadastro: "extra",
+    ultimaRetiradaISO: daysAgoISO(40),
+    retiradasExtras: 1,
   },
   {
     nome: "Pedro Henrique Lima",
@@ -89,9 +92,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     telefone: "(11) 99876-1234",
     familia: "Família Lima",
     endereco: "Av. Brasil, 900 — Centro",
-    ultimaRetirada: "05/06/2025",
-    proximaData: "30/06/2025",
-    situacao: { kind: "bloqueio25" },
+    tipoCadastro: "definitivo",
+    ultimaRetiradaISO: daysAgoISO(5),
+    retiradasExtras: 0,
   },
   {
     nome: "Ana Paula Rodrigues",
@@ -99,9 +102,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     telefone: "(11) 98888-2222",
     familia: "Família Rodrigues",
     endereco: "Rua das Palmeiras, 77 — Jardim",
-    ultimaRetirada: "20/04/2025",
-    proximaData: "15/05/2025",
-    situacao: { kind: "sem_estoque" },
+    tipoCadastro: "extra",
+    ultimaRetiradaISO: daysAgoISO(60),
+    retiradasExtras: 3,
   },
 ];
 
