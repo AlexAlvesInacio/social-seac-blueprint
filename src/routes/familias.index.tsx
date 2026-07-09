@@ -15,6 +15,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { useParametros } from "@/lib/config-store";
 
 export const Route = createFileRoute("/familias/")({
   head: () => ({ meta: [{ title: "Famílias — SEAC Social" }] }),
@@ -111,6 +112,7 @@ const exemploFamilias = [
 function FamiliasPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected = exemploFamilias.find((f) => f.id === selectedId) ?? null;
+  const params = useParametros((s) => s.params);
   const toggleSelect = (id: number) =>
     setSelectedId((cur) => (cur === id ? null : id));
 
@@ -142,7 +144,11 @@ function FamiliasPage() {
         <SummaryCard value={String(definitivos)} label="Cadastros definitivos" />
         <SummaryCard value={String(extras)} label="Cadastros em avaliação" className="border-l-secondary" />
         <SummaryCard value={String(aguardandoAvaliacao)} label="Aguardando avaliação definitiva" className="border-l-warning" />
-        <SummaryCard value={String(semRetirada90)} label="Sem retirada 90 dias+" className="border-l-destructive" />
+        <SummaryCard
+          value={String(semRetirada90)}
+          label={`Contato necessário (${params.inatividadeContatoDias}+ dias)`}
+          className="border-l-destructive"
+        />
         <SummaryCard value={String(bloqueadasInativas)} label="Bloqueadas/inativas" className="border-l-destructive" />
       </div>
 
@@ -290,7 +296,7 @@ function FamiliasPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <AcompanhamentoBadge status={familia.acompanhamento} />
+                          <AcompanhamentoBadge status={familia.acompanhamento} params={params} />
                           {familia.ultimaRetirada !== "—" && (
                             <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                               Última retirada: {familia.ultimaRetirada}
@@ -332,10 +338,18 @@ function SummaryCard({ value, label, className }: { value: string; label: string
   );
 }
 
-function AcompanhamentoBadge({ status }: { status: string }) {
+function AcompanhamentoBadge({
+  status,
+  params,
+}: {
+  status: string;
+  params: ReturnType<typeof useParametros.getState>["params"];
+}) {
   if (status === "em_dia") return <Badge>Em dia</Badge>;
-  if (status === "atencao_60") return <Badge variant="warning">Atenção 60 dias</Badge>;
-  if (status === "sem_retirada_90") return <Badge variant="destructive">Sem retirada 90 dias+</Badge>;
+  if (status === "atencao_60" || status === "atencao_45")
+    return <Badge variant="warning">Atenção {params.alertaLiberadoSemRetiradaDias} dias</Badge>;
+  if (status === "sem_retirada_90")
+    return <Badge variant="destructive">Contato necessário ({params.inatividadeContatoDias}+ dias)</Badge>;
   if (status === "inativo") return <Badge variant="outline" className="text-muted-foreground">Inativo</Badge>;
   return <span className="text-muted-foreground">—</span>;
 }
