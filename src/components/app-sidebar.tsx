@@ -12,7 +12,6 @@ import {
   BarChart3,
   ShieldCheck,
   LogOut,
-  Heart,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,6 +25,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import seacLogo from "@/assets/seac-logo.png.asset.json";
 
 const operacional = [
   { title: "Painel", url: "/painel", icon: LayoutDashboard },
@@ -82,9 +82,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <Link to="/painel" className="flex items-center gap-2 px-2 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Heart className="h-5 w-5" strokeWidth={2.5} />
-          </div>
+          <img
+            src={seacLogo.url}
+            alt="SEAC Social"
+            className="h-9 w-9 rounded-lg object-contain"
+          />
           <div className="flex flex-col leading-tight">
             <span className="text-base font-semibold text-foreground">
               SEAC <span className="text-primary">Social</span>
