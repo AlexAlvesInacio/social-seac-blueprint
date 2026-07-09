@@ -92,12 +92,6 @@ function AuthPage() {
               />
             </div>
             <div className="max-w-md space-y-3">
-              <h2 className="text-3xl font-bold tracking-tight text-secondary-foreground">
-                SEAC
-              </h2>
-              <p className="text-base font-medium text-primary">
-                Sopa, Esperança, Amor e Caridade
-              </p>
               <p className="text-lg font-semibold text-foreground">
                 “Sopa, Esperança, Amor e Caridade em ação.”
               </p>
