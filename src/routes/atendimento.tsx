@@ -54,7 +54,10 @@ export const Route = createFileRoute("/atendimento")({
  * função central `verificarElegibilidadeAtendimento` (regras oficiais).
  */
 
-type Assistido = AssistidoRegra;
+type Assistido = AssistidoRegra & {
+  /** Override do estoque só para este assistido (homologação). */
+  estoqueOverride?: Partial<EstoqueBeneficio>;
+};
 
 // Estoque atual dos benefícios (mock; futuramente virá do módulo Estoque).
 const ESTOQUE: EstoqueBeneficio = { cestaPadrao: 120, cestaExtra: 25 };
@@ -104,7 +107,9 @@ const MOCK_ASSISTIDOS: Assistido[] = [
     endereco: "Rua das Palmeiras, 77 — Jardim",
     tipoCadastro: "extra",
     ultimaRetiradaISO: daysAgoISO(60),
-    retiradasExtras: 3,
+    retiradasExtras: 1,
+    // Cenário de homologação: sem estoque para Cesta Extra deste atendimento.
+    estoqueOverride: { cestaExtra: 0 },
   },
 ];
 
@@ -230,7 +235,8 @@ function AtendimentoPage() {
 
 function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
   // Aplica a lógica central de regras oficiais (REGRAS_ATENDIMENTO_SEAC.md).
-  const el = verificarElegibilidadeAtendimento(assistido, ESTOQUE);
+  const estoque: EstoqueBeneficio = { ...ESTOQUE, ...(assistido.estoqueOverride ?? {}) };
+  const el = verificarElegibilidadeAtendimento(assistido, estoque);
   const tipo: "padrao" | "extra" =
     assistido.tipoCadastro === "definitivo" ? "padrao" : "extra";
   const progressoAtual =
