@@ -43,6 +43,8 @@ import {
   type EstoqueBeneficio,
   type Elegibilidade,
 } from "@/lib/atendimento-regras";
+import { useParametros } from "@/lib/config-store";
+import { registrarAuditoria } from "@/lib/auditoria-store";
 
 export const Route = createFileRoute("/atendimento")({
   head: () => ({ meta: [{ title: "Atendimento — SEAC Social" }] }),
@@ -118,6 +120,7 @@ const MOCK_ASSISTIDOS: Assistido[] = [
 function AtendimentoPage() {
   // Perfil simulado apenas para exibir a ação restrita a Administrador.
   const isAdmin = true;
+  const params = useParametros((s) => s.params);
 
   const [query, setQuery] = useState("");
   type SearchResult =
@@ -190,7 +193,7 @@ function AtendimentoPage() {
         {(result.status === "idle" || result.status === "invalid") && <EmptyState />}
         {result.status === "not_found" && <NaoEncontradoState />}
         {result.status === "found" && (
-          <ResultadoAssistido assistido={result.assistido} isAdmin={isAdmin} />
+          <ResultadoAssistido assistido={result.assistido} isAdmin={isAdmin} params={params} />
         )}
       </div>
 
@@ -233,10 +236,21 @@ function AtendimentoPage() {
 
 /* ---------- Resultado ---------- */
 
-function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAdmin: boolean }) {
+function ResultadoAssistido({
+  assistido,
+  isAdmin,
+  params,
+}: {
+  assistido: Assistido;
+  isAdmin: boolean;
+  params: ReturnType<typeof useParametros.getState>["params"];
+}) {
   // Aplica a lógica central de regras oficiais (REGRAS_ATENDIMENTO_SEAC.md).
   const estoque: EstoqueBeneficio = { ...ESTOQUE, ...(assistido.estoqueOverride ?? {}) };
-  const el = verificarElegibilidadeAtendimento(assistido, estoque);
+  const el = verificarElegibilidadeAtendimento(assistido, estoque, undefined, {
+    intervaloMinimoDias: params.intervaloMinimoDias,
+    limiteExtra: params.limiteExtra,
+  });
   const tipo: "padrao" | "extra" =
     assistido.tipoCadastro === "definitivo" ? "padrao" : "extra";
   const progressoAtual =
@@ -252,12 +266,29 @@ function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAd
         ? formatBR(
             new Date(
               new Date(assistido.ultimaRetiradaISO + "T00:00:00").getTime() +
-                25 * 24 * 60 * 60 * 1000,
+                params.intervaloMinimoDias * 24 * 60 * 60 * 1000,
             )
               .toISOString()
               .slice(0, 10),
           )
         : "—";
+
+  // Acompanhamento por inatividade (não bloqueia entrega).
+  const diasDesdeUltima = assistido.ultimaRetiradaISO
+    ? Math.floor(
+        (Date.now() -
+          new Date(assistido.ultimaRetiradaISO + "T00:00:00").getTime()) /
+          86400000,
+      )
+    : null;
+  const acompanhamento: "em_dia" | "atencao_45" | "contato_90" =
+    diasDesdeUltima === null
+      ? "em_dia"
+      : diasDesdeUltima >= params.inatividadeContatoDias
+        ? "contato_90"
+        : diasDesdeUltima >= params.alertaLiberadoSemRetiradaDias
+          ? "atencao_45"
+          : "em_dia";
 
   return (
     <ScenarioLayout
@@ -268,9 +299,11 @@ function ResultadoAssistido({ assistido, isAdmin }: { assistido: Assistido; isAd
           progresso={progressoAtual}
           ultimaRetirada={formatBR(assistido.ultimaRetiradaISO)}
           proximaData={proximaData}
+          acompanhamento={acompanhamento}
+          params={params}
         />
       }
-      action={renderAcao(el, assistido, isAdmin, proximaData)}
+      action={renderAcao(el, assistido, isAdmin, proximaData, params)}
     />
   );
 }
@@ -280,6 +313,7 @@ function renderAcao(
   assistido: Assistido,
   isAdmin: boolean,
   proximaData: string,
+  params: ReturnType<typeof useParametros.getState>["params"],
 ) {
   switch (el.cenario) {
     case "liberado_padrao":
@@ -307,6 +341,7 @@ function renderAcao(
           isAdmin={isAdmin}
           proximaData={proximaData}
           diasRestantes={el.diasRestantes}
+          intervaloMinimoDias={params.intervaloMinimoDias}
         />
       );
     case "bloqueio_estoque":
