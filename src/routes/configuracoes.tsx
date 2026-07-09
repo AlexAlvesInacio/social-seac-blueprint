@@ -92,12 +92,17 @@ type RowActionsProps = {
   onEdit: () => void;
   onToggleStatus: () => void;
   onDelete: () => void;
+  onDeleteBlocked?: () => void;
   status: Status;
   hasVinculo: boolean;
 };
 
-function RowActions({ onEdit, onToggleStatus, onDelete, status, hasVinculo }: RowActionsProps) {
+function RowActions({ onEdit, onToggleStatus, onDelete, onDeleteBlocked, status, hasVinculo }: RowActionsProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  function openDelete() {
+    if (hasVinculo) onDeleteBlocked?.();
+    setConfirmOpen(true);
+  }
   return (
     <div className="flex justify-end gap-1">
       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onEdit} title="Editar">
@@ -116,7 +121,7 @@ function RowActions({ onEdit, onToggleStatus, onDelete, status, hasVinculo }: Ro
         size="icon"
         variant="ghost"
         className="h-8 w-8 text-destructive hover:text-destructive"
-        onClick={() => setConfirmOpen(true)}
+        onClick={openDelete}
         title="Excluir"
       >
         <Trash2 className="h-4 w-4" />
@@ -127,23 +132,23 @@ function RowActions({ onEdit, onToggleStatus, onDelete, status, hasVinculo }: Ro
             <AlertDialogTitle>{hasVinculo ? "Não é possível excluir" : "Confirmar exclusão"}</AlertDialogTitle>
             <AlertDialogDescription>
               {hasVinculo
-                ? "Este registro já está vinculado a outros módulos do sistema. Por integridade, apenas é possível inativá-lo."
-                : "Esta ação não pode ser desfeita. Deseja realmente excluir este registro?"}
+                ? "Este cadastro possui vínculo com movimentações ou histórico. Não é possível excluir. Você pode inativar o cadastro."
+                : "Deseja realmente excluir este cadastro? Esta ação não poderá ser desfeita."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             {hasVinculo ? (
-              <AlertDialogAction onClick={() => { onToggleStatus(); setConfirmOpen(false); }}>
-                Inativar
-              </AlertDialogAction>
+              <AlertDialogAction onClick={() => setConfirmOpen(false)}>Entendi</AlertDialogAction>
             ) : (
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={() => { onDelete(); setConfirmOpen(false); }}
-              >
-                Excluir
-              </AlertDialogAction>
+              <>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => { onDelete(); setConfirmOpen(false); }}
+                >
+                  Excluir
+                </AlertDialogAction>
+              </>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -326,6 +331,9 @@ function ItensTab() {
                       registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Item excluído", modulo: "Configurações › Itens", registro: `${r.codigo} — ${r.nome}` });
                       toast.success("Item excluído");
                     }}
+                    onDeleteBlocked={() => {
+                      registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Itens", registro: `${r.codigo} — ${r.nome}`, observacao: "Registro possui vínculo com movimentações ou histórico" });
+                    }}
                   />
                 </TableCell>
               </TableRow>
@@ -433,6 +441,9 @@ function UnidadesTab() {
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Unidade excluída", modulo: "Configurações › Unidades", registro: `${r.codigo} — ${r.nome}` });
                     toast.success("Unidade excluída");
                   }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Unidades", registro: `${r.codigo} — ${r.nome}`, observacao: "Unidade está em uso por itens cadastrados" });
+                  }}
                 />
               </TableCell>
             </TableRow>
@@ -523,6 +534,9 @@ function CategoriasTab() {
                   onDelete={() => {
                     remove(r.codigo);
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Categoria excluída", modulo: "Configurações › Categorias", registro: `${r.codigo} — ${r.nome}` });
+                  }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Categorias", registro: `${r.codigo} — ${r.nome}`, observacao: "Categoria em uso por itens cadastrados" });
                   }}
                 />
               </TableCell>
@@ -626,6 +640,9 @@ function BeneficiosTab() {
                   onDelete={() => {
                     remove(r.codigo);
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Benefício excluído", modulo: "Configurações › Benefícios", registro: `${r.codigo} — ${r.nome}` });
+                  }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Benefícios", registro: `${r.codigo} — ${r.nome}`, observacao: "Benefício possui vínculo com entregas ou estoque" });
                   }}
                 />
               </TableCell>
@@ -746,6 +763,9 @@ function DoadoresTab() {
                     remove(r.codigo);
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Doador excluído", modulo: "Configurações › Doadores", registro: r.nome });
                   }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Doadores", registro: r.nome, observacao: "Doador possui doações registradas" });
+                  }}
                 />
               </TableCell>
             </TableRow>
@@ -853,6 +873,9 @@ function FornecedoresTab() {
                   onDelete={() => {
                     remove(r.codigo);
                     registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Fornecedor excluído", modulo: "Configurações › Fornecedores", registro: r.nome });
+                  }}
+                  onDeleteBlocked={() => {
+                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Fornecedores", registro: r.nome, observacao: "Fornecedor possui recebimentos registrados" });
                   }}
                 />
               </TableCell>
