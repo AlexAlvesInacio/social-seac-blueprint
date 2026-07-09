@@ -105,27 +105,6 @@ const MOCK_ASSISTIDOS: Assistido[] = [
   },
 ];
 
-function normalize(s: string) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "");
-}
-
-function buscarAssistido(q: string): Assistido | null {
-  const nq = normalize(q);
-  if (nq.length < 3) return null;
-  return (
-    MOCK_ASSISTIDOS.find(
-      (a) =>
-        normalize(a.nome).includes(nq) ||
-        normalize(a.documento).includes(nq) ||
-        normalize(a.telefone).includes(nq),
-    ) ?? null
-  );
-}
-
 /* ---------- Page ---------- */
 
 function AtendimentoPage() {
