@@ -45,75 +45,30 @@ import {
 } from "@/lib/atendimento-regras";
 import { useParametros } from "@/lib/config-store";
 import { registrarAuditoria } from "@/lib/auditoria-store";
+import { useFamilias } from "@/lib/familias-store";
+import { useAtendimentoStore, type BeneficioNome } from "@/lib/atendimento-store";
 
 export const Route = createFileRoute("/atendimento")({
   head: () => ({ meta: [{ title: "Atendimento — SEAC Social" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    assistido: typeof s.assistido === "string" ? s.assistido : undefined,
+  }),
   component: AtendimentoPage,
 });
 
-/* ---------- Mock lookup (sem backend) ----------
- * Dados brutos por assistido. O cenário exibido é sempre derivado pela
- * função central `verificarElegibilidadeAtendimento` (regras oficiais).
+/* ---------- Modelo local ----------
+ * A busca usa cadastros reais (useFamilias) + histórico de entregas
+ * (useAtendimentoStore) para montar o objeto que a regra oficial consome.
  */
 
 type Assistido = AssistidoRegra & {
-  /** Override do estoque só para este assistido (homologação). */
-  estoqueOverride?: Partial<EstoqueBeneficio>;
+  assistidoId: string;
+  familiaId: number;
 };
 
-// Estoque atual dos benefícios (mock; futuramente virá do módulo Estoque).
-const ESTOQUE: EstoqueBeneficio = { cestaPadrao: 120, cestaExtra: 25 };
-
-function daysAgoISO(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+function normDoc(s: string): string {
+  return (s ?? "").replace(/\D/g, "");
 }
-
-const MOCK_ASSISTIDOS: Assistido[] = [
-  {
-    nome: "João da Silva",
-    documento: "987.654.321-00",
-    telefone: "(11) 97654-3210",
-    familia: "Família da Silva",
-    endereco: "Rua das Flores, 123 — São João",
-    tipoCadastro: "definitivo",
-    ultimaRetiradaISO: daysAgoISO(60),
-    retiradasExtras: 0,
-  },
-  {
-    nome: "Maria da Silva",
-    documento: "321.654.987-00",
-    telefone: "(11) 91234-5678",
-    familia: "Família da Silva",
-    endereco: "Rua das Flores, 123 — São João",
-    tipoCadastro: "extra",
-    ultimaRetiradaISO: daysAgoISO(40),
-    retiradasExtras: 1,
-  },
-  {
-    nome: "Pedro Henrique Lima",
-    documento: "222.333.444-55",
-    telefone: "(11) 99876-1234",
-    familia: "Família Lima",
-    endereco: "Av. Brasil, 900 — Centro",
-    tipoCadastro: "definitivo",
-    ultimaRetiradaISO: daysAgoISO(5),
-    retiradasExtras: 0,
-  },
-  {
-    nome: "Ana Paula Rodrigues",
-    documento: "333.444.555-66",
-    telefone: "(11) 98888-2222",
-    familia: "Família Rodrigues",
-    endereco: "Rua das Palmeiras, 77 — Jardim",
-    tipoCadastro: "extra",
-    ultimaRetiradaISO: daysAgoISO(60),
-    retiradasExtras: 1,
-    // Cenário de homologação: sem estoque para Cesta Extra deste atendimento.
-    estoqueOverride: { cestaExtra: 0 },
-  },
-];
 
 /* ---------- Page ---------- */
 
@@ -121,6 +76,12 @@ function AtendimentoPage() {
   // Perfil simulado apenas para exibir a ação restrita a Administrador.
   const isAdmin = true;
   const params = useParametros((s) => s.params);
+  const familias = useFamilias((s) => s.familias);
+  const assistidosAll = useFamilias((s) => s.assistidos);
+  const ultimaEntrega = useAtendimentoStore((s) => s.ultimaEntrega);
+  const contarExtras = useAtendimentoStore((s) => s.contarExtras);
+  const saldoMap = useAtendimentoStore((s) => s.saldo);
+  const search = Route.useSearch();
 
   const [query, setQuery] = useState("");
   type SearchResult =
@@ -133,25 +94,72 @@ function AtendimentoPage() {
   const normalize = (s: string) => s.toLowerCase().trim();
   const onlyDigits = (s: string) => s.replace(/\D/g, "");
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = query.trim();
-    if (q.length < 3) {
-      setResult({ status: "invalid" });
-      return;
-    }
+  const buildAssistido = (raw: (typeof assistidosAll)[number]): Assistido | null => {
+    const familia = familias.find((f) => f.id === raw.familiaId);
+    if (!familia) return null;
+    const enderecoParts = [
+      [familia.endereco, familia.numero].filter(Boolean).join(", "),
+      familia.bairro,
+    ].filter(Boolean);
+    const ult = ultimaEntrega(raw.documento);
+    return {
+      assistidoId: raw.id,
+      familiaId: raw.familiaId,
+      nome: raw.nome,
+      documento: raw.documento,
+      telefone: raw.telefone ?? familia.telefone ?? "",
+      familia: familia.nome,
+      endereco: enderecoParts.join(" — ") || "—",
+      tipoCadastro: raw.tipoCadastro,
+      ultimaRetiradaISO: ult ? ult.dataISO.slice(0, 10) : null,
+      retiradasExtras: contarExtras(raw.documento),
+    };
+  };
+
+  const executarBusca = (raw: string): SearchResult => {
+    const q = raw.trim();
+    if (q.length < 3) return { status: "invalid" };
     const qNorm = normalize(q);
     const qDigits = onlyDigits(q);
-    const match = MOCK_ASSISTIDOS.find((a) => {
+    const ativos = assistidosAll.filter((a) => a.status === "ativo");
+    const match = ativos.find((a) => {
       const nameHit = normalize(a.nome).includes(qNorm);
       const docHit =
         qDigits.length >= 3 && onlyDigits(a.documento).includes(qDigits);
       const telHit =
-        qDigits.length >= 3 && onlyDigits(a.telefone).includes(qDigits);
+        qDigits.length >= 3 &&
+        onlyDigits(a.telefone ?? "").includes(qDigits);
       return nameHit || docHit || telHit;
     });
-    setResult(match ? { status: "found", assistido: match } : { status: "not_found" });
+    if (!match) return { status: "not_found" };
+    const built = buildAssistido(match);
+    return built ? { status: "found", assistido: built } : { status: "not_found" };
   };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setResult(executarBusca(query));
+  };
+
+  // Pré-seleção via ?assistido=<documento> (vindo de /familias/:id).
+  useEffect(() => {
+    if (!search.assistido) return;
+    const doc = search.assistido;
+    setQuery(doc);
+    setResult(executarBusca(doc));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.assistido, assistidosAll.length, familias.length]);
+
+  // Recalcula quando saldo/entregas mudarem, mantendo o assistido exibido.
+  useEffect(() => {
+    if (result.status !== "found") return;
+    const doc = result.assistido.documento;
+    const raw = assistidosAll.find((a) => normDoc(a.documento) === normDoc(doc));
+    if (!raw) return;
+    const rebuilt = buildAssistido(raw);
+    if (rebuilt) setResult({ status: "found", assistido: rebuilt });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saldoMap]);
 
   return (
     <AppShell title="Atendimento — Busca e entrega">
@@ -246,7 +254,9 @@ function ResultadoAssistido({
   params: ReturnType<typeof useParametros.getState>["params"];
 }) {
   // Aplica a lógica central de regras oficiais (REGRAS_ATENDIMENTO_SEAC.md).
-  const estoque: EstoqueBeneficio = { ...ESTOQUE, ...(assistido.estoqueOverride ?? {}) };
+  const saldoPadrao = useAtendimentoStore((s) => s.saldo["Cesta Padrão"] ?? 0);
+  const saldoExtra = useAtendimentoStore((s) => s.saldo["Cesta Extra"] ?? 0);
+  const estoque: EstoqueBeneficio = { cestaPadrao: saldoPadrao, cestaExtra: saldoExtra };
   const el = verificarElegibilidadeAtendimento(assistido, estoque, undefined, {
     intervaloMinimoDias: params.intervaloMinimoDias,
     limiteExtra: params.limiteExtra,
@@ -535,8 +545,24 @@ function LiberadoAction({
 }) {
   const completou = progresso === 3;
   const [open, setOpen] = useState(false);
+  const registrarEntrega = useAtendimentoStore((s) => s.registrarEntrega);
+  const saldoAtual = useAtendimentoStore((s) => s.saldo[beneficio] ?? 0);
 
   const confirmar = () => {
+    if (saldoAtual <= 0) {
+      toast.error("Sem saldo em estoque para este benefício.");
+      return;
+    }
+    registrarEntrega({
+      assistidoId: assistido.assistidoId,
+      familiaId: assistido.familiaId,
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      beneficio: beneficio as BeneficioNome,
+      usuario: "Administrador",
+      origem: "atendimento",
+    });
     registrarAuditoria({
       usuario: "Administrador",
       acao: "Entrega realizada",
@@ -642,8 +668,20 @@ function Bloqueio25Action({
 }) {
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
+  const registrarBloqueio = useAtendimentoStore((s) => s.registrarBloqueio);
+  const registrarEntrega = useAtendimentoStore((s) => s.registrarEntrega);
+  const saldoPadrao = useAtendimentoStore((s) => s.saldo["Cesta Padrão"] ?? 0);
+  const saldoExtra = useAtendimentoStore((s) => s.saldo["Cesta Extra"] ?? 0);
 
   useEffect(() => {
+    registrarBloqueio({
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      motivo: "prazo",
+      observacao: `Faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"} — próxima ${proximaData}.`,
+      usuario: "Administrador",
+    });
     registrarAuditoria({
       usuario: "Administrador",
       acao: "Tentativa bloqueada por prazo",
@@ -659,6 +697,25 @@ function Bloqueio25Action({
       toast.error("Informe o motivo da liberação excepcional.");
       return;
     }
+    const beneficio: BeneficioNome =
+      assistido.tipoCadastro === "definitivo" ? "Cesta Padrão" : "Cesta Extra";
+    const saldo = beneficio === "Cesta Padrão" ? saldoPadrao : saldoExtra;
+    if (saldo <= 0) {
+      toast.error("Sem saldo em estoque — liberação excepcional não permitida.");
+      return;
+    }
+    registrarEntrega({
+      assistidoId: assistido.assistidoId,
+      familiaId: assistido.familiaId,
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      beneficio,
+      usuario: "Administrador",
+      observacao: motivo.trim(),
+      excepcional: true,
+      origem: "atendimento",
+    });
     registrarAuditoria({
       usuario: "Administrador",
       acao: "Liberação excepcional",
@@ -736,7 +793,15 @@ function Bloqueio25Action({
 }
 
 function SemEstoqueAction({ assistido }: { assistido: Assistido }) {
+  const registrarBloqueio = useAtendimentoStore((s) => s.registrarBloqueio);
   const registrar = () => {
+    registrarBloqueio({
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      motivo: "estoque",
+      usuario: "Administrador",
+    });
     registrarAuditoria({
       usuario: "Administrador",
       acao: "Tentativa bloqueada por estoque",

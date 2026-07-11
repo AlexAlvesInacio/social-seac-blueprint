@@ -52,6 +52,10 @@ function FamiliaDetail() {
   const observacoes = useMemo(
     () => allObs.filter((o) => String(o.familiaId) === id), [allObs, id],
   );
+  const primeiroAssistidoAtivo = useMemo(
+    () => assistidos.find((a) => a.status === "ativo"),
+    [assistidos],
+  );
   const contagens = useMemo(() => {
     const assistidosAtivos = assistidos.filter((a) => a.status === "ativo");
     type Pessoa = { documento?: string; nascimento?: string; pcd?: boolean; gestante?: boolean };
@@ -145,7 +149,16 @@ function FamiliaDetail() {
           <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenEditar(true)}><Pencil className="h-4 w-4" /> Editar família</Button>
           <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenAssistido(true)}><Plus className="h-4 w-4" /> Adicionar assistido</Button>
           <Button asChild size="sm" className="gap-2">
-            <Link to="/atendimento"><HeartHandshake className="h-4 w-4" /> Ir para atendimento</Link>
+            <Link
+              to="/atendimento"
+              search={
+                primeiroAssistidoAtivo
+                  ? { assistido: primeiroAssistidoAtivo.documento }
+                  : {}
+              }
+            >
+              <HeartHandshake className="h-4 w-4" /> Ir para atendimento
+            </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
