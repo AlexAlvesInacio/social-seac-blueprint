@@ -500,6 +500,89 @@ function NaoEncontradoState() {
   );
 }
 
+function FamilySemAssistidoState({
+  nome, responsavel, documento, telefone, bairro, onAdicionar,
+}: {
+  familiaId: number;
+  nome: string;
+  responsavel: string;
+  documento: string;
+  telefone?: string;
+  bairro?: string;
+  onAdicionar: () => void;
+}) {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <UserCog className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              Família encontrada, mas nenhum assistido ativo foi localizado para atendimento.
+            </p>
+            <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+              <span><span className="font-medium text-foreground">Família:</span> {nome}</span>
+              <span><span className="font-medium text-foreground">Responsável:</span> {responsavel}</span>
+              <span><span className="font-medium text-foreground">Documento:</span> {documento}</span>
+              {telefone && <span><span className="font-medium text-foreground">Telefone:</span> {telefone}</span>}
+              {bairro && <span><span className="font-medium text-foreground">Bairro:</span> {bairro}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button className="gap-2" onClick={onAdicionar}>
+            <UserPlus className="h-4 w-4" /> Adicionar assistido
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MembroSemAssistidoState({
+  familiaNome, nome, documento, parentesco, onCadastrar,
+}: {
+  familiaId: number;
+  familiaNome: string;
+  nome: string;
+  documento?: string;
+  parentesco: string;
+  onCadastrar: () => void;
+}) {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <UserCheck className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              Pessoa encontrada como membro familiar, mas ainda não está cadastrada como assistido.
+            </p>
+            <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+              <span><span className="font-medium text-foreground">Nome:</span> {nome}</span>
+              <span><span className="font-medium text-foreground">Documento:</span> {documento || "—"}</span>
+              <span><span className="font-medium text-foreground">Família:</span> {familiaNome}</span>
+              <span><span className="font-medium text-foreground">Parentesco:</span> {parentesco}</span>
+            </div>
+            <p className="mt-2 text-[11px] text-amber-700">
+              A entrega de cesta não é permitida enquanto a pessoa estiver apenas como membro familiar.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button className="gap-2" onClick={onCadastrar}>
+            <UserPlus className="h-4 w-4" /> Cadastrar como assistido
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ---------- Person card ---------- */
 
 function PersonCard({
