@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { useFamilias, calcularIdade, calcularFaixaEtaria, rotuloFaixaEtaria } from "@/lib/familias-store";
 import { registrarAuditoria } from "@/lib/auditoria-store";
+import { useAtendimentoStore } from "@/lib/atendimento-store";
 import {
   EditarFamiliaDialog, AdicionarAssistidoDialog,
   AdicionarMembroDialog, RegistrarObservacaoDialog,
@@ -61,6 +62,14 @@ function FamiliaDetail() {
   );
   const observacoes = useMemo(
     () => allObs.filter((o) => String(o.familiaId) === id), [allObs, id],
+  );
+  const allEntregas = useAtendimentoStore((s) => s.entregas);
+  const entregasFamilia = useMemo(
+    () =>
+      allEntregas
+        .filter((e) => String(e.familiaId) === id)
+        .sort((a, b) => b.dataISO.localeCompare(a.dataISO)),
+    [allEntregas, id],
   );
   const assistidosAtivos = useMemo(
     () => assistidos.filter((a) => a.status === "ativo"),
@@ -397,9 +406,43 @@ function FamiliaDetail() {
 
           <TabsContent value="entregas">
             <Card>
-              <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Nenhuma entrega registrada.
-              </CardContent>
+              {entregasFamilia.length === 0 ? (
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhuma entrega registrada.
+                </CardContent>
+              ) : (
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Data / hora</TableHead>
+                      <TableHead>Assistido</TableHead>
+                      <TableHead>Documento</TableHead>
+                      <TableHead>Benefício</TableHead>
+                      <TableHead>Tipo de entrega</TableHead>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {entregasFamilia.map((e) => (
+                        <TableRow key={e.id}>
+                          <TableCell className="text-sm">{new Date(e.dataISO).toLocaleString("pt-BR")}</TableCell>
+                          <TableCell className="text-sm">{e.nome}</TableCell>
+                          <TableCell className="text-sm">{e.documento}</TableCell>
+                          <TableCell className="text-sm">
+                            {e.beneficio}
+                            {e.excepcional ? " (excepcional)" : ""}
+                          </TableCell>
+                          <TableCell className="text-sm">Retirada no local</TableCell>
+                          <TableCell className="text-sm">{e.usuario}</TableCell>
+                          <TableCell className="text-sm">
+                            <Badge variant="outline" className="text-[10px]">Entregue</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              )}
             </Card>
           </TabsContent>
 
