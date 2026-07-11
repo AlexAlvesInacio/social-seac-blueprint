@@ -545,8 +545,24 @@ function LiberadoAction({
 }) {
   const completou = progresso === 3;
   const [open, setOpen] = useState(false);
+  const registrarEntrega = useAtendimentoStore((s) => s.registrarEntrega);
+  const saldoAtual = useAtendimentoStore((s) => s.saldo[beneficio] ?? 0);
 
   const confirmar = () => {
+    if (saldoAtual <= 0) {
+      toast.error("Sem saldo em estoque para este benefício.");
+      return;
+    }
+    registrarEntrega({
+      assistidoId: assistido.assistidoId,
+      familiaId: assistido.familiaId,
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      beneficio: beneficio as BeneficioNome,
+      usuario: "Administrador",
+      origem: "atendimento",
+    });
     registrarAuditoria({
       usuario: "Administrador",
       acao: "Entrega realizada",
@@ -652,8 +668,20 @@ function Bloqueio25Action({
 }) {
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
+  const registrarBloqueio = useAtendimentoStore((s) => s.registrarBloqueio);
+  const registrarEntrega = useAtendimentoStore((s) => s.registrarEntrega);
+  const saldoPadrao = useAtendimentoStore((s) => s.saldo["Cesta Padrão"] ?? 0);
+  const saldoExtra = useAtendimentoStore((s) => s.saldo["Cesta Extra"] ?? 0);
 
   useEffect(() => {
+    registrarBloqueio({
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      motivo: "prazo",
+      observacao: `Faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"} — próxima ${proximaData}.`,
+      usuario: "Administrador",
+    });
     registrarAuditoria({
       usuario: "Administrador",
       acao: "Tentativa bloqueada por prazo",
@@ -669,6 +697,25 @@ function Bloqueio25Action({
       toast.error("Informe o motivo da liberação excepcional.");
       return;
     }
+    const beneficio: BeneficioNome =
+      assistido.tipoCadastro === "definitivo" ? "Cesta Padrão" : "Cesta Extra";
+    const saldo = beneficio === "Cesta Padrão" ? saldoPadrao : saldoExtra;
+    if (saldo <= 0) {
+      toast.error("Sem saldo em estoque — liberação excepcional não permitida.");
+      return;
+    }
+    registrarEntrega({
+      assistidoId: assistido.assistidoId,
+      familiaId: assistido.familiaId,
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      beneficio,
+      usuario: "Administrador",
+      observacao: motivo.trim(),
+      excepcional: true,
+      origem: "atendimento",
+    });
     registrarAuditoria({
       usuario: "Administrador",
       acao: "Liberação excepcional",
@@ -746,7 +793,15 @@ function Bloqueio25Action({
 }
 
 function SemEstoqueAction({ assistido }: { assistido: Assistido }) {
+  const registrarBloqueio = useAtendimentoStore((s) => s.registrarBloqueio);
   const registrar = () => {
+    registrarBloqueio({
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      motivo: "estoque",
+      usuario: "Administrador",
+    });
     registrarAuditoria({
       usuario: "Administrador",
       acao: "Tentativa bloqueada por estoque",
