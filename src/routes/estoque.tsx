@@ -223,7 +223,7 @@ function EstoquePage() {
                       <TableCell>{s.saldo}</TableCell>
                       <TableCell>{s.minimo}</TableCell>
                       <TableCell>{statusBadge(s.status)}</TableCell>
-                      <TableCell>{s.valor}</TableCell>
+                      <TableCell>{formatBRL(s.valorUnit)}</TableCell>
                       <TableCell className="text-muted-foreground">{s.ultima}</TableCell>
                     </TableRow>
                   ))}
