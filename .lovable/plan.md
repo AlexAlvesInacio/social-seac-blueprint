@@ -1,58 +1,37 @@
-## Objetivo
+## Diagnóstico
 
-Fazer o sistema classificar automaticamente cada membro/assistido a partir da **data de nascimento**, eliminando os checkboxes manuais de "Criança" e "Idoso" (e derivando a faixa etária de forma consistente em toda a aplicação).
+Os registros duplicados de "Tentativa bloqueada por prazo" às 20:42:50 e 20:35:56 vistos na tela são **dados antigos** persistidos em `localStorage` (chave `seac.auditoria.v1`), gravados antes da correção anterior — que removeu o `useEffect` de auto-auditoria no bloco de bloqueio por prazo.
 
-## Regras oficiais de faixa etária
+Como o store é persistente, os eventos antigos continuam aparecendo mesmo depois da correção do código. Além disso, hoje não existe nenhuma proteção no store contra duplicidade acidental (React Strict Mode em dev, cliques repetidos, re-renderizações), então vale reforçar a proteção para o futuro.
 
-- **Criança**: 0 a 12 anos completos (idade ≤ 12)
-- **Adolescente**: 13 a 17 anos (nova categoria)
-- **Adulto**: 18 a 59 anos
-- **Idoso**: 60 anos ou mais
+## Ajustes propostos
 
-Gestante e PCD continuam sendo marcadores manuais (não dá para inferir da data).
+### 1. `src/lib/auditoria-store.ts` — dedup no ponto de gravação
+- No método `registrar`, antes de inserir o evento, comparar com o evento mais recente da lista.
+- Se `usuario`, `acao`, `modulo`, `registro` e `observacao` forem iguais **e** a diferença de tempo for menor que 3 segundos, ignorar a inserção.
+- Regra vale para toda ação (entrega, baixa, tentativa bloqueada, etc.) sem alterar o formato dos eventos.
 
-## Onde aplicar
+### 2. `src/lib/atendimento-store.ts` — dedup em `registrarBloqueio`
+- Mesmo padrão: se o último bloqueio tem `documento + motivo` iguais dentro de 3 segundos, não duplicar.
+- Impede que dois cliques rápidos em "Registrar tentativa bloqueada" gerem duas linhas.
 
-1. **`src/lib/familias-store.ts`**
-   - Adicionar helper `calcularFaixaEtaria(nascimento)` → retorna `"crianca" | "adolescente" | "adulto" | "idoso"`.
-   - Adicionar helper `calcularIdade(nascimento)`.
-   - Manter os campos `crianca` / `idoso` no tipo `Membro` como **derivados** (calculados no `addMembro`/`update`), não mais definidos manualmente pelo formulário.
-   - Adicionar campo `adolescente: boolean` derivado.
-
-2. **`src/components/familia-detail-dialogs.tsx` — Adicionar membro familiar**
-   - Remover os checkboxes "Criança" e "Idoso".
-   - Manter apenas: Gestante, PCD.
-   - Mostrar, ao lado da data de nascimento, um badge automático: "Criança (8 anos)", "Adolescente (15 anos)", "Adulto (34 anos)" ou "Idoso (67 anos)".
-   - Ao salvar, gravar `crianca`, `adolescente`, `idoso` calculados a partir da data.
-
-3. **`src/components/nova-familia-dialog.tsx`** (se hoje pede contagens manuais)
-   - Manter o input de contagem manual apenas como fallback quando ainda não há membros cadastrados; após adicionar membros pela tela de detalhe, os contadores passam a ser calculados.
-
-4. **`src/routes/familias.$id.tsx` — cards de resumo**
-   - Calcular `criancas`, `idosos` (e agora `adolescentes`) via `useMemo` a partir da lista de `membros` da família, em vez de ler `familia.criancas` / `familia.idosos` fixos.
-   - Adicionar coluna/badge "Faixa etária" na tabela de membros vinculados.
-
-5. **`src/routes/familias.index.tsx`**
-   - Filtros existentes ("com crianças", "com idosos", se houver) passam a considerar os membros derivados.
-
-## Regras de borda
-
-- Data de nascimento **vazia** → não classifica (nenhum badge, contadores não somam).
-- Data **no futuro** ou inválida → bloquear salvar com mensagem "Data de nascimento inválida".
-- Idade calculada com base em `new Date()` no momento do cálculo (não persistir idade, só a data).
-- Aniversário do dia: já conta a idade nova.
+### 3. `src/routes/auditoria.tsx` — botão "Limpar histórico"
+- Adicionar botão discreto ao lado de "Limpar filtros", visível apenas para o perfil Administrador.
+- Ao clicar, abre um `AlertDialog` de confirmação e chama `useAuditoria().limpar()`.
+- Permite ao usuário remover de uma vez os registros duplicados legados sem precisar mexer no armazenamento do navegador.
+- Layout, cores, cards, menu lateral e topo permanecem intactos.
 
 ## O que **não** muda
 
-- Layout, paleta, menu lateral, topo, logo, estrutura dos cards e das abas.
-- Regras de atendimento (25 dias, cesta padrão/extra) e estoque.
-- Marcadores manuais de **Gestante** e **PCD**.
+- Layout visual aprovado da tela de Auditoria e da tela de Atendimento.
+- Menu lateral, topo, paleta, cards e estrutura de colunas.
+- Regras de entrega, estoque, 25 dias e liberação excepcional.
+- Formato dos eventos de auditoria já registrados.
 
 ## Validação
 
-1. Adicionar membro com nascimento 10/01/2018 → badge "Criança (8 anos)", contador de crianças +1.
-2. Adicionar membro com nascimento 05/2010 → "Adolescente (15/16 anos)".
-3. Adicionar membro com nascimento 1960 → "Idoso", contador de idosos +1.
-4. Editar data de nascimento e ver reclassificação automática.
-5. Data futura → erro de validação.
-6. Cards de resumo da família refletem os membros cadastrados.
+1. Abrir /auditoria e usar o novo botão "Limpar histórico" para remover as linhas duplicadas legadas.
+2. Buscar Alex Alves Inacio em /atendimento (bloqueado por prazo) — nenhum novo evento deve ser criado só por renderizar.
+3. Clicar em "Registrar tentativa bloqueada" em um cenário sem estoque duas vezes seguidas — apenas 1 linha em /auditoria.
+4. Entregar uma cesta — 1 "Entrega realizada" + 1 "Baixa automática", sem duplicatas.
+5. Liberação excepcional — 1 "Liberação excepcional" + 1 "Entrega realizada" + 1 "Baixa automática".
