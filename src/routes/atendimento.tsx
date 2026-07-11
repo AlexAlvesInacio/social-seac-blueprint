@@ -254,7 +254,9 @@ function ResultadoAssistido({
   params: ReturnType<typeof useParametros.getState>["params"];
 }) {
   // Aplica a lógica central de regras oficiais (REGRAS_ATENDIMENTO_SEAC.md).
-  const estoque: EstoqueBeneficio = { ...ESTOQUE, ...(assistido.estoqueOverride ?? {}) };
+  const saldoPadrao = useAtendimentoStore((s) => s.saldo["Cesta Padrão"] ?? 0);
+  const saldoExtra = useAtendimentoStore((s) => s.saldo["Cesta Extra"] ?? 0);
+  const estoque: EstoqueBeneficio = { cestaPadrao: saldoPadrao, cestaExtra: saldoExtra };
   const el = verificarElegibilidadeAtendimento(assistido, estoque, undefined, {
     intervaloMinimoDias: params.intervaloMinimoDias,
     limiteExtra: params.limiteExtra,
