@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Search,
   CheckCircle2,
@@ -78,16 +78,20 @@ function AtendimentoPage() {
   const params = useParametros((s) => s.params);
   const familias = useFamilias((s) => s.familias);
   const assistidosAll = useFamilias((s) => s.assistidos);
+  const membrosAll = useFamilias((s) => s.membros);
   const ultimaEntrega = useAtendimentoStore((s) => s.ultimaEntrega);
   const contarExtras = useAtendimentoStore((s) => s.contarExtras);
   const saldoMap = useAtendimentoStore((s) => s.saldo);
   const search = Route.useSearch();
+  const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
   type SearchResult =
     | { status: "idle" }
     | { status: "invalid" }
     | { status: "found"; assistido: Assistido }
+    | { status: "family_only"; familiaId: number; nome: string; responsavel: string; documento: string; telefone?: string; bairro?: string }
+    | { status: "member_only"; familiaId: number; familiaNome: string; nome: string; documento?: string; parentesco: string }
     | { status: "not_found" };
   const [result, setResult] = useState<SearchResult>({ status: "idle" });
 
@@ -131,9 +135,47 @@ function AtendimentoPage() {
         onlyDigits(a.telefone ?? "").includes(qDigits);
       return nameHit || docHit || telHit;
     });
-    if (!match) return { status: "not_found" };
-    const built = buildAssistido(match);
-    return built ? { status: "found", assistido: built } : { status: "not_found" };
+    if (match) {
+      const built = buildAssistido(match);
+      if (built) return { status: "found", assistido: built };
+    }
+    // Sem assistido → checar responsável de família.
+    const fam = familias.find((f) => {
+      const nameHit = normalize(f.responsavel).includes(qNorm) || normalize(f.nome).includes(qNorm);
+      const docHit = qDigits.length >= 3 && onlyDigits(f.documento).includes(qDigits);
+      const telHit = qDigits.length >= 3 && onlyDigits(f.telefone ?? "").includes(qDigits);
+      return nameHit || docHit || telHit;
+    });
+    if (fam) {
+      return {
+        status: "family_only",
+        familiaId: fam.id,
+        nome: fam.nome,
+        responsavel: fam.responsavel,
+        documento: fam.documento,
+        telefone: fam.telefone,
+        bairro: fam.bairro,
+      };
+    }
+    // Sem família → checar membro familiar.
+    const membro = membrosAll.find((m) => {
+      const nameHit = normalize(m.nome).includes(qNorm);
+      const docHit = qDigits.length >= 3 && !!m.documento && onlyDigits(m.documento).includes(qDigits);
+      const telHit = qDigits.length >= 3 && !!m.telefone && onlyDigits(m.telefone).includes(qDigits);
+      return nameHit || docHit || telHit;
+    });
+    if (membro) {
+      const famM = familias.find((f) => f.id === membro.familiaId);
+      return {
+        status: "member_only",
+        familiaId: membro.familiaId,
+        familiaNome: famM?.nome ?? "—",
+        nome: membro.nome,
+        documento: membro.documento,
+        parentesco: membro.parentesco,
+      };
+    }
+    return { status: "not_found" };
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -200,6 +242,43 @@ function AtendimentoPage() {
       <div className="mt-4">
         {(result.status === "idle" || result.status === "invalid") && <EmptyState />}
         {result.status === "not_found" && <NaoEncontradoState />}
+        {result.status === "family_only" && (
+          <FamilySemAssistidoState
+            familiaId={result.familiaId}
+            nome={result.nome}
+            responsavel={result.responsavel}
+            documento={result.documento}
+            telefone={result.telefone}
+            bairro={result.bairro}
+            onAdicionar={() => {
+              registrarAuditoria({
+                usuario: "operador",
+                acao: "Encaminhado para cadastro de assistido (responsável)",
+                modulo: "Atendimento",
+                registro: `${result.nome} — ${result.responsavel}`,
+              });
+              navigate({ to: "/familias/$id", params: { id: String(result.familiaId) } });
+            }}
+          />
+        )}
+        {result.status === "member_only" && (
+          <MembroSemAssistidoState
+            familiaId={result.familiaId}
+            familiaNome={result.familiaNome}
+            nome={result.nome}
+            documento={result.documento}
+            parentesco={result.parentesco}
+            onCadastrar={() => {
+              registrarAuditoria({
+                usuario: "operador",
+                acao: "Membro familiar encaminhado para cadastro como assistido",
+                modulo: "Atendimento",
+                registro: `${result.familiaNome} — ${result.nome}`,
+              });
+              navigate({ to: "/familias/$id", params: { id: String(result.familiaId) } });
+            }}
+          />
+        )}
         {result.status === "found" && (
           <ResultadoAssistido assistido={result.assistido} isAdmin={isAdmin} params={params} />
         )}
