@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Minus, Sliders, Package, PackageCheck, AlertTriangle, PackageX, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -16,47 +16,55 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { useAtendimentoStore } from "@/lib/atendimento-store";
 
 export const Route = createFileRoute("/estoque")({
   head: () => ({ meta: [{ title: "Estoque — SEAC Social" }] }),
   component: EstoquePage,
 });
 
-const kpis = [
-  { label: "Total de itens", value: "18", hint: "Cadastrados", icon: Package, tone: "bg-primary/10 text-primary" },
-  { label: "Itens com estoque", value: "12", hint: "Saldo > 0", icon: PackageCheck, tone: "bg-emerald-100 text-emerald-700" },
-  { label: "Itens em estoque baixo", value: "3", hint: "Atenção", icon: AlertTriangle, tone: "bg-amber-100 text-amber-700" },
-  { label: "Itens sem estoque", value: "2", hint: "Sem saldo", icon: PackageX, tone: "bg-red-100 text-red-700" },
-  { label: "Valor total estimado", value: "R$ 24.350,00", hint: "Valor estimado do estoque", icon: Wallet, tone: "bg-emerald-100 text-emerald-700" },
-];
-
 type StatusItem = "Em estoque" | "Atenção" | "Estoque baixo" | "Sem estoque" | "Inativo";
 
-const saldos: {
+type SaldoRow = {
   item: string; categoria: string; unidade: string; saldo: number; minimo: number;
-  status: StatusItem; valor: string; ultima: string;
-}[] = [
-  { item: "Cesta Padrão", categoria: "Benefício montado", unidade: "unidade", saldo: 120, minimo: 30, status: "Em estoque", valor: "R$ 85,00", ultima: "20/05/2025 10:30" },
-  { item: "Cesta Extra", categoria: "Benefício montado", unidade: "unidade", saldo: 25, minimo: 20, status: "Atenção", valor: "R$ 60,00", ultima: "20/05/2025 09:15" },
-  { item: "Arroz 5kg", categoria: "Alimento", unidade: "pacote", saldo: 200, minimo: 50, status: "Em estoque", valor: "R$ 24,00", ultima: "19/05/2025 14:20" },
-  { item: "Feijão 1kg", categoria: "Alimento", unidade: "pacote", saldo: 80, minimo: 40, status: "Em estoque", valor: "R$ 8,50", ultima: "19/05/2025 14:20" },
-  { item: "Óleo 900ml", categoria: "Alimento", unidade: "unidade", saldo: 15, minimo: 30, status: "Estoque baixo", valor: "R$ 7,50", ultima: "18/05/2025 16:45" },
-  { item: "Macarrão", categoria: "Alimento", unidade: "pacote", saldo: 0, minimo: 20, status: "Sem estoque", valor: "R$ 4,20", ultima: "18/05/2025 11:00" },
-  { item: "Marmita", categoria: "Refeição", unidade: "unidade", saldo: 150, minimo: 50, status: "Em estoque", valor: "R$ 12,00", ultima: "20/05/2025 08:50" },
-  { item: "Kit Gestante", categoria: "Benefício", unidade: "unidade", saldo: 8, minimo: 10, status: "Atenção", valor: "R$ 45,00", ultima: "17/05/2025 13:10" },
+  valorUnit: number; ultima: string;
+};
+
+const SALDOS_BASE: SaldoRow[] = [
+  { item: "Cesta Padrão", categoria: "Benefício montado", unidade: "unidade", saldo: 120, minimo: 30, valorUnit: 85, ultima: "20/05/2025 10:30" },
+  { item: "Cesta Extra", categoria: "Benefício montado", unidade: "unidade", saldo: 25, minimo: 20, valorUnit: 60, ultima: "20/05/2025 09:15" },
+  { item: "Arroz 5kg", categoria: "Alimento", unidade: "pacote", saldo: 200, minimo: 50, valorUnit: 24, ultima: "19/05/2025 14:20" },
+  { item: "Feijão 1kg", categoria: "Alimento", unidade: "pacote", saldo: 80, minimo: 40, valorUnit: 8.5, ultima: "19/05/2025 14:20" },
+  { item: "Óleo 900ml", categoria: "Alimento", unidade: "unidade", saldo: 15, minimo: 30, valorUnit: 7.5, ultima: "18/05/2025 16:45" },
+  { item: "Macarrão", categoria: "Alimento", unidade: "pacote", saldo: 0, minimo: 20, valorUnit: 4.2, ultima: "18/05/2025 11:00" },
+  { item: "Marmita", categoria: "Refeição", unidade: "unidade", saldo: 150, minimo: 50, valorUnit: 12, ultima: "20/05/2025 08:50" },
+  { item: "Kit Gestante", categoria: "Benefício", unidade: "unidade", saldo: 8, minimo: 10, valorUnit: 45, ultima: "17/05/2025 13:10" },
 ];
+
+const BENEFICIOS_STORE = new Set(["Cesta Padrão", "Cesta Extra", "Kit Gestante"]);
+
+function computeStatus(saldo: number, minimo: number): StatusItem {
+  if (saldo <= 0) return "Sem estoque";
+  if (saldo < minimo * 0.5) return "Estoque baixo";
+  if (saldo < minimo) return "Atenção";
+  return "Em estoque";
+}
+
+function formatBRL(v: number): string {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 type MovTipo = "Entrada" | "Saída" | "Ajuste" | "Baixa automática";
 
-const movimentacoes: {
-  data: string; item: string; tipo: MovTipo; quantidade: string; saldo: number;
-  usuario: string; origem: string; obs: string;
-}[] = [
-  { data: "20/05/2025 10:30", item: "Cesta Padrão", tipo: "Baixa automática", quantidade: "-1", saldo: 119, usuario: "Atendente teste", origem: "Entrega realizada", obs: "Entrega para João da Silva" },
-  { data: "20/05/2025 09:15", item: "Cesta Extra", tipo: "Baixa automática", quantidade: "-1", saldo: 24, usuario: "Atendente teste", origem: "Entrega realizada", obs: "Entrega para Maria da Silva" },
-  { data: "19/05/2025 14:20", item: "Arroz 5kg", tipo: "Entrada", quantidade: "+200", saldo: 200, usuario: "Atendente teste", origem: "Doação", obs: "Doador: Supermercado Exemplo" },
-  { data: "18/05/2025 16:45", item: "Óleo 900ml", tipo: "Ajuste", quantidade: "-5", saldo: 15, usuario: "Administrador", origem: "Ajuste de contagem", obs: "Correção de inventário" },
-  { data: "18/05/2025 11:00", item: "Macarrão", tipo: "Saída", quantidade: "-20", saldo: 0, usuario: "Atendente teste", origem: "Montagem de cesta", obs: "Uso na montagem de cesta" },
+type MovRow = {
+  key: string; data: string; ts: number; item: string; tipo: MovTipo;
+  quantidade: string; saldo: number; usuario: string; origem: string; obs: string;
+};
+
+const MOV_SEED: MovRow[] = [
+  { key: "seed-3", data: "19/05/2025 14:20", ts: new Date("2025-05-19T14:20:00").getTime(), item: "Arroz 5kg", tipo: "Entrada", quantidade: "+200", saldo: 200, usuario: "Atendente teste", origem: "Doação", obs: "Doador: Supermercado Exemplo" },
+  { key: "seed-4", data: "18/05/2025 16:45", ts: new Date("2025-05-18T16:45:00").getTime(), item: "Óleo 900ml", tipo: "Ajuste", quantidade: "-5", saldo: 15, usuario: "Administrador", origem: "Ajuste de contagem", obs: "Correção de inventário" },
+  { key: "seed-5", data: "18/05/2025 11:00", ts: new Date("2025-05-18T11:00:00").getTime(), item: "Macarrão", tipo: "Saída", quantidade: "-20", saldo: 0, usuario: "Atendente teste", origem: "Montagem de cesta", obs: "Uso na montagem de cesta" },
 ];
 
 function statusBadge(status: StatusItem) {
@@ -84,6 +92,68 @@ function EstoquePage() {
   const [openEntrada, setOpenEntrada] = useState(false);
   const [openSaida, setOpenSaida] = useState(false);
   const [openAjuste, setOpenAjuste] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const entregas = useAtendimentoStore((s) => s.entregas);
+  const saldoStore = useAtendimentoStore((s) => s.saldo);
+
+  const saldos = useMemo<(SaldoRow & { status: StatusItem })[]>(() => {
+    return SALDOS_BASE.map((s) => {
+      const saldo = mounted && BENEFICIOS_STORE.has(s.item)
+        ? (saldoStore[s.item] ?? s.saldo)
+        : s.saldo;
+      const ultimaEntrega = mounted
+        ? entregas.find((e) => e.beneficio === s.item)
+        : undefined;
+      const ultima = ultimaEntrega
+        ? new Date(ultimaEntrega.dataISO).toLocaleString("pt-BR")
+        : s.ultima;
+      return { ...s, saldo, ultima, status: computeStatus(saldo, s.minimo) };
+    });
+  }, [mounted, saldoStore, entregas]);
+
+  const kpis = useMemo(() => {
+    const total = saldos.length;
+    const com = saldos.filter((s) => s.saldo > 0).length;
+    const baixo = saldos.filter((s) => s.saldo > 0 && s.saldo < s.minimo).length;
+    const sem = saldos.filter((s) => s.saldo <= 0).length;
+    const valor = saldos.reduce((acc, s) => acc + s.saldo * s.valorUnit, 0);
+    return [
+      { label: "Total de itens", value: String(total), hint: "Cadastrados", icon: Package, tone: "bg-primary/10 text-primary" },
+      { label: "Itens com estoque", value: String(com), hint: "Saldo > 0", icon: PackageCheck, tone: "bg-emerald-100 text-emerald-700" },
+      { label: "Itens em estoque baixo", value: String(baixo), hint: "Atenção", icon: AlertTriangle, tone: "bg-amber-100 text-amber-700" },
+      { label: "Itens sem estoque", value: String(sem), hint: "Sem saldo", icon: PackageX, tone: "bg-red-100 text-red-700" },
+      { label: "Valor total estimado", value: formatBRL(valor), hint: "Valor estimado do estoque", icon: Wallet, tone: "bg-emerald-100 text-emerald-700" },
+    ];
+  }, [saldos]);
+
+  const movimentacoes = useMemo<MovRow[]>(() => {
+    if (!mounted) return MOV_SEED;
+    const ordenadas = [...entregas].sort(
+      (a, b) => new Date(a.dataISO).getTime() - new Date(b.dataISO).getTime(),
+    );
+    const saldoBase: Record<string, number> = {};
+    for (const s of SALDOS_BASE) saldoBase[s.item] = s.saldo;
+    const rows: MovRow[] = ordenadas.map((e) => {
+      const antes = saldoBase[e.beneficio] ?? 0;
+      const depois = Math.max(0, antes - 1);
+      saldoBase[e.beneficio] = depois;
+      return {
+        key: e.id,
+        data: new Date(e.dataISO).toLocaleString("pt-BR"),
+        ts: new Date(e.dataISO).getTime(),
+        item: e.beneficio,
+        tipo: "Baixa automática",
+        quantidade: "-1",
+        saldo: depois,
+        usuario: e.usuario,
+        origem: "Entrega realizada",
+        obs: `Entrega para ${e.nome}`,
+      };
+    });
+    return [...rows, ...MOV_SEED].sort((a, b) => b.ts - a.ts);
+  }, [mounted, entregas]);
 
   return (
     <AppShell
