@@ -78,10 +78,22 @@ export const useAtendimentoStore = create<State>()(
         return nova;
       },
       registrarBloqueio: (b) => {
+        const dataISO = b.dataISO ?? new Date().toISOString();
+        const ultimo = get().bloqueios[0];
+        if (
+          ultimo &&
+          normDoc(ultimo.documento) === normDoc(b.documento) &&
+          ultimo.motivo === b.motivo &&
+          Math.abs(
+            new Date(dataISO).getTime() - new Date(ultimo.dataISO).getTime(),
+          ) < 3000
+        ) {
+          return ultimo;
+        }
         const novo: TentativaBloqueada = {
           ...b,
           id: crypto.randomUUID(),
-          dataISO: b.dataISO ?? new Date().toISOString(),
+          dataISO,
         };
         set((s) => ({ bloqueios: [novo, ...s.bloqueios].slice(0, 500) }));
         return novo;
