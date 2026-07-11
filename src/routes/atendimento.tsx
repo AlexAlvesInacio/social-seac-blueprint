@@ -835,24 +835,8 @@ function Bloqueio25Action({
   const saldoPadrao = useAtendimentoStore((s) => s.saldo["Cesta Padrão"] ?? 0);
   const saldoExtra = useAtendimentoStore((s) => s.saldo["Cesta Extra"] ?? 0);
 
-  useEffect(() => {
-    registrarBloqueio({
-      documento: assistido.documento,
-      nome: assistido.nome,
-      familia: assistido.familia,
-      motivo: "prazo",
-      observacao: `Faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"} — próxima ${proximaData}.`,
-      usuario: "Administrador",
-    });
-    registrarAuditoria({
-      usuario: "Administrador",
-      acao: "Tentativa bloqueada por prazo",
-      modulo: "Atendimento",
-      registro: assistido.nome,
-      observacao: `Faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"} — próxima ${proximaData}.`,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Não auditar automaticamente ao renderizar: apenas ações reais do operador
+  // (liberação excepcional, entrega, tentativa por estoque) geram registro.
 
   const liberar = () => {
     if (motivo.trim().length < 5) {
@@ -877,6 +861,14 @@ function Bloqueio25Action({
       observacao: motivo.trim(),
       excepcional: true,
       origem: "atendimento",
+    });
+    registrarBloqueio({
+      documento: assistido.documento,
+      nome: assistido.nome,
+      familia: assistido.familia,
+      motivo: "prazo",
+      observacao: `Liberação excepcional — faltavam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"} (próxima ${proximaData}).`,
+      usuario: "Administrador",
     });
     registrarAuditoria({
       usuario: "Administrador",
