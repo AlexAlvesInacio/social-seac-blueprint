@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -25,7 +26,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useFamilias, calcularIdade, calcularFaixaEtaria, rotuloFaixaEtaria } from "@/lib/familias-store";
+import { registrarAuditoria } from "@/lib/auditoria-store";
 import {
   EditarFamiliaDialog, AdicionarAssistidoDialog,
   AdicionarMembroDialog, RegistrarObservacaoDialog,
@@ -52,10 +62,11 @@ function FamiliaDetail() {
   const observacoes = useMemo(
     () => allObs.filter((o) => String(o.familiaId) === id), [allObs, id],
   );
-  const primeiroAssistidoAtivo = useMemo(
-    () => assistidos.find((a) => a.status === "ativo"),
+  const assistidosAtivos = useMemo(
+    () => assistidos.filter((a) => a.status === "ativo"),
     [assistidos],
   );
+  const navigate = useNavigate();
   const contagens = useMemo(() => {
     const assistidosAtivos = assistidos.filter((a) => a.status === "ativo");
     type Pessoa = { documento?: string; nascimento?: string; pcd?: boolean; gestante?: boolean };
@@ -104,6 +115,47 @@ function FamiliaDetail() {
   const [openAssistido, setOpenAssistido] = useState(false);
   const [openMembro, setOpenMembro] = useState(false);
   const [openObs, setOpenObs] = useState(false);
+  const [openSelecionar, setOpenSelecionar] = useState(false);
+
+  const irParaAtendimento = () => {
+    if (!familia) return;
+    if (assistidosAtivos.length === 0) {
+      registrarAuditoria({
+        usuario: "operador",
+        acao: "Tentativa de atendimento sem assistido ativo",
+        modulo: "Atendimento",
+        registro: familia.nome,
+      });
+      toast.warning("Esta família ainda não possui assistido ativo para atendimento.", {
+        action: { label: "Adicionar assistido", onClick: () => setOpenAssistido(true) },
+      });
+      return;
+    }
+    if (assistidosAtivos.length === 1) {
+      const a = assistidosAtivos[0];
+      registrarAuditoria({
+        usuario: "operador",
+        acao: "Atendimento aberto a partir da família",
+        modulo: "Atendimento",
+        registro: `${familia.nome} — ${a.nome}`,
+      });
+      navigate({ to: "/atendimento", search: { assistido: a.documento } });
+      return;
+    }
+    setOpenSelecionar(true);
+  };
+
+  const selecionarAssistido = (docto: string, nome: string) => {
+    if (!familia) return;
+    registrarAuditoria({
+      usuario: "operador",
+      acao: "Assistido selecionado para atendimento",
+      modulo: "Atendimento",
+      registro: `${familia.nome} — ${nome}`,
+    });
+    setOpenSelecionar(false);
+    navigate({ to: "/atendimento", search: { assistido: docto } });
+  };
 
   if (!familia) {
     return (
@@ -148,17 +200,8 @@ function FamiliaDetail() {
           </Button>
           <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenEditar(true)}><Pencil className="h-4 w-4" /> Editar família</Button>
           <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenAssistido(true)}><Plus className="h-4 w-4" /> Adicionar assistido</Button>
-          <Button asChild size="sm" className="gap-2">
-            <Link
-              to="/atendimento"
-              search={
-                primeiroAssistidoAtivo
-                  ? { assistido: primeiroAssistidoAtivo.documento }
-                  : {}
-              }
-            >
-              <HeartHandshake className="h-4 w-4" /> Ir para atendimento
-            </Link>
+          <Button size="sm" className="gap-2" onClick={irParaAtendimento}>
+            <HeartHandshake className="h-4 w-4" /> Ir para atendimento
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -182,6 +225,37 @@ function FamiliaDetail() {
       <AdicionarAssistidoDialog open={openAssistido} onOpenChange={setOpenAssistido} familia={familia} />
       <AdicionarMembroDialog open={openMembro} onOpenChange={setOpenMembro} familia={familia} />
       <RegistrarObservacaoDialog open={openObs} onOpenChange={setOpenObs} familia={familia} />
+      <Dialog open={openSelecionar} onOpenChange={setOpenSelecionar}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Selecionar assistido para atendimento</DialogTitle>
+            <DialogDescription>
+              Esta família tem mais de um assistido ativo. Escolha quem será atendido agora.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {assistidosAtivos.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => selecionarAssistido(a.documento, a.nome)}
+                className="flex w-full flex-col gap-1 rounded-md border border-border bg-background p-3 text-left transition hover:border-primary/40 hover:bg-primary/5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{a.nome}</span>
+                  <Badge variant="outline" className="text-[10px] capitalize">{a.status}</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {a.documento} · {a.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"} · {a.beneficio}
+                </div>
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenSelecionar(false)}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="space-y-6">
         <Card>
           <CardContent className="p-6">
