@@ -12,6 +12,12 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useAuditoria } from "@/lib/auditoria-store";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/auditoria")({
   head: () => ({ meta: [{ title: "Auditoria — SEAC Social" }] }),
@@ -20,6 +26,7 @@ export const Route = createFileRoute("/auditoria")({
 
 function AuditoriaPage() {
   const eventos = useAuditoria((s) => s.eventos);
+  const limpar = useAuditoria((s) => s.limpar);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const [de, setDe] = useState("");
@@ -72,8 +79,27 @@ function AuditoriaPage() {
               </SelectContent>
             </Select>
           </F>
-          <div className="md:col-span-5 flex justify-end">
+          <div className="md:col-span-5 flex justify-end gap-2">
             <Button variant="outline" onClick={() => { setDe(""); setAte(""); setUsuario("all"); setAcao("all"); setModulo("all"); }}>Limpar filtros</Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="gap-2 text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4" /> Limpar histórico
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Limpar todo o histórico de auditoria?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação remove permanentemente todos os eventos registrados até agora, incluindo entradas duplicadas legadas. Não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => limpar()}>Limpar histórico</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>
