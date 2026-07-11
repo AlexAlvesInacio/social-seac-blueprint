@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Search,
   CheckCircle2,
@@ -78,16 +78,20 @@ function AtendimentoPage() {
   const params = useParametros((s) => s.params);
   const familias = useFamilias((s) => s.familias);
   const assistidosAll = useFamilias((s) => s.assistidos);
+  const membrosAll = useFamilias((s) => s.membros);
   const ultimaEntrega = useAtendimentoStore((s) => s.ultimaEntrega);
   const contarExtras = useAtendimentoStore((s) => s.contarExtras);
   const saldoMap = useAtendimentoStore((s) => s.saldo);
   const search = Route.useSearch();
+  const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
   type SearchResult =
     | { status: "idle" }
     | { status: "invalid" }
     | { status: "found"; assistido: Assistido }
+    | { status: "family_only"; familiaId: number; nome: string; responsavel: string; documento: string; telefone?: string; bairro?: string }
+    | { status: "member_only"; familiaId: number; familiaNome: string; nome: string; documento?: string; parentesco: string }
     | { status: "not_found" };
   const [result, setResult] = useState<SearchResult>({ status: "idle" });
 
@@ -131,9 +135,47 @@ function AtendimentoPage() {
         onlyDigits(a.telefone ?? "").includes(qDigits);
       return nameHit || docHit || telHit;
     });
-    if (!match) return { status: "not_found" };
-    const built = buildAssistido(match);
-    return built ? { status: "found", assistido: built } : { status: "not_found" };
+    if (match) {
+      const built = buildAssistido(match);
+      if (built) return { status: "found", assistido: built };
+    }
+    // Sem assistido → checar responsável de família.
+    const fam = familias.find((f) => {
+      const nameHit = normalize(f.responsavel).includes(qNorm) || normalize(f.nome).includes(qNorm);
+      const docHit = qDigits.length >= 3 && onlyDigits(f.documento).includes(qDigits);
+      const telHit = qDigits.length >= 3 && onlyDigits(f.telefone ?? "").includes(qDigits);
+      return nameHit || docHit || telHit;
+    });
+    if (fam) {
+      return {
+        status: "family_only",
+        familiaId: fam.id,
+        nome: fam.nome,
+        responsavel: fam.responsavel,
+        documento: fam.documento,
+        telefone: fam.telefone,
+        bairro: fam.bairro,
+      };
+    }
+    // Sem família → checar membro familiar.
+    const membro = membrosAll.find((m) => {
+      const nameHit = normalize(m.nome).includes(qNorm);
+      const docHit = qDigits.length >= 3 && !!m.documento && onlyDigits(m.documento).includes(qDigits);
+      const telHit = qDigits.length >= 3 && !!m.telefone && onlyDigits(m.telefone).includes(qDigits);
+      return nameHit || docHit || telHit;
+    });
+    if (membro) {
+      const famM = familias.find((f) => f.id === membro.familiaId);
+      return {
+        status: "member_only",
+        familiaId: membro.familiaId,
+        familiaNome: famM?.nome ?? "—",
+        nome: membro.nome,
+        documento: membro.documento,
+        parentesco: membro.parentesco,
+      };
+    }
+    return { status: "not_found" };
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -200,6 +242,43 @@ function AtendimentoPage() {
       <div className="mt-4">
         {(result.status === "idle" || result.status === "invalid") && <EmptyState />}
         {result.status === "not_found" && <NaoEncontradoState />}
+        {result.status === "family_only" && (
+          <FamilySemAssistidoState
+            familiaId={result.familiaId}
+            nome={result.nome}
+            responsavel={result.responsavel}
+            documento={result.documento}
+            telefone={result.telefone}
+            bairro={result.bairro}
+            onAdicionar={() => {
+              registrarAuditoria({
+                usuario: "operador",
+                acao: "Encaminhado para cadastro de assistido (responsável)",
+                modulo: "Atendimento",
+                registro: `${result.nome} — ${result.responsavel}`,
+              });
+              navigate({ to: "/familias/$id", params: { id: String(result.familiaId) } });
+            }}
+          />
+        )}
+        {result.status === "member_only" && (
+          <MembroSemAssistidoState
+            familiaId={result.familiaId}
+            familiaNome={result.familiaNome}
+            nome={result.nome}
+            documento={result.documento}
+            parentesco={result.parentesco}
+            onCadastrar={() => {
+              registrarAuditoria({
+                usuario: "operador",
+                acao: "Membro familiar encaminhado para cadastro como assistido",
+                modulo: "Atendimento",
+                registro: `${result.familiaNome} — ${result.nome}`,
+              });
+              navigate({ to: "/familias/$id", params: { id: String(result.familiaId) } });
+            }}
+          />
+        )}
         {result.status === "found" && (
           <ResultadoAssistido assistido={result.assistido} isAdmin={isAdmin} params={params} />
         )}
@@ -414,6 +493,89 @@ function NaoEncontradoState() {
             }
           >
             <ShoppingBasket className="h-4 w-4" /> Criar pré-cadastro e entregar Cesta Extra
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FamilySemAssistidoState({
+  nome, responsavel, documento, telefone, bairro, onAdicionar,
+}: {
+  familiaId: number;
+  nome: string;
+  responsavel: string;
+  documento: string;
+  telefone?: string;
+  bairro?: string;
+  onAdicionar: () => void;
+}) {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <UserCog className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              Família encontrada, mas nenhum assistido ativo foi localizado para atendimento.
+            </p>
+            <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+              <span><span className="font-medium text-foreground">Família:</span> {nome}</span>
+              <span><span className="font-medium text-foreground">Responsável:</span> {responsavel}</span>
+              <span><span className="font-medium text-foreground">Documento:</span> {documento}</span>
+              {telefone && <span><span className="font-medium text-foreground">Telefone:</span> {telefone}</span>}
+              {bairro && <span><span className="font-medium text-foreground">Bairro:</span> {bairro}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button className="gap-2" onClick={onAdicionar}>
+            <UserPlus className="h-4 w-4" /> Adicionar assistido
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MembroSemAssistidoState({
+  familiaNome, nome, documento, parentesco, onCadastrar,
+}: {
+  familiaId: number;
+  familiaNome: string;
+  nome: string;
+  documento?: string;
+  parentesco: string;
+  onCadastrar: () => void;
+}) {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <UserCheck className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              Pessoa encontrada como membro familiar, mas ainda não está cadastrada como assistido.
+            </p>
+            <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+              <span><span className="font-medium text-foreground">Nome:</span> {nome}</span>
+              <span><span className="font-medium text-foreground">Documento:</span> {documento || "—"}</span>
+              <span><span className="font-medium text-foreground">Família:</span> {familiaNome}</span>
+              <span><span className="font-medium text-foreground">Parentesco:</span> {parentesco}</span>
+            </div>
+            <p className="mt-2 text-[11px] text-amber-700">
+              A entrega de cesta não é permitida enquanto a pessoa estiver apenas como membro familiar.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button className="gap-2" onClick={onCadastrar}>
+            <UserPlus className="h-4 w-4" /> Cadastrar como assistido
           </Button>
         </div>
       </CardContent>
