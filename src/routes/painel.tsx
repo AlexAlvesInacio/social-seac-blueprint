@@ -194,7 +194,7 @@ function PainelPage() {
     const statusFamilias = [
       { status: "Liberado", qtd: familias.filter((f) => f.status === "liberado").length, fill: "hsl(152 55% 42%)" },
       { status: "Bloqueado", qtd: familias.filter((f) => f.status === "bloqueado").length, fill: "hsl(0 72% 51%)" },
-      { status: "Avaliar", qtd: familias.filter((f) => f.status === "avaliar").length, fill: "hsl(38 92% 50%)" },
+      { status: "Avaliar", qtd: familias.filter((f) => f.status === "avaliar").length, fill: "#E8712A" },
       { status: "Inativo", qtd: familias.filter((f) => f.status === "inativo").length, fill: "hsl(220 9% 55%)" },
     ];
 
@@ -263,7 +263,7 @@ function PainelPage() {
     { label: "PCD", value: dados.publico.pcd, hint: "Deficiência" },
   ];
 
-  const PIE_COLORS = ["hsl(var(--primary))", "hsl(160 60% 45%)", "hsl(280 60% 55%)"];
+  const PIE_COLORS = ["#1E5AA8", "#E8712A", "#4C8FD1", "#F4A96B"];
 
   return (
     <AppShell title="Painel">
@@ -325,7 +325,7 @@ function PainelPage() {
                   <XAxis dataKey="dia" tick={{ fontSize: 10 }} interval={dados.entregasPorDia.length > 12 ? 1 : 0} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Bar dataKey="qtd" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} minPointSize={4}>
+                  <Bar dataKey="qtd" fill="#1E5AA8" radius={[4, 4, 0, 0]} minPointSize={4}>
                     <LabelList dataKey="qtd" position="top" style={{ fontSize: 10, fill: "hsl(var(--foreground))" }} />
                   </Bar>
                 </BarChart>

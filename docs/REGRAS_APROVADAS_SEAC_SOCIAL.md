@@ -116,3 +116,15 @@ Este documento complementa `REGRAS_ATENDIMENTO_SEAC.md` e
   Liberado verde, Bloqueado vermelho, Avaliar laranja, Inativo cinza.
 - Contato necessário 90+ é apenas informativo: não bloqueia entregas,
   não altera status da família automaticamente.
+
+## Paleta oficial dos gráficos do Painel
+
+- Azul principal: `#1E5AA8`
+- Laranja principal: `#E8712A`
+- Azul claro: `#4C8FD1`
+- Laranja claro: `#F4A96B`
+- Usada em: "Atendimentos por dia", "Entregas por benefício" e
+  cor "Avaliar" do gráfico "Famílias por status".
+- Cores semânticas de status (verde liberado, vermelho bloqueado,
+  cinza inativo) permanecem, mantendo consistência com os chips de
+  /familias.
