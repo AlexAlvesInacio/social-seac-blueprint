@@ -20,6 +20,10 @@ import { useAtendimentoStore } from "@/lib/atendimento-store";
 
 export const Route = createFileRoute("/estoque")({
   head: () => ({ meta: [{ title: "Estoque — SEAC Social" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: (search.tab as "saldos" | "mov" | undefined) ?? undefined,
+    foco: (search.foco as "alertas" | undefined) ?? undefined,
+  }),
   component: EstoquePage,
 });
 
@@ -94,6 +98,9 @@ function EstoquePage() {
   const [openAjuste, setOpenAjuste] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const { tab: tabParam, foco } = Route.useSearch();
+  const [tab, setTab] = useState<"saldos" | "mov">(tabParam ?? "saldos");
+  useEffect(() => { if (tabParam) setTab(tabParam); }, [tabParam]);
 
   const entregas = useAtendimentoStore((s) => s.entregas);
   const saldoStore = useAtendimentoStore((s) => s.saldo);
@@ -192,7 +199,7 @@ function EstoquePage() {
         })}
       </div>
 
-      <Tabs defaultValue="saldos" className="mt-4">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "saldos" | "mov")} className="mt-4">
         <TabsList>
           <TabsTrigger value="saldos">Saldos atuais</TabsTrigger>
           <TabsTrigger value="mov">Movimentações</TabsTrigger>
@@ -201,6 +208,11 @@ function EstoquePage() {
         <TabsContent value="saldos" className="mt-3">
           <Card>
             <CardContent className="p-0">
+              {foco === "alertas" && (
+                <div className="border-b bg-amber-50 px-4 py-2 text-xs text-amber-800">
+                  Mostrando apenas itens com atenção ou sem estoque.
+                </div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -215,7 +227,9 @@ function EstoquePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {saldos.map((s) => (
+                  {saldos
+                    .filter((s) => foco !== "alertas" || s.status === "Atenção" || s.status === "Estoque baixo" || s.status === "Sem estoque")
+                    .map((s) => (
                     <TableRow key={s.item}>
                       <TableCell className="font-medium">{s.item}</TableCell>
                       <TableCell>{s.categoria}</TableCell>
