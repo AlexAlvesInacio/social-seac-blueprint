@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users, UserRound, Truck, Package, HeartHandshake, KeyRound, Download,
   Clock, PackageX, AlertTriangle, PhoneCall,
@@ -25,6 +25,9 @@ import { registrarAuditoria } from "@/lib/auditoria-store";
 
 export const Route = createFileRoute("/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — SEAC Social" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    tipo: (search.tipo as TipoRelatorio | undefined) ?? undefined,
+  }),
   component: RelatoriosPage,
 });
 
@@ -58,8 +61,9 @@ function filtrosLabel(f: FiltrosRelatorio): string {
 function RelatoriosPage() {
   const familias = useFamilias((s) => s.familias);
   const entregas = useAtendimentoStore((s) => s.entregas);
-
-  const [tipo, setTipo] = useState<TipoRelatorio | null>(null);
+  const { tipo: tipoParam } = Route.useSearch();
+  const [tipo, setTipo] = useState<TipoRelatorio | null>(tipoParam ?? null);
+  useEffect(() => { if (tipoParam) setTipo(tipoParam); }, [tipoParam]);
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
   const [bairro, setBairro] = useState("all");
