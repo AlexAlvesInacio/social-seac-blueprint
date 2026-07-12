@@ -99,3 +99,20 @@ Este documento complementa `REGRAS_ATENDIMENTO_SEAC.md` e
   entregas.
 - Estoque: painel, estoque, recebimentos, movimentações.
 - Pendente/inativo não acessam o sistema.
+
+## Painel — dashboard operacional
+
+- Painel usa dados reais das telas Famílias, Atendimento, Estoque,
+  Relatórios e Auditoria; não cria contagens paralelas.
+- Contadores alinhados: Famílias cadastradas, Assistidos ativos,
+  Entregas hoje e no mês, Cestas em estoque, Aguardando avaliação
+  (`status = avaliar`), Contato necessário 90+
+  (`acompanhamento = sem_retirada_90`).
+- Responsável da família conta como morador no perfil do público
+  atendido; assistidos e membros são deduplicados por documento.
+- Gráficos só exibem itens com valor real (dias com atendimento,
+  benefícios com entrega).
+- Status de famílias no gráfico segue as cores oficiais do sistema:
+  Liberado verde, Bloqueado vermelho, Avaliar laranja, Inativo cinza.
+- Contato necessário 90+ é apenas informativo: não bloqueia entregas,
+  não altera status da família automaticamente.
