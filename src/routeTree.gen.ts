@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as RecebimentosRouteImport } from './routes/recebimentos'
+import { Route as PainelRouteImport } from './routes/painel'
 import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ComposicaoCestaRouteImport } from './routes/composicao-cesta'
@@ -35,6 +36,11 @@ const RelatoriosRoute = RelatoriosRouteImport.update({
 const RecebimentosRoute = RecebimentosRouteImport.update({
   id: '/recebimentos',
   path: '/recebimentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EstoqueRoute = EstoqueRouteImport.update({
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/composicao-cesta': typeof ComposicaoCestaRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/estoque': typeof EstoqueRoute
+  '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
   '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/composicao-cesta': typeof ComposicaoCestaRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/estoque': typeof EstoqueRoute
+  '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
   '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/composicao-cesta': typeof ComposicaoCestaRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/estoque': typeof EstoqueRoute
+  '/painel': typeof PainelRoute
   '/recebimentos': typeof RecebimentosRoute
   '/relatorios': typeof RelatoriosRoute
   '/usuarios': typeof UsuariosRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/composicao-cesta'
     | '/configuracoes'
     | '/estoque'
+    | '/painel'
     | '/recebimentos'
     | '/relatorios'
     | '/usuarios'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/composicao-cesta'
     | '/configuracoes'
     | '/estoque'
+    | '/painel'
     | '/recebimentos'
     | '/relatorios'
     | '/usuarios'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/composicao-cesta'
     | '/configuracoes'
     | '/estoque'
+    | '/painel'
     | '/recebimentos'
     | '/relatorios'
     | '/usuarios'
@@ -179,6 +191,7 @@ export interface RootRouteChildren {
   ComposicaoCestaRoute: typeof ComposicaoCestaRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   EstoqueRoute: typeof EstoqueRoute
+  PainelRoute: typeof PainelRoute
   RecebimentosRoute: typeof RecebimentosRoute
   RelatoriosRoute: typeof RelatoriosRoute
   UsuariosRoute: typeof UsuariosRoute
@@ -207,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/recebimentos'
       fullPath: '/recebimentos'
       preLoaderRoute: typeof RecebimentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/estoque': {
@@ -283,6 +303,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComposicaoCestaRoute: ComposicaoCestaRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   EstoqueRoute: EstoqueRoute,
+  PainelRoute: PainelRoute,
   RecebimentosRoute: RecebimentosRoute,
   RelatoriosRoute: RelatoriosRoute,
   UsuariosRoute: UsuariosRoute,
