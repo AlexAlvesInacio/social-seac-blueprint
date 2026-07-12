@@ -177,3 +177,46 @@ A partir desta etapa, toda nova alteração deve respeitar as telas e
 regras homologadas. Antes de alterar uma tela já aprovada, verificar este
 documento. Se uma regra aprovada for alterada, registrar o motivo e
 atualizar este documento.
+
+---
+
+## Ajustes finos do Painel (dashboard operacional)
+
+O /painel foi revisado como dashboard operacional real do SEAC Social,
+preservando o layout aprovado. Ajustes registrados nesta etapa:
+
+- Gráfico "Atendimentos por dia (30 dias)" mostra apenas os dias com
+  atendimento real. Barras com valor 0 não aparecem. Barras pequenas
+  usam `minPointSize` para permanecerem visíveis. O valor é exibido
+  acima de cada barra.
+- Gráfico "Entregas por benefício (mês)" oculta benefícios com valor
+  zero no período. Se não houver nenhuma entrega, exibe a mensagem
+  "Nenhuma entrega registrada no período.".
+- Gráfico "Famílias por status" agora usa cores por status
+  (Liberado verde, Bloqueado vermelho, Avaliar laranja, Inativo cinza)
+  e mostra o total ao lado de cada barra.
+- Cards inferiores navegam com filtro pré-aplicado:
+  - "Ver relatório" → /relatorios?tipo=entregas
+  - "Ver estoque" (Últimas movimentações) → /estoque?tab=mov
+  - "Abrir" (Alertas de estoque) → /estoque?tab=saldos&foco=alertas
+  - "Ver famílias" (Aguardando avaliação) → /familias?foco=avaliar
+  - "Ver famílias" (Contato necessário 90+) → /familias?foco=contato90
+- Contato necessário 90+ segue como acompanhamento informativo. Não
+  bloqueia entrega e não torna a família inativa automaticamente.
+- Os números do Painel foram alinhados às demais telas:
+  - Famílias cadastradas = total de /familias.
+  - Famílias atendidas 30 dias = famílias únicas com entrega nos
+    últimos 30 dias.
+  - Assistidos ativos = assistidos com status ativo cadastrados.
+  - Entregas hoje / no mês = entregas reais registradas em
+    /atendimento.
+  - Cestas em estoque = benefícios entregáveis no estoque.
+  - Aguardando avaliação = famílias com `status = avaliar` (mesmo
+    critério do card em /familias).
+  - Contato necessário 90+ = famílias com
+    `acompanhamento = sem_retirada_90` (mesmo critério de /familias).
+- O responsável da família é contado como morador no perfil do
+  público atendido; assistidos e membros só contam uma vez por
+  documento, sem duplicidade.
+- O Painel passa a refletir as fontes de Famílias, Atendimento,
+  Estoque, Relatórios e Auditoria, sem criar contagens paralelas.
