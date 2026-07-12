@@ -131,6 +131,26 @@ Parâmetros oficiais:
   `/auditoria` (ação "Relatório gerado" / "Relatório exportado CSV",
   módulo "Relatórios", com filtros aplicados e total de registros).
 
+### 8. `/painel` — Em homologação funcional
+- Passou a usar dados reais dos mesmos stores das telas homologadas
+  (`useFamilias`, `useAtendimentoStore`, `useParametros`) — sem mock.
+- Bloco superior de indicadores: famílias cadastradas, famílias
+  atendidas nos últimos 30 dias (com comparação vs 30 dias anteriores),
+  assistidos ativos, entregas hoje, entregas no mês (com tendência),
+  cestas em estoque (soma dos benefícios entregáveis), aguardando
+  avaliação definitiva, contato necessário 90+ dias.
+- Bloco de perfil do público: crianças, adolescentes, adultos, idosos,
+  gestantes, PCD — contados por moradores únicos da família
+  (responsável + assistidos + membros, sem duplicidade por documento).
+  Sexo/gênero ainda não é obrigatório no cadastro; enquanto isso, os
+  contadores de "Mulheres"/"Homens" ficam zerados e o total aparece em
+  "Não informado".
+- Gráficos: atendimentos por dia (30 dias), entregas por benefício no
+  mês, famílias por status.
+- Bloco operacional: últimas entregas, últimas movimentações, alertas
+  de estoque, aguardando avaliação e contato 90+, todos clicáveis para
+  `/relatorios`, `/estoque` e `/familias/:id`.
+
 ---
 
 ## Pendências de validação
