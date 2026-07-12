@@ -56,3 +56,15 @@ homologação.
 Ao concluir qualquer item, mover a descrição correspondente para
 `HOMOLOGACAO_SEAC_SOCIAL.md` como homologado e registrar em
 `REGRAS_APROVADAS_SEAC_SOCIAL.md` se gerar regra nova.
+
+---
+
+## /painel — dashboard operacional
+
+- Ajustes finos concluídos: gráficos sem barras zeradas, cores por
+  status, deep-links dos cards inferiores (/relatorios, /estoque,
+  /familias) com filtro pré-aplicado.
+- Contadores validados contra Famílias, Atendimento, Estoque e
+  Relatórios.
+- Pendente para publicação: revisar com o gestor e homologar
+  formalmente o /painel como dashboard oficial do sistema.
