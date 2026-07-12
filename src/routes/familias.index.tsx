@@ -21,13 +21,22 @@ import { NovaFamiliaDialog } from "@/components/nova-familia-dialog";
 
 export const Route = createFileRoute("/familias/")({
   head: () => ({ meta: [{ title: "Famílias — SEAC Social" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    foco: (search.foco as "avaliar" | "contato90" | undefined) ?? undefined,
+  }),
   component: FamiliasPage,
 });
 
 function FamiliasPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [novaOpen, setNovaOpen] = useState(false);
-  const exemploFamilias = useFamilias((s) => s.familias);
+  const todasFamilias = useFamilias((s) => s.familias);
+  const { foco } = Route.useSearch();
+  const exemploFamilias = foco === "avaliar"
+    ? todasFamilias.filter((f) => f.status === "avaliar" || (f.tipoCadastro === "extra" && f.progressoExtra === "3/3"))
+    : foco === "contato90"
+      ? todasFamilias.filter((f) => f.acompanhamento === "sem_retirada_90")
+      : todasFamilias;
   const selected = exemploFamilias.find((f) => f.id === selectedId) ?? null;
   const params = useParametros((s) => s.params);
   const toggleSelect = (id: number) =>
