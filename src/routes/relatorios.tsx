@@ -28,9 +28,9 @@ export const Route = createFileRoute("/relatorios")({
   component: RelatoriosPage,
 });
 
-type Card = { tipo: TipoRelatorio; icon: React.ComponentType<{ className?: string }>; title: string; desc: string };
+type CardConfig = { tipo: TipoRelatorio; icon: React.ComponentType<{ className?: string }>; title: string; desc: string };
 
-const CARDS: Card[] = [
+const CARDS: CardConfig[] = [
   { tipo: "familias", icon: Users, title: "Famílias", desc: "Cadastros e situação das famílias." },
   { tipo: "assistidos", icon: UserRound, title: "Assistidos", desc: "Lista de assistidos e benefícios." },
   { tipo: "entregas", icon: Truck, title: "Entregas", desc: "Entregas realizadas no período." },
