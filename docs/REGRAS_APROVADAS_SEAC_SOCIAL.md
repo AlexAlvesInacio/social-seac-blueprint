@@ -1,130 +1,102 @@
 # Regras aprovadas — SEAC Social
 
-Consolidação das regras de negócio já aprovadas e em vigor no sistema.
-Este documento complementa `REGRAS_ATENDIMENTO_SEAC.md` e
-`HOMOLOGACAO_SEAC_SOCIAL.md`.
+Regras oficiais de negócio já homologadas. Toda alteração no sistema
+deve respeitar este documento. Alterações em regra aprovada exigem
+registro do motivo neste arquivo.
 
-## Parâmetros oficiais
+## 1. Família e moradores
 
-| Parâmetro | Valor |
-| --- | --- |
-| Prazo mínimo para nova retirada | 25 dias |
-| Alerta após liberação sem retirada | 45 dias |
-| Contato necessário por inatividade | 90 dias |
-| Limite de Cesta Extra | 3 retiradas |
-| Após limite de retirada extra | Avaliar cadastro definitivo |
-| Liberação excepcional | Apenas Administrador |
-| Observação obrigatória na liberação excepcional | Sim |
-| Bloqueio por falta de estoque | Sim |
-| Baixa automática no estoque após entrega | Sim |
-| Registrar auditoria de alterações | Sim |
+- O responsável da família conta como morador.
+- Contagem de moradores = responsável + assistidos + membros
+  familiares.
+- Evitar duplicidade por CPF, RG ou documento.
+- Assistido é quem pode receber benefício.
+- Membro familiar compõe a família, mas não necessariamente recebe
+  benefício.
 
-## Atendimento
+## 2. Atendimento
 
-- Assistido só pode receber nova cesta após 25 dias da última retirada.
-- Bloqueio antes do prazo exibe próxima data permitida.
-- Cadastro definitivo recebe **Cesta Padrão** respeitando os 25 dias.
-- Cadastro em avaliação recebe **Cesta Extra**, limitado a 3 retiradas
-  (progresso 1/3, 2/3, 3/3). Após a 3ª, exibir alerta para avaliação de
-  cadastro definitivo. Não converter automaticamente.
-- Liberação excepcional apenas para Administrador, com observação
-  obrigatória. Nunca liberar quando o bloqueio for falta de estoque.
-- Falta de estoque bloqueia entrega e permite apenas registrar tentativa
-  bloqueada.
-- Toda tentativa gera histórico: entrega realizada, bloqueio por prazo,
-  bloqueio por estoque, liberação excepcional, pré-cadastro criado, e
-  pré-cadastro com entrega de Cesta Extra.
+- Busca por CPF, RG, documento, nome ou telefone.
+- Entrega permitida somente para assistido ativo e elegível.
+- Intervalo mínimo para nova retirada: 25 dias.
+- Antes dos 25 dias, a entrega fica bloqueada.
+- Bloqueio por prazo deve registrar tentativa bloqueada.
+- Liberação excepcional somente para Administrador.
+- Liberação excepcional exige motivo/observação obrigatória.
+- Entrega confirmada registra histórico da família, movimentação de
+  estoque e auditoria.
 
-## Relatórios
+## 3. Cesta Extra
 
-- Tela `/relatorios` é somente leitura. Nenhum relatório cria, edita,
-  exclui, inativa ou altera dados do sistema.
-- Motor central: `src/lib/relatorios-store.ts` → `gerarRelatorio(tipo,
-  filtros)`. Consome os mesmos stores das telas homologadas.
-- Filtros combinados: período, bairro, benefício, item, usuário e
-  status. Cada relatório aplica apenas os filtros compatíveis com sua
-  fonte de dados.
-- Geração explícita: nada é gerado ao abrir a tela. É preciso selecionar
-  um card e clicar em "Gerar relatório".
-- Exportação oficial nesta fase: CSV (UTF-8 com BOM, separador `;`,
-  cabeçalhos em português, datas em dd/mm/aaaa, valores em BRL). Nome do
-  arquivo: `seac-social-relatorio-[tipo]-[YYYY-MM-DD].csv`. CSV atende
-  Excel e Power BI.
-- Os botões PDF e Excel nativo foram removidos da tela nesta fase para
-  evitar botão sem função. Voltam quando a exportação nativa for
-  implementada.
-- Toda geração e toda exportação CSV é registrada em Auditoria
-  (ação `Relatório gerado` / `Relatório exportado CSV`, módulo
-  `Relatórios`, com filtros aplicados e total de registros).
+- Cadastro em avaliação recebe Cesta Extra.
+- Limite de 3 retiradas extras (progresso 1/3, 2/3, 3/3).
+- Após a 3ª retirada, exibir aviso para avaliar cadastro definitivo.
+- Após avaliação definitiva aprovada, assistido passa a receber
+  Cesta Padrão.
+- Não converter automaticamente para definitivo.
 
-## Família
+## 4. Acompanhamento
 
-- Detalhe da família carregado pelo ID da URL.
-- Responsável conta como morador.
-- Moradores = responsável + assistidos + membros familiares, sem
-  duplicidade por documento.
-- Assistido pode receber benefício; membro familiar compõe a família.
-- Histórico de entregas exibe apenas as entregas da própria família.
+- Alerta após 45 dias sem retirada: apenas informativo.
+- Contato necessário após 90 dias sem retirada: apenas informativo.
+- Não bloquear entrega automaticamente.
+- Não tornar família inativa automaticamente.
+- Não gerar tarefa automática.
 
-## Estoque
+## 5. Estoque
 
-- Baixa automática ao confirmar entrega no atendimento.
-- Movimentação registrada com: data/hora, item/benefício, tipo,
-  quantidade, saldo após, usuário, origem, observação.
-- Origem “Entrega realizada” vincula assistido, família, usuário e
-  data/hora.
-- Fonte única de saldos — a mesma usada em `/estoque`.
+- Entrega baixa automaticamente o estoque do benefício entregue.
+- Entrada, saída, ajuste e baixa automática aparecem nas
+  movimentações.
+- Itens abaixo do mínimo aparecem como atenção.
+- Itens zerados aparecem como sem estoque.
 
-## Auditoria
+## 6. Configurações
 
-- Registra usuário, data/hora, ação, módulo, registro afetado e
-  observação/motivo quando existir.
-- Deduplicação por 3 segundos para o mesmo evento evita registros
-  repetidos por re-render ou cliques rápidos.
-- Botão “Limpar histórico” disponível para Administrador.
+- Itens, unidades, categorias, benefícios, doadores, fornecedores e
+  parâmetros são funcionais.
+- Excluir e inativar são ações diferentes.
+- Se houver vínculo, a exclusão deve ser bloqueada e o sistema deve
+  oferecer inativação.
+- Tentativa bloqueada é registrada na auditoria.
 
-## Configurações
+## 7. Relatórios
 
-- CRUD nas abas Itens, Unidades, Categorias, Benefícios, Doadores,
-  Fornecedores e Parâmetros.
-- Inativar ≠ excluir. Excluir só é permitido sem vínculos; com vínculo,
-  bloquear e orientar inativação.
-- Alterações relevantes são auditadas.
+- Relatórios devem gerar visualização em tela.
+- Exportação CSV deve funcionar (UTF-8 com BOM, separador `;`,
+  cabeçalhos em português).
+- Botão Excel direto removido nesta fase.
+- PDF não é obrigatório nesta fase.
+- CSV é o formato oficial para Excel e Power BI.
 
-## Perfis
+## 8. Auditoria
 
-- Perfis oficiais: admin, atendente, estoque, pendente.
+- Registrar alterações de cadastro.
+- Registrar entregas.
+- Registrar baixas automáticas de estoque.
+- Registrar tentativas bloqueadas (prazo e estoque).
+- Registrar liberação excepcional (com motivo).
+- Registrar exclusões bloqueadas.
+- Registrar alterações em configurações.
+- Sem duplicidade de registros.
+
+## 9. Perfis de acesso
+
+- Perfis oficiais: `admin`, `atendente`, `estoque`, `pendente`.
 - Admin acessa tudo, inclusive `/usuarios` e liberação excepcional.
 - Atendente: painel, atendimento, famílias, assistidos, membros,
   entregas.
 - Estoque: painel, estoque, recebimentos, movimentações.
 - Pendente/inativo não acessam o sistema.
 
-## Painel — dashboard operacional
+## 10. Painel — dashboard operacional
 
 - Painel usa dados reais das telas Famílias, Atendimento, Estoque,
   Relatórios e Auditoria; não cria contagens paralelas.
-- Contadores alinhados: Famílias cadastradas, Assistidos ativos,
-  Entregas hoje e no mês, Cestas em estoque, Aguardando avaliação
-  (`status = avaliar`), Contato necessário 90+
-  (`acompanhamento = sem_retirada_90`).
-- Responsável da família conta como morador no perfil do público
-  atendido; assistidos e membros são deduplicados por documento.
-- Gráficos só exibem itens com valor real (dias com atendimento,
+- Gráficos só exibem itens com valor real (dias com atendimento e
   benefícios com entrega).
-- Status de famílias no gráfico segue as cores oficiais do sistema:
-  Liberado verde, Bloqueado vermelho, Avaliar laranja, Inativo cinza.
-- Contato necessário 90+ é apenas informativo: não bloqueia entregas,
-  não altera status da família automaticamente.
-
-## Paleta oficial dos gráficos do Painel
-
-- Azul principal: `#1E5AA8`
-- Laranja principal: `#E8712A`
-- Azul claro: `#4C8FD1`
-- Laranja claro: `#F4A96B`
-- Usada em: "Atendimentos por dia", "Entregas por benefício" e
-  cor "Avaliar" do gráfico "Famílias por status".
-- Cores semânticas de status (verde liberado, vermelho bloqueado,
-  cinza inativo) permanecem, mantendo consistência com os chips de
-  /familias.
+- Status de famílias no gráfico segue as cores oficiais: Liberado
+  verde, Bloqueado vermelho, Avaliar laranja (`#E8712A`), Inativo
+  cinza.
+- Paleta oficial dos gráficos: azul `#1E5AA8`, laranja `#E8712A`,
+  azul claro `#4C8FD1`, laranja claro `#F4A96B`.

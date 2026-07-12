@@ -1,222 +1,166 @@
 # Homologação — SEAC Social
 
-Documento oficial de controle da homologação do sistema SEAC Social.
-Serve como fonte de verdade sobre o que já foi aprovado, o que está em
-validação e o que ainda precisa ser resolvido antes da publicação.
+Documento oficial de homologação do sistema SEAC Social antes da
+publicação. Registra o que já foi validado, as regras principais e as
+observações relevantes de cada área do MVP.
 
-> Não alterar layout visual, menu lateral, topo, paleta, logo, fluxos já
-> funcionando, dados de teste existentes ou regras já aplicadas em
-> Atendimento, Família, Estoque e Auditoria sem antes atualizar este
-> documento.
+> Regra de trabalho: toda nova alteração deve respeitar as telas e
+> regras aqui homologadas. Antes de alterar uma tela já aprovada,
+> verificar este documento. Se uma regra aprovada for alterada,
+> registrar o motivo e atualizar este documento.
 
 ---
 
-## Telas homologadas
+## 1. Login / Auth (`/auth`)
 
-### 1. `/auth` — Homologada visualmente
-- Layout 50/50.
-- Lado esquerdo: formulário de login.
-- Lado direito: identidade visual SEAC.
-- Imagem institucional SEAC como referência visual.
-- Slogan: “Sopa, Esperança, Amor e Caridade em ação.”
-- Texto institucional: “Organizando o cuidado, fortalecendo famílias e
-  levando solidariedade com respeito.”
-- Paleta visual SEAC aplicada.
-- Bloco “Status de acesso” removido.
+- **Status:** Homologado
+- **Validado:** login do administrador, mensagem para usuários pendentes
+  e inativos, saída do sistema, identificação do usuário logado no topo.
+- **Regras principais:** primeiro usuário vira admin automaticamente;
+  demais usuários ficam pendentes até liberação; pendente e inativo
+  não acessam o sistema.
+- **Observações:** confirmação por e-mail desativada na homologação.
+- **Pendências não bloqueantes:** revisar mensagens de erro amigáveis
+  em cenários raros (usuário sem profile, sessão expirada).
 
-### 2. `/configuracoes` — Homologada funcionalmente
-- Abas: Itens, Unidades, Categorias, Benefícios, Doadores, Fornecedores,
-  Parâmetros.
-- CRUD funcional nas abas principais.
-- Inativar e excluir são ações distintas.
-- Excluir remove o registro apenas quando não houver vínculo.
-- Com vínculo, exclusão é bloqueada e o operador é orientado a inativar.
-- Filtros funcionando.
-- Ações relevantes registradas na auditoria.
+## 2. Painel (`/painel`)
 
-Parâmetros oficiais:
-- Prazo mínimo para nova retirada: **25 dias**
-- Alerta após liberação sem retirada: **45 dias**
-- Contato necessário por inatividade: **90 dias**
-- Limite de Cesta Extra: **3 retiradas**
-- Após limite de retirada extra: **Avaliar cadastro definitivo**
-- Liberação excepcional: **Apenas Administrador**
-- Observação obrigatória na liberação excepcional: **Sim**
-- Bloqueio por falta de estoque: **Sim**
-- Baixa automática no estoque após entrega: **Sim**
-- Registrar auditoria de alterações: **Sim**
+- **Status:** Homologado
+- **Validado:** KPIs principais, perfil do público atendido, gráficos
+  (Atendimentos por dia, Entregas por benefício, Famílias por status),
+  cards de últimas entregas, últimas movimentações, alertas de estoque,
+  aguardando avaliação e contato necessário 90+ com deep-links.
+- **Regras principais:** o painel usa dados reais de Famílias,
+  Atendimento, Estoque, Relatórios e Auditoria — sem contagens
+  paralelas. O responsável da família conta como morador. Contato 90+
+  é apenas informativo.
+- **Observações:** paleta de gráficos oficial azul + laranja
+  (`#1E5AA8`, `#E8712A`, `#4C8FD1`, `#F4A96B`). Cores semânticas de
+  status mantidas no gráfico "Famílias por status".
+- **Pendências não bloqueantes:** ver PENDENCIAS_PUBLICACAO.
 
-### 3. `/familias` — Em homologação avançada
-- Criação de nova família funcionando.
-- Detalhe da família carrega pelo ID da URL.
-- Ao clicar em uma família, a família correta é aberta.
-- Responsável da família conta como morador.
-- Moradores = responsável + assistidos + membros familiares, sem
-  duplicidade por documento.
-- Assistido é quem pode receber benefício.
-- Membro familiar compõe a família, mas não necessariamente recebe
-  benefício.
-- Cards de contagem refletem os dados reais da família.
-- Abas aprovadas: Assistidos vinculados, Membros vinculados, Histórico de
-  entregas, Tentativas bloqueadas, Observações sociais.
-- Observações sociais funcionam.
-- Histórico de entrega aparece na família após atendimento.
-- Botões funcionais: Editar família, Adicionar assistido, Adicionar membro
-  familiar, Registrar observação, Ir para atendimento.
+## 3. Famílias (`/familias`)
 
-### 4. `/atendimento` — Em homologação funcional
-- Estado inicial: “Nenhuma busca realizada”.
-- Busca por CPF, RG, nome ou telefone.
-- Localiza assistidos vinculados a famílias.
-- Ao buscar membro familiar que não é assistido, exibir contexto claro em
-  vez de tratar como “não encontrado”.
-- Confirmar entrega:
-  - registra a entrega,
-  - baixa o estoque automaticamente,
-  - atualiza o histórico da família,
-  - atualiza as movimentações de estoque,
-  - registra na auditoria.
-- Após entrega, nova tentativa antes de 25 dias é bloqueada.
-- Bloqueio por prazo mostra próxima data permitida.
-- Tentativa bloqueada por prazo é registrada na auditoria.
-- Cesta Extra tem limite de 3 retiradas.
-- Após 3 retiradas extras, sinalizar avaliação para cadastro definitivo.
-- Liberação excepcional apenas para Administrador e exige observação.
-- Falta de estoque não permite liberação excepcional.
+- **Status:** Homologado
+- **Validado:** listagem, filtros por foco (avaliar / contato90),
+  contadores oficiais (total, definitivos, extras, avaliar, 90+,
+  bloqueadas/inativas), abertura do detalhe pelo ID.
+- **Regras principais:** contadores refletem o total real de famílias;
+  acompanhamento (45 e 90 dias) é informativo.
+- **Observações:** filtros pré-aplicados via URL suportados
+  (`?foco=avaliar` e `?foco=contato90`).
+- **Pendências não bloqueantes:** filtros de nome/CPF/telefone/bairro
+  na barra superior podem ser ativados em fase posterior.
 
-### 5. `/estoque` — Em homologação funcional
-- Controle de saldos atuais.
-- Aba de movimentações.
-- Entrega realizada no atendimento gera baixa automática.
-- Cada movimentação registra: data/hora, item/benefício, tipo de
-  movimentação, quantidade, saldo após, usuário, origem e observação.
-- Estoque reflete entregas reais.
+## 4. Detalhe da família (`/familias/:id`)
 
-### 6. `/auditoria` — Em homologação funcional
-- Registra eventos relevantes do sistema:
-  - Entrega realizada
-  - Baixa automática
-  - Tentativa bloqueada por prazo
-  - Tentativa bloqueada por estoque
-  - Liberação excepcional
-  - Família criada
-  - Família atualizada
-  - Assistido adicionado à família
-  - Membro familiar adicionado
-  - Observação registrada
-  - Alterações de parâmetros
-  - Exclusão bloqueada por vínculo
-- Filtros por período, usuário, tipo de ação e módulo.
+- **Status:** Homologado
+- **Validado:** dados da família, endereço, contadores, assistidos,
+  membros familiares, histórico de entregas, observações sociais,
+  edição da família, adicionar/editar assistido e membro.
+- **Regras principais:** responsável conta como morador; assistidos e
+  membros são deduplicados por documento.
+- **Observações:** dados vindos do store `familias-store` durante a
+  homologação.
+- **Pendências não bloqueantes:** anexos e documentos digitalizados
+  ficam para fase posterior.
 
-### 7. `/relatorios` — Em homologação funcional
-- Somente leitura: nenhum relatório altera dados do sistema.
-- Cards de tipos de relatório: Famílias, Assistidos, Entregas, Retiradas
-  bloqueadas por prazo, Retiradas bloqueadas por estoque, Famílias em
-  atenção 45 dias+, Famílias com contato necessário 90 dias+, Estoque,
-  Doações / recebimentos, Liberações excepcionais.
-- Fonte oficial dos dados: mesmos stores já usados em Famílias,
-  Atendimento, Estoque e Auditoria (`useFamilias`, `useAtendimentoStore`,
-  `useParametros`) via motor central `src/lib/relatorios-store.ts` →
-  `gerarRelatorio(tipo, filtros)`.
-- Filtros combinados: período, bairro, benefício, item, usuário, status.
-  Botão "Limpar filtros" preserva o resultado já gerado.
-- Geração explícita: nada é gerado ao abrir a tela; usuário clica em um
-  card e depois em "Gerar relatório".
-- Exportação oficial nesta fase: **CSV** (UTF-8 com BOM, separador `;`,
-  cabeçalhos em português, datas em dd/mm/aaaa) — compatível com Excel e
+## 5. Atendimento (`/atendimento`)
+
+- **Status:** Homologado
+- **Validado:** busca por documento, nome e telefone; exibição dos
+  dados do assistido, família, endereço, última retirada, próxima
+  data permitida; entrega liberada, entrega bloqueada por prazo,
+  entrega bloqueada por estoque; liberação excepcional pelo admin;
+  pré-cadastro (com e sem entrega de Cesta Extra); progresso 1/3,
+  2/3, 3/3 da Cesta Extra.
+- **Regras principais:** regra dos 25 dias, apenas admin libera
+  excepcionalmente, motivo obrigatório na liberação, baixa automática
+  de estoque, histórico + auditoria em toda tentativa.
+- **Observações:** função central `verificarElegibilidadeAtendimento`
+  concentra as regras.
+- **Pendências não bloqueantes:** validação por QR/foto do assistido
+  fica para fase futura.
+
+## 6. Estoque (`/estoque`)
+
+- **Status:** Homologado
+- **Validado:** saldos atuais, aba Movimentações, entrada, saída,
+  ajuste, baixa automática (via entrega), alertas de estoque baixo,
+  filtro `foco=alertas` via URL, valor total estimado.
+- **Regras principais:** entrega baixa automaticamente 1 unidade do
+  benefício; itens abaixo do mínimo aparecem como atenção; zerados
+  como sem estoque.
+- **Observações:** deep-links do Painel funcionam
+  (`?tab=mov`, `?tab=saldos&foco=alertas`).
+- **Pendências não bloqueantes:** controle por lote e validade fica
+  para fase futura.
+
+## 7. Recebimentos (`/recebimentos`)
+
+- **Status:** Homologado
+- **Validado:** registro de entrada de alimentos, origem (doação,
+  compra, investimento próprio, ajuste), doador/fornecedor, valor,
+  observação e usuário responsável.
+- **Regras principais:** entrada de recebimento aumenta o estoque e
+  gera movimentação; doações, compras e investimentos aparecem nos
+  relatórios correspondentes.
+- **Observações:** anexo de nota fiscal/comprovante é opcional.
+- **Pendências não bloqueantes:** integração automática com nota
+  fiscal eletrônica fica para fase futura.
+
+## 8. Composição por benefício (`/composicao-cesta`)
+
+- **Status:** Homologado
+- **Validado:** cadastro dos itens que compõem cada benefício
+  (Cesta Padrão, Cesta Extra, Kit Gestante), quantidade por item,
+  atualização da composição.
+- **Regras principais:** montagem de cesta baixa os itens da
+  composição e aumenta o benefício pronto; sem saldo, montagem
+  bloqueada.
+- **Observações:** entrega ao assistido baixa o benefício pronto,
+  não os itens individuais.
+- **Pendências não bloqueantes:** custo estimado por cesta a partir
+  do valor médio dos itens.
+
+## 9. Configurações (`/configuracoes`)
+
+- **Status:** Homologado
+- **Validado:** cadastro de itens, unidades, categorias, benefícios,
+  doadores, fornecedores e parâmetros do sistema (intervalos,
+  alertas).
+- **Regras principais:** excluir e inativar são ações distintas; se
+  houver vínculo, exclusão é bloqueada e o sistema oferece
+  inativação; tentativa bloqueada é registrada em auditoria.
+- **Observações:** acesso restrito ao perfil Administrador.
+- **Pendências não bloqueantes:** exportar configurações para backup
+  manual.
+
+## 10. Relatórios com CSV (`/relatorios`)
+
+- **Status:** Homologado
+- **Validado:** 10 tipos de relatório com dados reais, filtros
+  combinados (período, bairro, benefício, item, usuário, status),
+  visualização em tabela, exportação CSV (UTF-8 com BOM, separador
+  `;`, cabeçalhos em português), abertura correta em Excel e
   Power BI.
-- Botões PDF e Excel nativo foram removidos da tela nesta fase para
-  evitar botão sem função. Ficam como melhorias futuras.
-- Auditoria: cada geração e cada exportação CSV gera evento na tela
-  `/auditoria` (ação "Relatório gerado" / "Relatório exportado CSV",
-  módulo "Relatórios", com filtros aplicados e total de registros).
+- **Regras principais:** CSV é a exportação oficial nesta fase;
+  botões PDF e Excel nativo foram removidos.
+- **Observações:** deep-link `?tipo=entregas` funciona a partir do
+  Painel.
+- **Pendências não bloqueantes:** PDF e Excel nativo ficam como
+  melhorias futuras.
 
-### 8. `/painel` — Em homologação funcional
-- Passou a usar dados reais dos mesmos stores das telas homologadas
-  (`useFamilias`, `useAtendimentoStore`, `useParametros`) — sem mock.
-- Bloco superior de indicadores: famílias cadastradas, famílias
-  atendidas nos últimos 30 dias (com comparação vs 30 dias anteriores),
-  assistidos ativos, entregas hoje, entregas no mês (com tendência),
-  cestas em estoque (soma dos benefícios entregáveis), aguardando
-  avaliação definitiva, contato necessário 90+ dias.
-- Bloco de perfil do público: crianças, adolescentes, adultos, idosos,
-  gestantes, PCD — contados por moradores únicos da família
-  (responsável + assistidos + membros, sem duplicidade por documento).
-  Sexo/gênero ainda não é obrigatório no cadastro; enquanto isso, os
-  contadores de "Mulheres"/"Homens" ficam zerados e o total aparece em
-  "Não informado".
-- Gráficos: atendimentos por dia (30 dias), entregas por benefício no
-  mês, famílias por status.
-- Bloco operacional: últimas entregas, últimas movimentações, alertas
-  de estoque, aguardando avaliação e contato 90+, todos clicáveis para
-  `/relatorios`, `/estoque` e `/familias/:id`.
+## 11. Auditoria (`/auditoria`)
 
----
-
-## Pendências de validação
-
-Ver detalhe em [PENDENCIAS_PUBLICACAO_SEAC_SOCIAL.md](./PENDENCIAS_PUBLICACAO_SEAC_SOCIAL.md).
-
-Resumo:
-1. Pré-cadastro pelo atendimento (com e sem entrega de Cesta Extra).
-2. Liberação excepcional (perfil, observação, auditoria, bloqueio por
-   falta de estoque).
-3. Relatórios com dados reais e exportação PDF/Excel/CSV.
-4. Painel com indicadores reais.
-5. Recebimentos — definir se apenas registram origem ou também geram
-   entrada de estoque.
-6. Publicação — persistência real, banco/Supabase, permissões,
-   Administrador, segurança básica, ausência de dados críticos apenas
-   em mock/localStorage.
-
----
-
-## Regra de trabalho
-
-A partir desta etapa, toda nova alteração deve respeitar as telas e
-regras homologadas. Antes de alterar uma tela já aprovada, verificar este
-documento. Se uma regra aprovada for alterada, registrar o motivo e
-atualizar este documento.
-
----
-
-## Ajustes finos do Painel (dashboard operacional)
-
-O /painel foi revisado como dashboard operacional real do SEAC Social,
-preservando o layout aprovado. Ajustes registrados nesta etapa:
-
-- Gráfico "Atendimentos por dia (30 dias)" mostra apenas os dias com
-  atendimento real. Barras com valor 0 não aparecem. Barras pequenas
-  usam `minPointSize` para permanecerem visíveis. O valor é exibido
-  acima de cada barra.
-- Gráfico "Entregas por benefício (mês)" oculta benefícios com valor
-  zero no período. Se não houver nenhuma entrega, exibe a mensagem
-  "Nenhuma entrega registrada no período.".
-- Gráfico "Famílias por status" agora usa cores por status
-  (Liberado verde, Bloqueado vermelho, Avaliar laranja, Inativo cinza)
-  e mostra o total ao lado de cada barra.
-- Cards inferiores navegam com filtro pré-aplicado:
-  - "Ver relatório" → /relatorios?tipo=entregas
-  - "Ver estoque" (Últimas movimentações) → /estoque?tab=mov
-  - "Abrir" (Alertas de estoque) → /estoque?tab=saldos&foco=alertas
-  - "Ver famílias" (Aguardando avaliação) → /familias?foco=avaliar
-  - "Ver famílias" (Contato necessário 90+) → /familias?foco=contato90
-- Contato necessário 90+ segue como acompanhamento informativo. Não
-  bloqueia entrega e não torna a família inativa automaticamente.
-- Os números do Painel foram alinhados às demais telas:
-  - Famílias cadastradas = total de /familias.
-  - Famílias atendidas 30 dias = famílias únicas com entrega nos
-    últimos 30 dias.
-  - Assistidos ativos = assistidos com status ativo cadastrados.
-  - Entregas hoje / no mês = entregas reais registradas em
-    /atendimento.
-  - Cestas em estoque = benefícios entregáveis no estoque.
-  - Aguardando avaliação = famílias com `status = avaliar` (mesmo
-    critério do card em /familias).
-  - Contato necessário 90+ = famílias com
-    `acompanhamento = sem_retirada_90` (mesmo critério de /familias).
-- O responsável da família é contado como morador no perfil do
-  público atendido; assistidos e membros só contam uma vez por
-  documento, sem duplicidade.
-- O Painel passa a refletir as fontes de Famílias, Atendimento,
-  Estoque, Relatórios e Auditoria, sem criar contagens paralelas.
+- **Status:** Homologado
+- **Validado:** registro de entregas, baixas automáticas de estoque,
+  tentativas bloqueadas (prazo/estoque), liberações excepcionais,
+  alterações de cadastro, exclusões bloqueadas, alterações em
+  configurações, geração e exportação de relatórios.
+- **Regras principais:** cada evento registra usuário, data/hora,
+  ação, módulo, registro afetado e observação/motivo quando existir.
+  Sem duplicação de registros.
+- **Observações:** disponível para admin.
+- **Pendências não bloqueantes:** exportação da auditoria como CSV
+  em fase posterior.
