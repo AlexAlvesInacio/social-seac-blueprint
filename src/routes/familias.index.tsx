@@ -42,12 +42,12 @@ function FamiliasPage() {
   const toggleSelect = (id: number) =>
     setSelectedId((cur) => (cur === id ? null : id));
 
-  const total = exemploFamilias.length;
-  const definitivos = exemploFamilias.filter((f) => f.tipoCadastro === "definitivo").length;
-  const extras = exemploFamilias.filter((f) => f.tipoCadastro === "extra").length;
-  const aguardandoAvaliacao = exemploFamilias.filter((f) => f.status === "avaliar").length;
-  const semRetirada90 = exemploFamilias.filter((f) => f.acompanhamento === "sem_retirada_90").length;
-  const bloqueadasInativas = exemploFamilias.filter(
+  const total = todasFamilias.length;
+  const definitivos = todasFamilias.filter((f) => f.tipoCadastro === "definitivo").length;
+  const extras = todasFamilias.filter((f) => f.tipoCadastro === "extra").length;
+  const aguardandoAvaliacao = todasFamilias.filter((f) => f.status === "avaliar").length;
+  const semRetirada90 = todasFamilias.filter((f) => f.acompanhamento === "sem_retirada_90").length;
+  const bloqueadasInativas = todasFamilias.filter(
     (f) => f.status === "bloqueado" || f.status === "inativo",
   ).length;
 
