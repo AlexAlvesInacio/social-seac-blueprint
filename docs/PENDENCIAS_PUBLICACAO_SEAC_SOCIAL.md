@@ -24,8 +24,9 @@ homologação.
 - CSV homologado como exportação inicial (UTF-8 + BOM, `;`, dd/mm/aaaa)
   para uso em Excel e Power BI.
 - Pendências:
-  - Exportação PDF nativa.
-  - Exportação Excel nativa (`.xlsx`).
+  - Exportação PDF nativa (botão removido da tela até estar pronto).
+  - Exportação Excel nativa `.xlsx` (botão removido da tela até estar
+    pronto; CSV atende Excel e Power BI nesta fase).
   - Recebimentos com store real (hoje o relatório usa espelho da tela).
   - Validar cobertura de todos os filtros com dados reais.
 
