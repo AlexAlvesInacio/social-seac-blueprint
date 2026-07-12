@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, LabelList,
 } from "recharts";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,11 +98,12 @@ function PainelPage() {
       return acc + (saldoStore[b] ?? base);
     }, 0);
 
-    // Aguardando avaliação = famílias com progresso 3/3 ou status avaliar
-    const aguardandoAvaliacao = familias.filter((f) => f.status === "avaliar" || f.progressoExtra === "3/3");
+    // Aguardando avaliação — alinhado ao card de /familias
+    const aguardandoAvaliacao = familias.filter((f) => f.status === "avaliar");
 
-    // Contato necessário 90+
+    // Contato necessário 90+ — alinhado ao card de /familias (acompanhamento sem_retirada_90)
     const contatoNecessario = familias
+      .filter((f) => f.acompanhamento === "sem_retirada_90")
       .map((f) => {
         const docs = new Set(assistidos.filter((a) => a.familiaId === f.id).map((a) => normDoc(a.documento)));
         docs.add(normDoc(f.documento));
@@ -114,14 +115,12 @@ function PainelPage() {
           }
         }
         if (!ult) ult = parseBR(f.ultimaRetirada);
-        const dias = ult ? Math.floor((hoje.getTime() - ult.getTime()) / 86400000) : null;
+        const dias = ult ? Math.floor((hoje.getTime() - ult.getTime()) / 86400000) : params.inatividadeContatoDias;
         return { f, ult, dias };
-      })
-      .filter((x) => x.dias !== null && x.dias >= params.inatividadeContatoDias);
+      });
 
-    // Assistidos ativos
-    const assistidosAtivos = assistidos.filter((a) => a.status === "ativo").length
-      || familias.filter((f) => f.status !== "inativo").length; // fallback quando nenhum foi criado
+    // Assistidos ativos — só assistidos cadastrados com status ativo
+    const assistidosAtivos = assistidos.filter((a) => a.status === "ativo").length;
 
     // Perfil do público
     const publico = { criancas: 0, adolescentes: 0, adultos: 0, idosos: 0, gestantes: 0, pcd: 0, mulheres: 0, homens: 0, naoInformado: 0, total: 0 };
@@ -177,24 +176,26 @@ function PainelPage() {
       }
     }
 
-    // Charts
+    // Atendimentos por dia (30 dias) — apenas dias com atendimento real
     const entregasPorDia: { dia: string; qtd: number }[] = [];
     for (let i = 29; i >= 0; i--) {
       const d = daysAgo(i);
-      const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
       const qtd = entregas.filter((e) => startOfDay(parseEntrega(e.dataISO)).getTime() === d.getTime()).length;
+      if (qtd === 0) continue;
+      const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
       entregasPorDia.push({ dia: label, qtd });
     }
 
-    const entregasPorBeneficio = BENEFICIOS_ENTREGAVEIS.map((b) => ({
-      name: b, value: entregasMes.filter((e) => e.beneficio === b).length,
-    }));
+    // Entregas por benefício (mês) — oculta benefícios sem entrega no período
+    const entregasPorBeneficio = BENEFICIOS_ENTREGAVEIS
+      .map((b) => ({ name: b, value: entregasMes.filter((e) => e.beneficio === b).length }))
+      .filter((b) => b.value > 0);
 
     const statusFamilias = [
-      { status: "Liberado", qtd: familias.filter((f) => f.status === "liberado").length },
-      { status: "Bloqueado", qtd: familias.filter((f) => f.status === "bloqueado").length },
-      { status: "Avaliar", qtd: familias.filter((f) => f.status === "avaliar").length },
-      { status: "Inativo", qtd: familias.filter((f) => f.status === "inativo").length },
+      { status: "Liberado", qtd: familias.filter((f) => f.status === "liberado").length, fill: "hsl(152 55% 42%)" },
+      { status: "Bloqueado", qtd: familias.filter((f) => f.status === "bloqueado").length, fill: "hsl(0 72% 51%)" },
+      { status: "Avaliar", qtd: familias.filter((f) => f.status === "avaliar").length, fill: "hsl(38 92% 50%)" },
+      { status: "Inativo", qtd: familias.filter((f) => f.status === "inativo").length, fill: "hsl(220 9% 55%)" },
     ];
 
     // Alertas estoque
@@ -316,25 +317,31 @@ function PainelPage() {
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle className="text-base">Atendimentos por dia (30 dias)</CardTitle></CardHeader>
           <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dados.entregasPorDia}>
-                <XAxis dataKey="dia" tick={{ fontSize: 10 }} interval={2} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Bar dataKey="qtd" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {dados.entregasPorDia.length === 0 ? (
+              <EmptyList text="Nenhum atendimento nos últimos 30 dias." />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dados.entregasPorDia} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="dia" tick={{ fontSize: 10 }} interval={dados.entregasPorDia.length > 12 ? 1 : 0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="qtd" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} minPointSize={4}>
+                    <LabelList dataKey="qtd" position="top" style={{ fontSize: 10, fill: "hsl(var(--foreground))" }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle className="text-base">Entregas por benefício (mês)</CardTitle></CardHeader>
           <CardContent className="h-64">
-            {dados.entregasPorBeneficio.every((b) => b.value === 0) ? (
-              <EmptyList text="Sem entregas registradas neste mês." />
+            {dados.entregasPorBeneficio.length === 0 ? (
+              <EmptyList text="Nenhuma entrega registrada no período." />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={dados.entregasPorBeneficio} dataKey="value" nameKey="name" outerRadius={80} label>
+                  <Pie data={dados.entregasPorBeneficio} dataKey="value" nameKey="name" outerRadius={80} label={(e: { name: string; value: number }) => `${e.name}: ${e.value}`}>
                     {dados.entregasPorBeneficio.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                   </Pie>
                   <Legend />
@@ -350,11 +357,16 @@ function PainelPage() {
         <CardHeader><CardTitle className="text-base">Famílias por status</CardTitle></CardHeader>
         <CardContent className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dados.statusFamilias} layout="vertical">
+            <BarChart data={dados.statusFamilias} layout="vertical" margin={{ top: 4, right: 32, left: 0, bottom: 4 }}>
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
               <YAxis dataKey="status" type="category" tick={{ fontSize: 11 }} width={80} />
               <Tooltip />
-              <Bar dataKey="qtd" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="qtd" radius={[0, 4, 4, 0]}>
+                {dados.statusFamilias.map((s) => (
+                  <Cell key={s.status} fill={s.fill} />
+                ))}
+                <LabelList dataKey="qtd" position="right" style={{ fontSize: 11, fill: "hsl(var(--foreground))", fontWeight: 600 }} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -365,7 +377,7 @@ function PainelPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Últimas entregas</CardTitle>
-            <Link to="/relatorios" className="text-xs text-primary hover:underline">Ver relatório</Link>
+            <Link to="/relatorios" search={{ tipo: "entregas" }} className="text-xs text-primary hover:underline">Ver relatório</Link>
           </CardHeader>
           <CardContent>
             {dados.ultimasEntregas.length === 0 ? <EmptyList text="Nenhuma entrega registrada ainda." /> : (
@@ -387,7 +399,7 @@ function PainelPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Últimas movimentações</CardTitle>
-            <Link to="/estoque" className="text-xs text-primary hover:underline">Ver estoque</Link>
+            <Link to="/estoque" search={{ tab: "mov" }} className="text-xs text-primary hover:underline">Ver estoque</Link>
           </CardHeader>
           <CardContent>
             {dados.ultimasMovimentacoes.length === 0 ? <EmptyList text="Nenhuma movimentação ainda." /> : (
@@ -409,7 +421,7 @@ function PainelPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600" /> Alertas de estoque</CardTitle>
-            <Link to="/estoque" className="text-xs text-primary hover:underline">Abrir</Link>
+            <Link to="/estoque" search={{ tab: "saldos", foco: "alertas" }} className="text-xs text-primary hover:underline">Abrir</Link>
           </CardHeader>
           <CardContent>
             {dados.alertasEstoque.length === 0 ? <EmptyList text="Sem alertas no momento." /> : (
@@ -433,7 +445,7 @@ function PainelPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Aguardando avaliação definitiva</CardTitle>
-            <Link to="/familias" className="text-xs text-primary hover:underline">Ver famílias</Link>
+            <Link to="/familias" search={{ foco: "avaliar" }} className="text-xs text-primary hover:underline">Ver famílias</Link>
           </CardHeader>
           <CardContent>
             {dados.aguardandoAvaliacao.length === 0 ? <EmptyList text="Nenhuma família em avaliação." /> : (
@@ -455,7 +467,7 @@ function PainelPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Contato necessário (90+ dias)</CardTitle>
-            <Link to="/familias" className="text-xs text-primary hover:underline">Ver famílias</Link>
+            <Link to="/familias" search={{ foco: "contato90" }} className="text-xs text-primary hover:underline">Ver famílias</Link>
           </CardHeader>
           <CardContent>
             {dados.contatoNecessario.length === 0 ? <EmptyList text="Nenhuma família nesse período." /> : (
