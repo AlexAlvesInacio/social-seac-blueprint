@@ -48,9 +48,11 @@ Este documento complementa `REGRAS_ATENDIMENTO_SEAC.md` e
   um card e clicar em "Gerar relatório".
 - Exportação oficial nesta fase: CSV (UTF-8 com BOM, separador `;`,
   cabeçalhos em português, datas em dd/mm/aaaa, valores em BRL). Nome do
-  arquivo: `seac-social-relatorio-[tipo]-[YYYY-MM-DD].csv`.
-- Botões PDF e Excel avisam que a exportação nativa será implementada
-  numa etapa futura; usar CSV para Excel e Power BI enquanto isso.
+  arquivo: `seac-social-relatorio-[tipo]-[YYYY-MM-DD].csv`. CSV atende
+  Excel e Power BI.
+- Os botões PDF e Excel nativo foram removidos da tela nesta fase para
+  evitar botão sem função. Voltam quando a exportação nativa for
+  implementada.
 - Toda geração e toda exportação CSV é registrada em Auditoria
   (ação `Relatório gerado` / `Relatório exportado CSV`, módulo
   `Relatórios`, com filtros aplicados e total de registros).

@@ -197,8 +197,6 @@ function RelatoriosPage() {
           <div className="md:col-span-6 flex flex-wrap justify-between gap-2 pt-2">
             <Button variant="outline" onClick={limparFiltros}>Limpar filtros</Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => toast.info("Exportação PDF será implementada na próxima etapa.")}>PDF</Button>
-              <Button variant="outline" onClick={() => toast.info("Exportação Excel será implementada na próxima etapa. Use CSV para Excel e Power BI.")}>Excel</Button>
               <Button variant="outline" onClick={handleCSV}>CSV</Button>
               <Button className="gap-2" onClick={handleGerar}><Download className="h-4 w-4" /> Gerar relatório</Button>
             </div>

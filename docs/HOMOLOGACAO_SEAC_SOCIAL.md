@@ -122,10 +122,11 @@ Parâmetros oficiais:
   Botão "Limpar filtros" preserva o resultado já gerado.
 - Geração explícita: nada é gerado ao abrir a tela; usuário clica em um
   card e depois em "Gerar relatório".
-- Exportação oficial: **CSV** (UTF-8 com BOM, separador `;`, cabeçalhos
-  em português, datas em dd/mm/aaaa) — compatível com Excel e Power BI.
-- Exportação PDF e Excel nativo: pendentes de implementação futura;
-  botões avisam o usuário e não quebram.
+- Exportação oficial nesta fase: **CSV** (UTF-8 com BOM, separador `;`,
+  cabeçalhos em português, datas em dd/mm/aaaa) — compatível com Excel e
+  Power BI.
+- Botões PDF e Excel nativo foram removidos da tela nesta fase para
+  evitar botão sem função. Ficam como melhorias futuras.
 - Auditoria: cada geração e cada exportação CSV gera evento na tela
   `/auditoria` (ação "Relatório gerado" / "Relatório exportado CSV",
   módulo "Relatórios", com filtros aplicados e total de registros).
