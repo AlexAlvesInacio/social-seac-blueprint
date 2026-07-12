@@ -108,6 +108,28 @@ Parâmetros oficiais:
   - Exclusão bloqueada por vínculo
 - Filtros por período, usuário, tipo de ação e módulo.
 
+### 7. `/relatorios` — Em homologação funcional
+- Somente leitura: nenhum relatório altera dados do sistema.
+- Cards de tipos de relatório: Famílias, Assistidos, Entregas, Retiradas
+  bloqueadas por prazo, Retiradas bloqueadas por estoque, Famílias em
+  atenção 45 dias+, Famílias com contato necessário 90 dias+, Estoque,
+  Doações / recebimentos, Liberações excepcionais.
+- Fonte oficial dos dados: mesmos stores já usados em Famílias,
+  Atendimento, Estoque e Auditoria (`useFamilias`, `useAtendimentoStore`,
+  `useParametros`) via motor central `src/lib/relatorios-store.ts` →
+  `gerarRelatorio(tipo, filtros)`.
+- Filtros combinados: período, bairro, benefício, item, usuário, status.
+  Botão "Limpar filtros" preserva o resultado já gerado.
+- Geração explícita: nada é gerado ao abrir a tela; usuário clica em um
+  card e depois em "Gerar relatório".
+- Exportação oficial: **CSV** (UTF-8 com BOM, separador `;`, cabeçalhos
+  em português, datas em dd/mm/aaaa) — compatível com Excel e Power BI.
+- Exportação PDF e Excel nativo: pendentes de implementação futura;
+  botões avisam o usuário e não quebram.
+- Auditoria: cada geração e cada exportação CSV gera evento na tela
+  `/auditoria` (ação "Relatório gerado" / "Relatório exportado CSV",
+  módulo "Relatórios", com filtros aplicados e total de registros).
+
 ---
 
 ## Pendências de validação

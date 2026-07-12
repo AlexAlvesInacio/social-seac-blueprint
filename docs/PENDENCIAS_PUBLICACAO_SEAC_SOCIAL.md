@@ -19,10 +19,15 @@ homologação.
 - Não permitir quando o bloqueio for falta de estoque.
 
 ## 3. Relatórios
-- Validar uso de dados reais (sem mock).
-- Relatórios cobertos: famílias, assistidos, entregas, bloqueios,
-  estoque, doações/recebimentos, liberações excepcionais.
-- Exportação em PDF, Excel e CSV.
+- Motor central `gerarRelatorio` já usa os stores reais de Famílias,
+  Atendimento, Estoque e Auditoria.
+- CSV homologado como exportação inicial (UTF-8 + BOM, `;`, dd/mm/aaaa)
+  para uso em Excel e Power BI.
+- Pendências:
+  - Exportação PDF nativa.
+  - Exportação Excel nativa (`.xlsx`).
+  - Recebimentos com store real (hoje o relatório usa espelho da tela).
+  - Validar cobertura de todos os filtros com dados reais.
 
 ## 4. Painel
 - Validar se todos os indicadores usam dados reais:
