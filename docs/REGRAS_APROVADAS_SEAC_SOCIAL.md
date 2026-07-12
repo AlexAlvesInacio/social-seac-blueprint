@@ -35,6 +35,26 @@ Este documento complementa `REGRAS_ATENDIMENTO_SEAC.md` e
   bloqueio por estoque, liberação excepcional, pré-cadastro criado, e
   pré-cadastro com entrega de Cesta Extra.
 
+## Relatórios
+
+- Tela `/relatorios` é somente leitura. Nenhum relatório cria, edita,
+  exclui, inativa ou altera dados do sistema.
+- Motor central: `src/lib/relatorios-store.ts` → `gerarRelatorio(tipo,
+  filtros)`. Consome os mesmos stores das telas homologadas.
+- Filtros combinados: período, bairro, benefício, item, usuário e
+  status. Cada relatório aplica apenas os filtros compatíveis com sua
+  fonte de dados.
+- Geração explícita: nada é gerado ao abrir a tela. É preciso selecionar
+  um card e clicar em "Gerar relatório".
+- Exportação oficial nesta fase: CSV (UTF-8 com BOM, separador `;`,
+  cabeçalhos em português, datas em dd/mm/aaaa, valores em BRL). Nome do
+  arquivo: `seac-social-relatorio-[tipo]-[YYYY-MM-DD].csv`.
+- Botões PDF e Excel avisam que a exportação nativa será implementada
+  numa etapa futura; usar CSV para Excel e Power BI enquanto isso.
+- Toda geração e toda exportação CSV é registrada em Auditoria
+  (ação `Relatório gerado` / `Relatório exportado CSV`, módulo
+  `Relatórios`, com filtros aplicados e total de registros).
+
 ## Família
 
 - Detalhe da família carregado pelo ID da URL.
