@@ -49,7 +49,7 @@ export const TIPOS_RELATORIO: { tipo: TipoRelatorio; titulo: string }[] = [
 ];
 
 // Base de estoque espelhada da tela /estoque (mantido em sincronia).
-const ESTOQUE_BASE = [
+export const ESTOQUE_BASE = [
   { item: "Cesta Padrão", categoria: "Benefício montado", unidade: "unidade", saldo: 120, minimo: 30, valorUnit: 85, ultima: "20/05/2025 10:30" },
   { item: "Cesta Extra", categoria: "Benefício montado", unidade: "unidade", saldo: 25, minimo: 20, valorUnit: 60, ultima: "20/05/2025 09:15" },
   { item: "Arroz 5kg", categoria: "Alimento", unidade: "pacote", saldo: 200, minimo: 50, valorUnit: 24, ultima: "19/05/2025 14:20" },
