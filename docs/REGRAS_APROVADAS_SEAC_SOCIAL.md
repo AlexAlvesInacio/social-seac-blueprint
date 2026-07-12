@@ -1,0 +1,102 @@
+# Regras aprovadas — SEAC Social
+
+Regras oficiais de negócio já homologadas. Toda alteração no sistema
+deve respeitar este documento. Alterações em regra aprovada exigem
+registro do motivo neste arquivo.
+
+## 1. Família e moradores
+
+- O responsável da família conta como morador.
+- Contagem de moradores = responsável + assistidos + membros
+  familiares.
+- Evitar duplicidade por CPF, RG ou documento.
+- Assistido é quem pode receber benefício.
+- Membro familiar compõe a família, mas não necessariamente recebe
+  benefício.
+
+## 2. Atendimento
+
+- Busca por CPF, RG, documento, nome ou telefone.
+- Entrega permitida somente para assistido ativo e elegível.
+- Intervalo mínimo para nova retirada: 25 dias.
+- Antes dos 25 dias, a entrega fica bloqueada.
+- Bloqueio por prazo deve registrar tentativa bloqueada.
+- Liberação excepcional somente para Administrador.
+- Liberação excepcional exige motivo/observação obrigatória.
+- Entrega confirmada registra histórico da família, movimentação de
+  estoque e auditoria.
+
+## 3. Cesta Extra
+
+- Cadastro em avaliação recebe Cesta Extra.
+- Limite de 3 retiradas extras (progresso 1/3, 2/3, 3/3).
+- Após a 3ª retirada, exibir aviso para avaliar cadastro definitivo.
+- Após avaliação definitiva aprovada, assistido passa a receber
+  Cesta Padrão.
+- Não converter automaticamente para definitivo.
+
+## 4. Acompanhamento
+
+- Alerta após 45 dias sem retirada: apenas informativo.
+- Contato necessário após 90 dias sem retirada: apenas informativo.
+- Não bloquear entrega automaticamente.
+- Não tornar família inativa automaticamente.
+- Não gerar tarefa automática.
+
+## 5. Estoque
+
+- Entrega baixa automaticamente o estoque do benefício entregue.
+- Entrada, saída, ajuste e baixa automática aparecem nas
+  movimentações.
+- Itens abaixo do mínimo aparecem como atenção.
+- Itens zerados aparecem como sem estoque.
+
+## 6. Configurações
+
+- Itens, unidades, categorias, benefícios, doadores, fornecedores e
+  parâmetros são funcionais.
+- Excluir e inativar são ações diferentes.
+- Se houver vínculo, a exclusão deve ser bloqueada e o sistema deve
+  oferecer inativação.
+- Tentativa bloqueada é registrada na auditoria.
+
+## 7. Relatórios
+
+- Relatórios devem gerar visualização em tela.
+- Exportação CSV deve funcionar (UTF-8 com BOM, separador `;`,
+  cabeçalhos em português).
+- Botão Excel direto removido nesta fase.
+- PDF não é obrigatório nesta fase.
+- CSV é o formato oficial para Excel e Power BI.
+
+## 8. Auditoria
+
+- Registrar alterações de cadastro.
+- Registrar entregas.
+- Registrar baixas automáticas de estoque.
+- Registrar tentativas bloqueadas (prazo e estoque).
+- Registrar liberação excepcional (com motivo).
+- Registrar exclusões bloqueadas.
+- Registrar alterações em configurações.
+- Sem duplicidade de registros.
+
+## 9. Perfis de acesso
+
+- Perfis oficiais: `admin`, `atendente`, `estoque`, `pendente`.
+- Admin acessa tudo, inclusive `/usuarios` e liberação excepcional.
+- Atendente: painel, atendimento, famílias, assistidos, membros,
+  entregas.
+- Estoque: painel, estoque, recebimentos, movimentações.
+- Pendente/inativo não acessam o sistema.
+
+## 10. Painel — dashboard operacional
+
+- Painel usa dados reais das telas Famílias, Atendimento, Estoque,
+  Relatórios e Auditoria; não cria contagens paralelas.
+- Gráficos só exibem itens com valor real (dias com atendimento e
+  benefícios com entrega).
+- Status de famílias no gráfico segue as cores oficiais: Liberado
+  verde, Bloqueado vermelho, Avaliar laranja (`#E8712A`), Inativo
+  cinza.
+- Paleta oficial dos gráficos: azul `#1E5AA8`, laranja `#E8712A`,
+  azul claro `#4C8FD1`, laranja claro `#F4A96B`.
