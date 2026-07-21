@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -7,9 +7,12 @@ import {
   ChevronRight,
   ClipboardList,
   HeartHandshake,
+  LoaderCircle,
+  LockKeyhole,
   MoreHorizontal,
   Pencil,
   Plus,
+  RefreshCw,
   Users,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -18,7 +21,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -34,12 +42,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useFamilias, calcularIdade, calcularFaixaEtaria, rotuloFaixaEtaria } from "@/lib/familias-store";
+import {
+  useFamilias,
+  calcularIdade,
+  calcularFaixaEtaria,
+  rotuloFaixaEtaria,
+} from "@/lib/familias-store";
 import { registrarAuditoria } from "@/lib/auditoria-store";
 import { useAtendimentoStore } from "@/lib/atendimento-store";
+import type { FamiliaSupabaseReadModel } from "@/lib/familias/familias-supabase-types";
+import { useFamiliaSupabase } from "@/lib/familias/use-familias-supabase";
 import {
-  EditarFamiliaDialog, AdicionarAssistidoDialog,
-  AdicionarMembroDialog, RegistrarObservacaoDialog,
+  EditarFamiliaDialog,
+  AdicionarAssistidoDialog,
+  AdicionarMembroDialog,
+  RegistrarObservacaoDialog,
 } from "@/components/familia-detail-dialogs";
 
 export const Route = createFileRoute("/familias/$id")({
@@ -47,29 +64,66 @@ export const Route = createFileRoute("/familias/$id")({
   component: FamiliaDetail,
 });
 
+const localFamiliaIdPattern = /^\d+$/;
+const supabaseFamiliaIdPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const legacyFamiliaDaSilvaRouteId = 1;
+const familiaDaSilvaStoreId = 15;
+
 function FamiliaDetail() {
   const { id } = Route.useParams();
+
+  if (localFamiliaIdPattern.test(id)) {
+    return <FamiliaLocalDetail id={id} />;
+  }
+
+  if (supabaseFamiliaIdPattern.test(id)) {
+    return <FamiliaSupabaseDetail id={id} />;
+  }
+
+  return <FamiliaDetailState message="Identificador de família inválido." />;
+}
+
+function FamiliaLocalDetail({ id }: { id: string }) {
+  const [localStoreHydrated, setLocalStoreHydrated] = useState(false);
+  const localFamiliaId = Number(id);
   const familias = useFamilias((s) => s.familias);
   const allAssistidos = useFamilias((s) => s.assistidos);
   const allMembros = useFamilias((s) => s.membros);
   const allObs = useFamilias((s) => s.observacoes);
-  const familia = useMemo(() => familias.find((f) => String(f.id) === id), [familias, id]);
+  const familia = useMemo(() => {
+    const familiaById = familias.find((item) => item.id === localFamiliaId);
+
+    if (familiaById) return familiaById;
+
+    // O detalhe local original exibia a Família da Silva em /familias/1,
+    // enquanto o seed atual identifica esse mesmo mock com o ID 15.
+    if (localFamiliaId === legacyFamiliaDaSilvaRouteId) {
+      return familias.find((item) => item.id === familiaDaSilvaStoreId);
+    }
+
+    return undefined;
+  }, [familias, localFamiliaId]);
+  const resolvedFamiliaId = familia?.id ?? localFamiliaId;
   const assistidos = useMemo(
-    () => allAssistidos.filter((a) => String(a.familiaId) === id), [allAssistidos, id],
+    () => allAssistidos.filter((a) => a.familiaId === resolvedFamiliaId),
+    [allAssistidos, resolvedFamiliaId],
   );
   const membros = useMemo(
-    () => allMembros.filter((m) => String(m.familiaId) === id), [allMembros, id],
+    () => allMembros.filter((m) => m.familiaId === resolvedFamiliaId),
+    [allMembros, resolvedFamiliaId],
   );
   const observacoes = useMemo(
-    () => allObs.filter((o) => String(o.familiaId) === id), [allObs, id],
+    () => allObs.filter((o) => o.familiaId === resolvedFamiliaId),
+    [allObs, resolvedFamiliaId],
   );
   const allEntregas = useAtendimentoStore((s) => s.entregas);
   const entregasFamilia = useMemo(
     () =>
       allEntregas
-        .filter((e) => String(e.familiaId) === id)
+        .filter((e) => e.familiaId === resolvedFamiliaId)
         .sort((a, b) => b.dataISO.localeCompare(a.dataISO)),
-    [allEntregas, id],
+    [allEntregas, resolvedFamiliaId],
   );
   const assistidosAtivos = useMemo(
     () => assistidos.filter((a) => a.status === "ativo"),
@@ -87,10 +141,16 @@ function FamiliaDetail() {
         gestante: false,
       },
       ...assistidosAtivos.map((a) => ({
-        documento: a.documento, nascimento: a.nascimento, pcd: a.pcd, gestante: false,
+        documento: a.documento,
+        nascimento: a.nascimento,
+        pcd: a.pcd,
+        gestante: false,
       })),
       ...membros.map((m) => ({
-        documento: m.documento, nascimento: m.nascimento, pcd: m.pcd, gestante: m.gestante,
+        documento: m.documento,
+        nascimento: m.nascimento,
+        pcd: m.pcd,
+        gestante: m.gestante,
       })),
     ];
     const vistos = new Set<string>();
@@ -103,7 +163,12 @@ function FamiliaDetail() {
       }
       unicos.push(p);
     }
-    let criancas = 0, adolescentes = 0, adultos = 0, idosos = 0, gestantes = 0, pcd = 0;
+    let criancas = 0,
+      adolescentes = 0,
+      adultos = 0,
+      idosos = 0,
+      gestantes = 0,
+      pcd = 0;
     for (const p of unicos) {
       const faixa = calcularFaixaEtaria(p.nascimento);
       if (faixa === "crianca") criancas++;
@@ -117,7 +182,12 @@ function FamiliaDetail() {
       moradores: unicos.length,
       assistidosAtivos: assistidosAtivos.length,
       membrosAtivos: membros.length,
-      criancas, adolescentes, adultos, idosos, gestantes, pcd,
+      criancas,
+      adolescentes,
+      adultos,
+      idosos,
+      gestantes,
+      pcd,
     };
   }, [assistidos, membros, familia?.documento]);
   const [openEditar, setOpenEditar] = useState(false);
@@ -125,6 +195,34 @@ function FamiliaDetail() {
   const [openMembro, setOpenMembro] = useState(false);
   const [openObs, setOpenObs] = useState(false);
   const [openSelecionar, setOpenSelecionar] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const persistApi = useFamilias.persist;
+    const finishHydration = () => {
+      if (active) setLocalStoreHydrated(true);
+    };
+
+    if (!persistApi) {
+      finishHydration();
+      return () => {
+        active = false;
+      };
+    }
+
+    const unsubscribe = persistApi.onFinishHydration(finishHydration);
+
+    if (persistApi.hasHydrated()) {
+      finishHydration();
+    } else {
+      void Promise.resolve(persistApi.rehydrate()).then(finishHydration, finishHydration);
+    }
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   const irParaAtendimento = () => {
     if (!familia) return;
@@ -166,13 +264,19 @@ function FamiliaDetail() {
     navigate({ to: "/atendimento", search: { assistido: docto } });
   };
 
+  if (!localStoreHydrated) {
+    return <FamiliaDetailState loading message="Carregando dados locais..." />;
+  }
+
   if (!familia) {
     return (
       <AppShell
         title="Detalhe da família"
         actions={
           <Button asChild size="sm" variant="ghost" className="gap-2">
-            <Link to="/familias"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+            <Link to="/familias" search={{ foco: undefined }}>
+              <ArrowLeft className="h-4 w-4" /> Voltar
+            </Link>
           </Button>
         }
       >
@@ -187,9 +291,13 @@ function FamiliaDetail() {
 
   const alertaAvaliacao = false;
   const statusLabel =
-    familia.status === "liberado" ? "Ativa" :
-    familia.status === "bloqueado" ? "Bloqueada" :
-    familia.status === "inativo" ? "Inativa" : "Em avaliação";
+    familia.status === "liberado"
+      ? "Ativa"
+      : familia.status === "bloqueado"
+        ? "Bloqueada"
+        : familia.status === "inativo"
+          ? "Inativa"
+          : "Em avaliação";
 
   return (
     <AppShell
@@ -197,7 +305,9 @@ function FamiliaDetail() {
       breadcrumbs={
         <div className="hidden items-center gap-1 text-xs text-muted-foreground md:flex">
           <ChevronRight className="h-3 w-3" />
-          <Link to="/familias" className="hover:text-foreground">Famílias</Link>
+          <Link to="/familias" search={{ foco: undefined }} className="hover:text-foreground">
+            Famílias
+          </Link>
           <ChevronRight className="h-3 w-3" />
           <span className="text-foreground">{familia.nome}</span>
         </div>
@@ -205,10 +315,21 @@ function FamiliaDetail() {
       actions={
         <div className="flex items-center gap-2">
           <Button asChild size="sm" variant="ghost" className="gap-2">
-            <Link to="/familias"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+            <Link to="/familias" search={{ foco: undefined }}>
+              <ArrowLeft className="h-4 w-4" /> Voltar
+            </Link>
           </Button>
-          <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenEditar(true)}><Pencil className="h-4 w-4" /> Editar família</Button>
-          <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenAssistido(true)}><Plus className="h-4 w-4" /> Adicionar assistido</Button>
+          <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenEditar(true)}>
+            <Pencil className="h-4 w-4" /> Editar família
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            onClick={() => setOpenAssistido(true)}
+          >
+            <Plus className="h-4 w-4" /> Adicionar assistido
+          </Button>
           <Button size="sm" className="gap-2" onClick={irParaAtendimento}>
             <HeartHandshake className="h-4 w-4" /> Ir para atendimento
           </Button>
@@ -231,7 +352,11 @@ function FamiliaDetail() {
       }
     >
       <EditarFamiliaDialog open={openEditar} onOpenChange={setOpenEditar} familia={familia} />
-      <AdicionarAssistidoDialog open={openAssistido} onOpenChange={setOpenAssistido} familia={familia} />
+      <AdicionarAssistidoDialog
+        open={openAssistido}
+        onOpenChange={setOpenAssistido}
+        familia={familia}
+      />
       <AdicionarMembroDialog open={openMembro} onOpenChange={setOpenMembro} familia={familia} />
       <RegistrarObservacaoDialog open={openObs} onOpenChange={setOpenObs} familia={familia} />
       <Dialog open={openSelecionar} onOpenChange={setOpenSelecionar}>
@@ -252,16 +377,21 @@ function FamiliaDetail() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{a.nome}</span>
-                  <Badge variant="outline" className="text-[10px] capitalize">{a.status}</Badge>
+                  <Badge variant="outline" className="text-[10px] capitalize">
+                    {a.status}
+                  </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {a.documento} · {a.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"} · {a.beneficio}
+                  {a.documento} · {a.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"} ·{" "}
+                  {a.beneficio}
                 </div>
               </button>
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenSelecionar(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setOpenSelecionar(false)}>
+              Cancelar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -275,12 +405,17 @@ function FamiliaDetail() {
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-xl font-semibold">{familia.nome}</h2>
-                  <Badge className="bg-primary/15 text-primary hover:bg-primary/15">{statusLabel}</Badge>
+                  <Badge className="bg-primary/15 text-primary hover:bg-primary/15">
+                    {statusLabel}
+                  </Badge>
                 </div>
                 <div className="mt-4 grid gap-4 md:grid-cols-4">
                   <Info label="Responsável" value={familia.responsavel} />
                   <Info label="CPF / RG" value={familia.documento} />
-                  <Info label="Endereço" value={[familia.endereco, familia.numero].filter(Boolean).join(", ") || "—"} />
+                  <Info
+                    label="Endereço"
+                    value={[familia.endereco, familia.numero].filter(Boolean).join(", ") || "—"}
+                  />
                   <Info label="Bairro" value={familia.bairro || "—"} />
                   <Info label="Cidade" value={familia.cidade || "—"} />
                   <Info label="UF" value={familia.uf || "—"} />
@@ -293,7 +428,10 @@ function FamiliaDetail() {
                   <Info label="Idosos" value={String(contagens.idosos)} />
                   <Info label="Gestantes" value={String(contagens.gestantes)} />
                   <Info label="PCD" value={String(contagens.pcd)} />
-                  <Info label="Tipo de cadastro" value={familia.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"} />
+                  <Info
+                    label="Tipo de cadastro"
+                    value={familia.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"}
+                  />
                 </div>
                 <div className="mt-4">
                   <p className="text-xs text-muted-foreground">Observações</p>
@@ -309,7 +447,8 @@ function FamiliaDetail() {
             <CardContent className="flex items-start gap-3 p-4">
               <AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
               <p className="text-sm text-foreground">
-                Assistido completou 3 retiradas extras. Avaliar cadastro definitivo para liberar Cesta Padrão no próximo mês.
+                Assistido completou 3 retiradas extras. Avaliar cadastro definitivo para liberar
+                Cesta Padrão no próximo mês.
               </p>
             </CardContent>
           </Card>
@@ -324,7 +463,11 @@ function FamiliaDetail() {
           <SummaryCard label="Idosos" value={String(contagens.idosos)} />
           <SummaryCard label="Gestantes" value={String(contagens.gestantes)} />
           <SummaryCard label="PCD" value={String(contagens.pcd)} />
-          <SummaryCard label="Acompanhamento" value={familia.acompanhamento === "em_dia" ? "Em dia" : "—"} tone="success" />
+          <SummaryCard
+            label="Acompanhamento"
+            value={familia.acompanhamento === "em_dia" ? "Em dia" : "—"}
+            tone="success"
+          />
         </div>
 
         <Tabs defaultValue="assistidos">
@@ -339,21 +482,30 @@ function FamiliaDetail() {
           <TabsContent value="assistidos">
             <Card>
               {assistidos.length === 0 ? (
-                <CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum assistido vinculado.</CardContent>
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhum assistido vinculado.
+                </CardContent>
               ) : (
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Nome</TableHead><TableHead>CPF/RG</TableHead>
-                      <TableHead>Tipo</TableHead><TableHead>Benefício</TableHead>
-                      <TableHead>Status</TableHead><TableHead>PCD</TableHead>
-                    </TableRow></TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>CPF/RG</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Benefício</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>PCD</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {assistidos.map((a) => (
                         <TableRow key={a.id}>
                           <TableCell className="text-sm">{a.nome}</TableCell>
                           <TableCell className="text-sm">{a.documento}</TableCell>
-                          <TableCell className="text-sm">{a.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"}</TableCell>
+                          <TableCell className="text-sm">
+                            {a.tipoCadastro === "definitivo" ? "Definitivo" : "Avaliação"}
+                          </TableCell>
                           <TableCell className="text-sm">{a.beneficio}</TableCell>
                           <TableCell className="text-sm capitalize">{a.status}</TableCell>
                           <TableCell className="text-sm">{a.pcd ? "Sim" : "Não"}</TableCell>
@@ -369,32 +521,41 @@ function FamiliaDetail() {
           <TabsContent value="membros">
             <Card>
               {membros.length === 0 ? (
-                <CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum membro vinculado.</CardContent>
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhum membro vinculado.
+                </CardContent>
               ) : (
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Nome</TableHead><TableHead>Parentesco</TableHead>
-                      <TableHead>Doc.</TableHead>
-                      <TableHead>Faixa etária</TableHead>
-                      <TableHead>Marcadores</TableHead>
-                    </TableRow></TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Parentesco</TableHead>
+                        <TableHead>Doc.</TableHead>
+                        <TableHead>Faixa etária</TableHead>
+                        <TableHead>Marcadores</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {membros.map((m) => {
                         const idade = calcularIdade(m.nascimento);
                         const faixa = calcularFaixaEtaria(m.nascimento);
                         return (
-                        <TableRow key={m.id}>
-                          <TableCell className="text-sm">{m.nome}</TableCell>
-                          <TableCell className="text-sm">{m.parentesco}</TableCell>
-                          <TableCell className="text-sm">{m.documento || "—"}</TableCell>
-                          <TableCell className="text-sm">
-                            {faixa ? `${rotuloFaixaEtaria(faixa)}${idade !== null ? ` (${idade})` : ""}` : "—"}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {[m.gestante && "Gestante", m.pcd && "PCD"].filter(Boolean).join(" · ") || "—"}
-                          </TableCell>
-                        </TableRow>
+                          <TableRow key={m.id}>
+                            <TableCell className="text-sm">{m.nome}</TableCell>
+                            <TableCell className="text-sm">{m.parentesco}</TableCell>
+                            <TableCell className="text-sm">{m.documento || "—"}</TableCell>
+                            <TableCell className="text-sm">
+                              {faixa
+                                ? `${rotuloFaixaEtaria(faixa)}${idade !== null ? ` (${idade})` : ""}`
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {[m.gestante && "Gestante", m.pcd && "PCD"]
+                                .filter(Boolean)
+                                .join(" · ") || "—"}
+                            </TableCell>
+                          </TableRow>
                         );
                       })}
                     </TableBody>
@@ -413,19 +574,23 @@ function FamiliaDetail() {
               ) : (
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Data / hora</TableHead>
-                      <TableHead>Assistido</TableHead>
-                      <TableHead>Documento</TableHead>
-                      <TableHead>Benefício</TableHead>
-                      <TableHead>Tipo de entrega</TableHead>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow></TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data / hora</TableHead>
+                        <TableHead>Assistido</TableHead>
+                        <TableHead>Documento</TableHead>
+                        <TableHead>Benefício</TableHead>
+                        <TableHead>Tipo de entrega</TableHead>
+                        <TableHead>Usuário</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {entregasFamilia.map((e) => (
                         <TableRow key={e.id}>
-                          <TableCell className="text-sm">{new Date(e.dataISO).toLocaleString("pt-BR")}</TableCell>
+                          <TableCell className="text-sm">
+                            {new Date(e.dataISO).toLocaleString("pt-BR")}
+                          </TableCell>
                           <TableCell className="text-sm">{e.nome}</TableCell>
                           <TableCell className="text-sm">{e.documento}</TableCell>
                           <TableCell className="text-sm">
@@ -435,7 +600,9 @@ function FamiliaDetail() {
                           <TableCell className="text-sm">Retirada no local</TableCell>
                           <TableCell className="text-sm">{e.usuario}</TableCell>
                           <TableCell className="text-sm">
-                            <Badge variant="outline" className="text-[10px]">Entregue</Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              Entregue
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -458,10 +625,19 @@ function FamiliaDetail() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Observações sociais</CardTitle>
-                <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpenObs(true)}><Plus className="h-4 w-4" /> Nova observação</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setOpenObs(true)}
+                >
+                  <Plus className="h-4 w-4" /> Nova observação
+                </Button>
               </CardHeader>
               {observacoes.length === 0 ? (
-                <CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma observação social registrada.</CardContent>
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhuma observação social registrada.
+                </CardContent>
               ) : (
                 <CardContent className="space-y-3">
                   {observacoes.map((o) => (
@@ -485,6 +661,401 @@ function FamiliaDetail() {
   );
 }
 
+function FamiliaSupabaseDetail({ id }: { id: string }) {
+  const { data: familia, isError, isFetching, isPending, refetch } = useFamiliaSupabase(id);
+
+  if (isPending) {
+    return <FamiliaDetailState loading message="Carregando família do Supabase..." />;
+  }
+
+  if (isError) {
+    return (
+      <FamiliaDetailState
+        message="Não foi possível carregar a família do Supabase."
+        description="Verifique a conexão e tente novamente. Nenhum dado local foi usado para este UUID."
+        onRetry={() => void refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
+
+  if (!familia) {
+    return <FamiliaDetailState message="Família não encontrada ou sem permissão." />;
+  }
+
+  return <FamiliaSupabaseReadOnly familia={familia} />;
+}
+
+function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadModel }) {
+  const contagens = calcularContagensFamiliaSupabase(familia);
+  const statusLabel = rotuloStatusFamiliaSupabase(familia.status);
+  const endereco = [familia.endereco, familia.numero, familia.complemento]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    <AppShell
+      title="Detalhe da família"
+      breadcrumbs={
+        <div className="hidden items-center gap-1 text-xs text-muted-foreground md:flex">
+          <ChevronRight className="h-3 w-3" />
+          <Link to="/familias" search={{ foco: undefined }} className="hover:text-foreground">
+            Famílias
+          </Link>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-foreground">{familia.nome || "Família"}</span>
+        </div>
+      }
+      actions={
+        <Button asChild size="sm" variant="ghost" className="gap-2">
+          <Link to="/familias" search={{ foco: undefined }}>
+            <ArrowLeft className="h-4 w-4" /> Voltar
+          </Link>
+        </Button>
+      }
+    >
+      <div className="space-y-6">
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-start gap-3 p-4">
+            <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div>
+              <p className="text-sm font-medium">Dados do Supabase em modo somente leitura</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Edição, atendimento, novas observações e inclusão de membros ou assistidos ainda não
+                estão disponíveis para famílias remotas.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Users className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-semibold">{familia.nome || "Família sem nome"}</h2>
+                  <Badge className="bg-primary/15 text-primary hover:bg-primary/15">
+                    {statusLabel}
+                  </Badge>
+                </div>
+                <div className="mt-4 grid gap-4 md:grid-cols-4">
+                  <Info label="Responsável" value={familia.responsavel || "—"} />
+                  <Info label="CPF / RG" value={familia.documento || "—"} />
+                  <Info label="Endereço" value={endereco || "—"} />
+                  <Info label="Bairro" value={familia.bairro || "—"} />
+                  <Info label="Cidade" value={familia.cidade || "—"} />
+                  <Info label="UF" value={familia.uf || "—"} />
+                  <Info label="CEP" value={familia.cep || "—"} />
+                  <Info label="Telefone / WhatsApp" value={familia.telefone || "—"} />
+                  <Info label="Moradores" value={String(contagens.moradores)} />
+                  <Info label="Crianças" value={String(contagens.criancas)} />
+                  <Info label="Adolescentes" value={String(contagens.adolescentes)} />
+                  <Info label="Adultos" value={String(contagens.adultos)} />
+                  <Info label="Idosos" value={String(contagens.idosos)} />
+                  <Info label="Gestantes" value={String(contagens.gestantes)} />
+                  <Info label="PCD" value={String(contagens.pcd)} />
+                  <Info
+                    label="Acompanhamento"
+                    value={rotuloAcompanhamentoSupabase(familia.acompanhamento)}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9">
+          <SummaryCard label="Moradores" value={String(contagens.moradores)} />
+          <SummaryCard label="Assistidos" value={String(contagens.assistidosAtivos)} />
+          <SummaryCard label="Crianças" value={String(contagens.criancas)} />
+          <SummaryCard label="Adolescentes" value={String(contagens.adolescentes)} />
+          <SummaryCard label="Adultos" value={String(contagens.adultos)} />
+          <SummaryCard label="Idosos" value={String(contagens.idosos)} />
+          <SummaryCard label="Gestantes" value={String(contagens.gestantes)} />
+          <SummaryCard label="PCD" value={String(contagens.pcd)} />
+          <SummaryCard
+            label="Acompanhamento"
+            value={rotuloAcompanhamentoSupabase(familia.acompanhamento)}
+            tone={familia.acompanhamento === "em_dia" ? "success" : undefined}
+          />
+        </div>
+
+        <Tabs defaultValue="assistidos">
+          <TabsList>
+            <TabsTrigger value="assistidos">Assistidos vinculados</TabsTrigger>
+            <TabsTrigger value="membros">Membros vinculados</TabsTrigger>
+            <TabsTrigger value="entregas">Histórico de entregas</TabsTrigger>
+            <TabsTrigger value="bloqueios">Tentativas bloqueadas</TabsTrigger>
+            <TabsTrigger value="observacoes">Observações sociais</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="assistidos">
+            <Card>
+              {familia.assistidos.length === 0 ? (
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhum assistido vinculado.
+                </CardContent>
+              ) : (
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>CPF/RG</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Benefício</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>PCD</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {familia.assistidos.map((assistido) => (
+                        <TableRow key={assistido.id}>
+                          <TableCell className="text-sm">{assistido.nome}</TableCell>
+                          <TableCell className="text-sm">{assistido.documento}</TableCell>
+                          <TableCell className="text-sm">
+                            {assistido.tipoCadastro === "definitivo" ? "Definitivo" : "Extra"}
+                          </TableCell>
+                          <TableCell className="text-sm">{assistido.beneficio || "—"}</TableCell>
+                          <TableCell className="text-sm capitalize">{assistido.status}</TableCell>
+                          <TableCell className="text-sm">{assistido.pcd ? "Sim" : "Não"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="membros">
+            <Card>
+              {familia.membros.length === 0 ? (
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhum membro vinculado.
+                </CardContent>
+              ) : (
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Parentesco</TableHead>
+                        <TableHead>Doc.</TableHead>
+                        <TableHead>Faixa etária</TableHead>
+                        <TableHead>Marcadores</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {familia.membros.map((membro) => {
+                        const idade = calcularIdade(membro.nascimento);
+                        const faixa = calcularFaixaEtaria(membro.nascimento);
+
+                        return (
+                          <TableRow key={membro.id}>
+                            <TableCell className="text-sm">{membro.nome}</TableCell>
+                            <TableCell className="text-sm">{membro.parentesco}</TableCell>
+                            <TableCell className="text-sm">{membro.documento || "—"}</TableCell>
+                            <TableCell className="text-sm">
+                              {faixa
+                                ? `${rotuloFaixaEtaria(faixa)}${idade !== null ? ` (${idade})` : ""}`
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {[
+                                membro.responsavelPrincipal && "Responsável principal",
+                                membro.gestante && "Gestante",
+                                membro.pcd && "PCD",
+                              ]
+                                .filter(Boolean)
+                                .join(" · ") || "—"}
+                            </TableCell>
+                            <TableCell className="text-sm capitalize">{membro.status}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="entregas">
+            <RemoteHistoryUnavailable message="Histórico de entregas ainda não integrado ao Supabase nesta etapa." />
+          </TabsContent>
+
+          <TabsContent value="bloqueios">
+            <RemoteHistoryUnavailable message="Tentativas bloqueadas ainda não integradas ao Supabase nesta etapa." />
+          </TabsContent>
+
+          <TabsContent value="observacoes">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Observações sociais</CardTitle>
+                <Badge variant="outline" className="gap-1">
+                  <LockKeyhole className="h-3 w-3" /> Somente leitura
+                </Badge>
+              </CardHeader>
+              {familia.observacoes.length === 0 ? (
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhuma observação social registrada.
+                </CardContent>
+              ) : (
+                <CardContent className="space-y-3">
+                  {familia.observacoes.map((observacao) => (
+                    <div key={observacao.id} className="rounded-md border p-3">
+                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                        <Badge variant="outline">{observacao.tipo}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatarDataHora(observacao.data)} · Autor {observacao.usuario}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm">{observacao.texto}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              )}
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AppShell>
+  );
+}
+
+function FamiliaDetailState({
+  description,
+  loading = false,
+  message,
+  onRetry,
+  retrying = false,
+}: {
+  description?: string;
+  loading?: boolean;
+  message: string;
+  onRetry?: () => void;
+  retrying?: boolean;
+}) {
+  return (
+    <AppShell
+      title="Detalhe da família"
+      actions={
+        <Button asChild size="sm" variant="ghost" className="gap-2">
+          <Link to="/familias" search={{ foco: undefined }}>
+            <ArrowLeft className="h-4 w-4" /> Voltar
+          </Link>
+        </Button>
+      }
+    >
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+          {loading ? (
+            <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
+          ) : onRetry ? (
+            <AlertTriangle className="h-5 w-5 text-warning" />
+          ) : null}
+          <p className="text-sm text-muted-foreground">{message}</p>
+          {description ? (
+            <p className="max-w-xl text-xs text-muted-foreground">{description}</p>
+          ) : null}
+          {onRetry ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              disabled={retrying}
+              onClick={onRetry}
+            >
+              <RefreshCw className={`h-4 w-4 ${retrying ? "animate-spin" : ""}`} />
+              {retrying ? "Tentando novamente..." : "Tentar novamente"}
+            </Button>
+          ) : null}
+        </CardContent>
+      </Card>
+    </AppShell>
+  );
+}
+
+function RemoteHistoryUnavailable({ message }: { message: string }) {
+  return (
+    <Card>
+      <CardContent className="p-8 text-center">
+        <p className="text-sm font-medium">Ainda não integrado</p>
+        <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function calcularContagensFamiliaSupabase(familia: FamiliaSupabaseReadModel) {
+  const membrosAtivosPorPessoa = new Map(
+    familia.membros
+      .filter((membro) => membro.status === "ativo")
+      .map((membro) => [membro.pessoaId, membro] as const),
+  );
+  const membrosAtivos = [...membrosAtivosPorPessoa.values()];
+  const assistidosAtivos = new Set(
+    familia.assistidos
+      .filter((assistido) => assistido.status === "ativo")
+      .map((assistido) => assistido.pessoaId),
+  ).size;
+  let criancas = 0;
+  let adolescentes = 0;
+  let adultos = 0;
+  let idosos = 0;
+  let gestantes = 0;
+  let pcd = 0;
+
+  for (const membro of membrosAtivos) {
+    const faixa = calcularFaixaEtaria(membro.nascimento);
+
+    if (faixa === "crianca") criancas += 1;
+    else if (faixa === "adolescente") adolescentes += 1;
+    else if (faixa === "adulto") adultos += 1;
+    else if (faixa === "idoso") idosos += 1;
+
+    if (membro.gestante) gestantes += 1;
+    if (membro.pcd) pcd += 1;
+  }
+
+  return {
+    moradores: membrosAtivos.length,
+    assistidosAtivos,
+    criancas,
+    adolescentes,
+    adultos,
+    idosos,
+    gestantes,
+    pcd,
+  };
+}
+
+function rotuloStatusFamiliaSupabase(status: FamiliaSupabaseReadModel["status"]) {
+  if (status === "liberado") return "Ativa";
+  if (status === "bloqueado") return "Bloqueada";
+  if (status === "inativo") return "Inativa";
+  return "Em avaliação";
+}
+
+function rotuloAcompanhamentoSupabase(acompanhamento: FamiliaSupabaseReadModel["acompanhamento"]) {
+  if (acompanhamento === "em_dia") return "Em dia";
+  if (acompanhamento === "atencao_45") return "Atenção (45 dias)";
+  if (acompanhamento === "atencao_60") return "Atenção (60 dias)";
+  if (acompanhamento === "sem_retirada_90") return "Contato necessário (90+ dias)";
+  return "Inativo";
+}
+
+function formatarDataHora(value: string) {
+  const data = new Date(value);
+  return Number.isNaN(data.getTime()) ? "—" : data.toLocaleString("pt-BR");
+}
+
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -499,7 +1070,11 @@ function SummaryCard({ label, value, tone }: { label: string; value: string; ton
     <Card>
       <CardContent className="p-3">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className={`mt-1 text-lg font-semibold ${tone === "success" ? "text-primary" : "text-foreground"}`}>{value}</p>
+        <p
+          className={`mt-1 text-lg font-semibold ${tone === "success" ? "text-primary" : "text-foreground"}`}
+        >
+          {value}
+        </p>
       </CardContent>
     </Card>
   );
