@@ -2,10 +2,17 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { getCurrentProfile, getCurrentUser, signOut } from "@/lib/auth/auth-service";
+import type { PapelPerfil } from "@/lib/auth/types";
 
 type AccessState = "checking" | "allowed";
 
-export function RequireActiveProfile({ children }: { children: ReactNode }) {
+export function RequireActiveProfile({
+  children,
+  requiredRole,
+}: {
+  children: ReactNode;
+  requiredRole?: PapelPerfil;
+}) {
   const navigate = useNavigate();
   const [accessState, setAccessState] = useState<AccessState>("checking");
 
@@ -33,6 +40,13 @@ export function RequireActiveProfile({ children }: { children: ReactNode }) {
           return;
         }
 
+        if (requiredRole && profile.papel !== requiredRole) {
+          if (isCurrent) {
+            await navigate({ to: "/painel", replace: true });
+          }
+          return;
+        }
+
         if (isCurrent) {
           setAccessState("allowed");
         }
@@ -48,7 +62,7 @@ export function RequireActiveProfile({ children }: { children: ReactNode }) {
     return () => {
       isCurrent = false;
     };
-  }, [navigate]);
+  }, [navigate, requiredRole]);
 
   if (accessState === "checking") {
     return (

@@ -5,20 +5,23 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RequireActiveProfile } from "@/lib/auth/auth-guard";
+import type { PapelPerfil } from "@/lib/auth/types";
 
 export function AppShell({
   title,
   breadcrumbs,
   actions,
   children,
+  requiredRole,
 }: {
   title: string;
   breadcrumbs?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
+  requiredRole?: PapelPerfil;
 }) {
   return (
-    <RequireActiveProfile>
+    <RequireActiveProfile requiredRole={requiredRole}>
       <SidebarProvider>
         <div className="flex min-h-screen w-full bg-muted/30">
           <AppSidebar />
