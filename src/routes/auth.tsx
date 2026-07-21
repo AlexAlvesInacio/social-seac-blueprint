@@ -1,9 +1,22 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Mail, Lock, Eye, ShoppingBasket, Utensils, Baby, Shirt, Palette, HandHeart } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Mail,
+  Lock,
+  Eye,
+  ShoppingBasket,
+  Utensils,
+  Baby,
+  Shirt,
+  Palette,
+  HandHeart,
+} from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getCurrentProfile, signIn, signOut } from "@/lib/auth/auth-service";
 import seacBrand from "@/assets/seac-brand.jpeg.asset.json";
 import seacLogo from "@/assets/seac-logo.png.asset.json";
 
@@ -19,6 +32,54 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const { data, error } = await signIn(email.trim(), password);
+
+      if (error || !data?.user || !data.session) {
+        setErrorMessage("E-mail ou senha inválidos. Verifique os dados e tente novamente.");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await getCurrentProfile();
+
+      if (profileError || !profile) {
+        await signOut();
+        setErrorMessage(
+          "Seu perfil de acesso não foi encontrado. Procure a administração do SEAC.",
+        );
+        return;
+      }
+
+      if (profile.status === "pendente") {
+        await signOut();
+        setErrorMessage("Seu acesso ainda está pendente de aprovação pela administração do SEAC.");
+        return;
+      }
+
+      if (profile.status === "inativo") {
+        await signOut();
+        setErrorMessage("Seu acesso está inativo. Procure a administração do SEAC.");
+        return;
+      }
+
+      await navigate({ to: "/painel", replace: true });
+    } catch {
+      setErrorMessage("Não foi possível entrar agora. Verifique a configuração e tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="grid min-h-screen w-full lg:grid-cols-2">
@@ -26,57 +87,75 @@ function AuthPage() {
         <div className="flex items-center justify-center bg-gradient-to-br from-background via-background to-secondary/40 px-4 py-10">
           <Card className="w-full max-w-md border-border/60 shadow-lg">
             <CardContent className="p-8">
-            <div className="mb-6 flex flex-col items-center gap-3 text-center">
-              <img
-                src={seacLogo.url}
-                alt="SEAC Social"
-                className="h-14 w-14 rounded-2xl object-contain"
-              />
-              <div>
-                <h1 className="text-2xl font-semibold text-foreground">
-                  Acesse o <span className="text-primary">SEAC Social</span>
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Gestão social para atendimentos, famílias e benefícios.
-                </p>
+              <div className="mb-6 flex flex-col items-center gap-3 text-center">
+                <img
+                  src={seacLogo.url}
+                  alt="SEAC Social"
+                  className="h-14 w-14 rounded-2xl object-contain"
+                />
+                <div>
+                  <h1 className="text-2xl font-semibold text-foreground">
+                    Acesse o <span className="text-primary">SEAC Social</span>
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Gestão social para atendimentos, famílias e benefícios.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                navigate({ to: "/painel" });
-              }}
-            >
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="email" type="email" placeholder="seu@email.com" className="pl-9" />
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      className="pl-9"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      autoComplete="email"
+                      disabled={isSubmitting}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="password" type="password" placeholder="Digite sua senha" className="pl-9 pr-9" />
-                  <Eye className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 cursor-pointer text-muted-foreground" />
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Digite sua senha"
+                      className="pl-9 pr-9"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      autoComplete="current-password"
+                      disabled={isSubmitting}
+                      required
+                    />
+                    <Eye className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 cursor-pointer text-muted-foreground" />
+                  </div>
                 </div>
-              </div>
-              <Button type="submit" size="lg" className="w-full">
-                Entrar
-              </Button>
-              <div className="relative py-2 text-center">
-                <span className="bg-card px-3 text-xs uppercase tracking-wide text-muted-foreground">ou</span>
-              </div>
-              <p className="text-center text-sm text-muted-foreground">
-                Ainda não tem uma conta?{" "}
-                <Link to="/painel" className="font-medium text-primary hover:underline">
-                  Cadastre-se
-                </Link>
-              </p>
-            </form>
+                {errorMessage && (
+                  <Alert variant="destructive" aria-live="polite">
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? "Entrando…" : "Entrar"}
+                </Button>
+                <div className="relative py-2 text-center">
+                  <span className="bg-card px-3 text-xs uppercase tracking-wide text-muted-foreground">
+                    ou
+                  </span>
+                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  O acesso é criado pela administração do SEAC.
+                </p>
+              </form>
             </CardContent>
           </Card>
         </div>
