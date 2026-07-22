@@ -125,14 +125,16 @@ function mapFamiliaSupabaseParaLista(familia: FamiliaSupabaseReadModel): Familia
 function FamiliasPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [novaOpen, setNovaOpen] = useState(false);
+  const [cadastroMessage, setCadastroMessage] = useState<string | null>(null);
   const familiasLocais = useFamilias((s) => s.familias);
   const {
     data: familiasSupabase,
-    isError: supabaseFalhou,
+    isLoadingError: supabaseFalhaInicial,
+    isRefetchError: supabaseFalhaAtualizacao,
     isPending: supabaseCarregando,
   } = useFamiliasSupabase();
   const temFamiliasSupabase = Boolean(familiasSupabase?.length);
-  const usandoSupabase = temFamiliasSupabase && !supabaseFalhou;
+  const usandoSupabase = temFamiliasSupabase && !supabaseFalhaInicial;
   const todasFamilias: FamiliaListaItem[] = usandoSupabase
     ? (familiasSupabase ?? []).map(mapFamiliaSupabaseParaLista)
     : familiasLocais.map(mapFamiliaLocalParaLista);
@@ -176,17 +178,54 @@ function FamiliasPage() {
         </span>
       }
       actions={
-        <Button size="sm" className="gap-2" onClick={() => setNovaOpen(true)}>
+        <Button
+          size="sm"
+          className="gap-2"
+          onClick={() => {
+            setCadastroMessage(null);
+            setNovaOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4" /> Nova família
         </Button>
       }
     >
-      <NovaFamiliaDialog open={novaOpen} onOpenChange={setNovaOpen} />
+      <NovaFamiliaDialog
+        open={novaOpen}
+        onOpenChange={setNovaOpen}
+        onCreated={({ origem, nome }) =>
+          setCadastroMessage(
+            origem === "supabase"
+              ? `${nome} foi cadastrada no Supabase.`
+              : `${nome} foi salva somente neste navegador.`,
+          )
+        }
+        destinoInicial="supabase"
+        fonteLista={usandoSupabase ? "supabase" : "local"}
+      />
       <FonteDadosNotice
         carregando={supabaseCarregando}
-        falhou={supabaseFalhou}
+        falhaInicial={supabaseFalhaInicial}
+        falhaAtualizacao={supabaseFalhaAtualizacao}
         usandoSupabase={usandoSupabase}
       />
+      {cadastroMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground"
+        >
+          <span>{cadastroMessage}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto h-7 px-2"
+            onClick={() => setCadastroMessage(null)}
+          >
+            Fechar
+          </Button>
+        </div>
+      )}
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         <SummaryCard value={String(total)} label="Total de famílias" />
         <SummaryCard value={String(definitivos)} label="Cadastros definitivos" />
@@ -378,7 +417,7 @@ function FamiliasPage() {
                             <div className="flex flex-col">
                               <span>{familia.nome || "Família sem nome de referência"}</span>
                               <span className="text-[11px] font-normal text-muted-foreground">
-                                Detalhe disponível em próxima etapa
+                                Ações remotas desta lista ainda não integradas
                               </span>
                             </div>
                           )}
@@ -466,24 +505,33 @@ function FamiliasPage() {
 
 function FonteDadosNotice({
   carregando,
-  falhou,
+  falhaInicial,
+  falhaAtualizacao,
   usandoSupabase,
 }: {
   carregando: boolean;
-  falhou: boolean;
+  falhaInicial: boolean;
+  falhaAtualizacao: boolean;
   usandoSupabase: boolean;
 }) {
   let mensagem =
-    "Nenhuma família foi retornada pelo Supabase. Exibindo os dados locais temporariamente.";
+    "Nenhuma família foi retornada pelo Supabase. Exibindo os dados locais temporariamente; novos cadastros usam o Supabase por padrão.";
 
   if (carregando) {
     mensagem =
       "Consultando o Supabase. Os dados locais permanecem visíveis durante o carregamento.";
-  } else if (falhou) {
-    mensagem = "Não foi possível consultar o Supabase. Exibindo os dados locais temporariamente.";
+  } else if (falhaAtualizacao && usandoSupabase) {
+    mensagem =
+      "Não foi possível atualizar o Supabase. Mantendo os últimos dados remotos carregados.";
+  } else if (falhaAtualizacao) {
+    mensagem =
+      "Não foi possível atualizar o Supabase. Exibindo os dados locais até a próxima consulta.";
+  } else if (falhaInicial) {
+    mensagem =
+      "Não foi possível consultar o Supabase. Exibindo os dados locais; o cadastro local permanece uma opção explícita e separada.";
   } else if (usandoSupabase) {
     mensagem =
-      "Exibindo famílias do Supabase em modo somente leitura. Cadastro e detalhes continuam locais.";
+      "Exibindo famílias do Supabase. O cadastro remoto é o padrão e o modo local permanece separado.";
   }
 
   return (
@@ -492,11 +540,11 @@ function FonteDadosNotice({
       aria-live="polite"
       className={cn(
         "flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground",
-        falhou && "border-warning/40 bg-warning/5 text-foreground",
+        (falhaInicial || falhaAtualizacao) && "border-warning/40 bg-warning/5 text-foreground",
       )}
     >
       {carregando && <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
-      {falhou && !carregando && (
+      {(falhaInicial || falhaAtualizacao) && !carregando && (
         <AlertTriangle className="h-3.5 w-3.5 text-warning" aria-hidden="true" />
       )}
       <span>{mensagem}</span>
