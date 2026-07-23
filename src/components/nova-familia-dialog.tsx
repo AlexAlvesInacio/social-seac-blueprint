@@ -25,9 +25,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { registrarAuditoria } from "@/lib/auditoria-store";
 import { useFamilias, type FamiliaStatus, type TipoCadastro } from "@/lib/familias-store";
-import type { PessoaTipoDocumentoSupabase } from "@/lib/familias/familias-supabase-types";
-import { FamiliasSupabaseWriteError } from "@/lib/familias/familias-write-repository";
-import { useCriarFamiliaSupabase } from "@/lib/familias/use-criar-familia-supabase";
+import {
+  FamiliasSupabaseWriteQueryError,
+  type PessoaTipoDocumentoSupabase,
+} from "@/lib/familias/familias-supabase-types";
+import { useCriarFamiliaSupabase } from "@/lib/familias/use-familias-supabase";
 
 type CadastroFamiliaDestino = "supabase" | "local";
 type FonteListaFamilias = "supabase" | "local";
@@ -87,19 +89,17 @@ const emptyForm: FormState = {
 };
 
 function getSupabaseErrorMessage(error: unknown): string {
-  if (!(error instanceof FamiliasSupabaseWriteError)) {
+  if (!(error instanceof FamiliasSupabaseWriteQueryError)) {
     return "Não foi possível confirmar o cadastro no Supabase. Nenhum dado foi salvo localmente; atualize a lista antes de tentar novamente.";
   }
 
-  switch (error.kind) {
-    case "documento_duplicado":
+  switch (error.code) {
+    case "23505":
       return "Já existe uma pessoa cadastrada com este documento.";
-    case "dados_invalidos":
+    case "22023":
       return "Revise os dados informados e tente novamente.";
-    case "sem_permissao":
+    case "42501":
       return "Apenas administrador ou atendente ativo pode cadastrar famílias.";
-    case "resposta_invalida":
-      return "Não foi possível confirmar o cadastro. Atualize a lista antes de tentar novamente.";
     default:
       return "Não foi possível confirmar o cadastro no Supabase. Nenhum dado foi salvo localmente; atualize a lista antes de tentar novamente.";
   }
@@ -231,11 +231,11 @@ export function NovaFamiliaDialog({
 
       toast.success("Família cadastrada no Supabase com sucesso.");
       onCreated({ origem: "supabase", nome: form.nome.trim() });
-      concluirCadastro(nova.familiaId, irParaDetalhe);
+      concluirCadastro(nova.familia_id, irParaDetalhe);
     } catch (error) {
       const message = getSupabaseErrorMessage(error);
 
-      if (error instanceof FamiliasSupabaseWriteError && error.kind === "documento_duplicado") {
+      if (error instanceof FamiliasSupabaseWriteQueryError && error.code === "23505") {
         setErros((current) => ({ ...current, documento: message }));
       }
 
