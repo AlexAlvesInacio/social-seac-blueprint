@@ -22,6 +22,9 @@ import type {
   ObservacaoSocialSupabaseRow,
   PessoaSupabaseRow,
   PessoaTipoDocumentoSupabase,
+  RegistrarEntregaResult,
+  RegistrarTentativaResult,
+  ResumoAtendimentoAssistido,
 } from "@/lib/familias/familias-supabase-types";
 import {
   toFamiliasSupabaseReadError,
@@ -595,6 +598,180 @@ export async function atualizarResponsavelFamiliaNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseWriteError("atualizar_responsavel", error),
+    };
+  }
+}
+
+/* ============ Atendimento: entregas e tentativas ============ */
+
+export interface RegistrarEntregaInput {
+  assistidoId: string;
+  /** Apenas para invalidação de cache; não é enviado à RPC. */
+  familiaId: string;
+  excepcional?: boolean;
+  observacao?: string;
+}
+
+export interface RegistrarTentativaInput {
+  assistidoId: string;
+  familiaId: string;
+  motivo: "prazo" | "estoque";
+  observacao?: string;
+}
+
+async function registrarEntrega(
+  input: RegistrarEntregaInput,
+): Promise<FamiliasSupabaseWriteResult<RegistrarEntregaResult>> {
+  const { data, error } = await getSupabaseClient().rpc("registrar_entrega_atendimento", {
+    p_assistido_id: input.assistidoId,
+    p_excepcional: input.excepcional ?? false,
+    p_observacao: nullableParam(input.observacao),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("registrar_entrega", error) };
+  }
+
+  const row = firstRow<RegistrarEntregaResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "registrar_entrega",
+        code: "EMPTY_RESULT",
+        message: "O registro da entrega não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function registrarEntregaAtendimentoNoSupabase(
+  input: RegistrarEntregaInput,
+): Promise<FamiliasSupabaseWriteResult<RegistrarEntregaResult>> {
+  try {
+    return await registrarEntrega(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("registrar_entrega", error),
+    };
+  }
+}
+
+async function registrarTentativa(
+  input: RegistrarTentativaInput,
+): Promise<FamiliasSupabaseWriteResult<RegistrarTentativaResult>> {
+  const { data, error } = await getSupabaseClient().rpc("registrar_tentativa_bloqueada", {
+    p_assistido_id: input.assistidoId,
+    p_motivo: input.motivo,
+    p_observacao: nullableParam(input.observacao),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("registrar_tentativa", error) };
+  }
+
+  const row = firstRow<RegistrarTentativaResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "registrar_tentativa",
+        code: "EMPTY_RESULT",
+        message: "O registro da tentativa não retornou identificador.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function registrarTentativaBloqueadaNoSupabase(
+  input: RegistrarTentativaInput,
+): Promise<FamiliasSupabaseWriteResult<RegistrarTentativaResult>> {
+  try {
+    return await registrarTentativa(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("registrar_tentativa", error),
+    };
+  }
+}
+
+const BENEFICIO_PADRAO = "Cesta Padrão";
+const BENEFICIO_EXTRA = "Cesta Extra";
+
+type EntregaResumoRow = { criado_em: string; beneficio_id: string };
+type BeneficioSaldoRow = { id: string; nome: string; saldo: number };
+
+async function getResumoAtendimento(
+  assistidoId: string,
+): Promise<FamiliasSupabaseReadResult<ResumoAtendimentoAssistido>> {
+  const client = getSupabaseClient();
+
+  // Sem join embutido do PostgREST: buscamos beneficio_id nas entregas e
+  // mapeamos pelo id via a consulta de benefícios (mais previsível e tipado).
+  const [entregasResult, beneficiosResult] = await Promise.all([
+    client
+      .from("entregas")
+      .select("criado_em, beneficio_id")
+      .eq("assistido_id", assistidoId)
+      .order("criado_em", { ascending: false }),
+    client
+      .from("beneficios")
+      .select("id, nome, saldo")
+      .in("nome", [BENEFICIO_PADRAO, BENEFICIO_EXTRA]),
+  ]);
+
+  if (entregasResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("resumo_atendimento", entregasResult.error),
+    };
+  }
+  if (beneficiosResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("resumo_atendimento", beneficiosResult.error),
+    };
+  }
+
+  const entregas = (entregasResult.data ?? []) as EntregaResumoRow[];
+  const beneficios = (beneficiosResult.data ?? []) as BeneficioSaldoRow[];
+
+  const extraId = beneficios.find((b) => b.nome === BENEFICIO_EXTRA)?.id;
+  const ultimaRetiradaISO = entregas[0] ? entregas[0].criado_em.slice(0, 10) : null;
+  const retiradasExtras = extraId ? entregas.filter((e) => e.beneficio_id === extraId).length : 0;
+  const saldoDe = (nome: string) => beneficios.find((b) => b.nome === nome)?.saldo ?? 0;
+
+  return {
+    data: {
+      ultimaRetiradaISO,
+      retiradasExtras,
+      saldoPadrao: saldoDe(BENEFICIO_PADRAO),
+      saldoExtra: saldoDe(BENEFICIO_EXTRA),
+    },
+    error: null,
+  };
+}
+
+/** Insumos para a UI calcular o cenário de elegibilidade (enforcement é da RPC). */
+export async function getResumoAtendimentoAssistido(
+  assistidoId: string,
+): Promise<FamiliasSupabaseReadResult<ResumoAtendimentoAssistido>> {
+  try {
+    return await getResumoAtendimento(assistidoId);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseReadError("resumo_atendimento", error),
     };
   }
 }

@@ -8,13 +8,18 @@ import {
   criarMembroEmFamiliaNoSupabase,
   criarObservacaoSocialNoSupabase,
   getFamiliaFromSupabaseById,
+  getResumoAtendimentoAssistido,
   listFamiliasFromSupabase,
+  registrarEntregaAtendimentoNoSupabase,
+  registrarTentativaBloqueadaNoSupabase,
   type AtualizarFamiliaInput,
   type AtualizarResponsavelInput,
   type CriarAssistidoInput,
   type CriarFamiliaInput,
   type CriarMembroInput,
   type CriarObservacaoInput,
+  type RegistrarEntregaInput,
+  type RegistrarTentativaInput,
 } from "@/lib/familias/familias-repository";
 import {
   FamiliasSupabaseQueryError,
@@ -24,6 +29,8 @@ import {
 export const familiasSupabaseQueryKeys = {
   all: ["familias", "supabase"] as const,
   detail: (id: string) => ["familias", "supabase", id] as const,
+  resumoAtendimento: (assistidoId: string) =>
+    ["familias", "supabase", "resumo-atendimento", assistidoId] as const,
 };
 
 export function useFamiliasSupabase() {
@@ -157,6 +164,63 @@ export function useAtualizarResponsavelSupabase() {
       void queryClient.invalidateQueries({
         queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
       });
+    },
+  });
+}
+
+export function useResumoAtendimento(assistidoId: string) {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.resumoAtendimento(assistidoId),
+    queryFn: async () => {
+      const result = await getResumoAtendimentoAssistido(assistidoId);
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+    enabled: assistidoId.length > 0,
+  });
+}
+
+// Entrega/tentativa invalidam o detalhe da família (agregado) e o resumo do
+// assistido, que alimenta o cenário de elegibilidade exibido.
+function invalidarAtendimento(
+  queryClient: ReturnType<typeof useQueryClient>,
+  familiaId: string,
+  assistidoId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: familiasSupabaseQueryKeys.detail(familiaId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: familiasSupabaseQueryKeys.resumoAtendimento(assistidoId),
+  });
+}
+
+export function useRegistrarEntregaSupabase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: RegistrarEntregaInput) => {
+      const result = await registrarEntregaAtendimentoNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (_data, variables) => {
+      invalidarAtendimento(queryClient, variables.familiaId, variables.assistidoId);
+    },
+  });
+}
+
+export function useRegistrarTentativaSupabase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: RegistrarTentativaInput) => {
+      const result = await registrarTentativaBloqueadaNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (_data, variables) => {
+      invalidarAtendimento(queryClient, variables.familiaId, variables.assistidoId);
     },
   });
 }

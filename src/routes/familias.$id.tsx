@@ -50,7 +50,10 @@ import {
 } from "@/lib/familias-store";
 import { registrarAuditoria } from "@/lib/auditoria-store";
 import { useAtendimentoStore } from "@/lib/atendimento-store";
-import type { FamiliaSupabaseReadModel } from "@/lib/familias/familias-supabase-types";
+import type {
+  AssistidoSupabaseReadModel,
+  FamiliaSupabaseReadModel,
+} from "@/lib/familias/familias-supabase-types";
 import { useFamiliaSupabase } from "@/lib/familias/use-familias-supabase";
 import {
   EditarFamiliaDialog,
@@ -62,6 +65,7 @@ import { AdicionarAssistidoSupabaseDialog } from "@/components/adicionar-assisti
 import { AdicionarMembroSupabaseDialog } from "@/components/adicionar-membro-supabase-dialog";
 import { EditarFamiliaSupabaseDialog } from "@/components/editar-familia-supabase-dialog";
 import { RegistrarObservacaoSupabaseDialog } from "@/components/registrar-observacao-supabase-dialog";
+import { RegistrarEntregaSupabaseDialog } from "@/components/registrar-entrega-supabase-dialog";
 
 export const Route = createFileRoute("/familias/$id")({
   head: () => ({ meta: [{ title: "Detalhe da família — SEAC Social" }] }),
@@ -700,6 +704,7 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
   const [membroOpen, setMembroOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
   const [obsOpen, setObsOpen] = useState(false);
+  const [entregaAssistido, setEntregaAssistido] = useState<AssistidoSupabaseReadModel | null>(null);
 
   return (
     <AppShell
@@ -754,6 +759,14 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
         open={obsOpen}
         onOpenChange={setObsOpen}
         familiaId={familia.id}
+        familiaNome={familia.nome || "família"}
+      />
+      <RegistrarEntregaSupabaseDialog
+        open={entregaAssistido !== null}
+        onOpenChange={(o) => {
+          if (!o) setEntregaAssistido(null);
+        }}
+        assistido={entregaAssistido}
         familiaNome={familia.nome || "família"}
       />
       <div className="space-y-6">
@@ -854,6 +867,7 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
                         <TableHead>Benefício</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>PCD</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -867,6 +881,17 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
                           <TableCell className="text-sm">{assistido.beneficio || "—"}</TableCell>
                           <TableCell className="text-sm capitalize">{assistido.status}</TableCell>
                           <TableCell className="text-sm">{assistido.pcd ? "Sim" : "Não"}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                              disabled={assistido.status !== "ativo"}
+                              onClick={() => setEntregaAssistido(assistido)}
+                            >
+                              <HeartHandshake className="h-4 w-4" /> Registrar entrega
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
