@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +14,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  useFamilias, type Familia, type FamiliaStatus, type TipoCadastro,
+  useFamilias,
+  type Familia,
+  type FamiliaStatus,
+  type TipoCadastro,
 } from "@/lib/familias-store";
 import { calcularIdade, calcularFaixaEtaria, rotuloFaixaEtaria } from "@/lib/familias-store";
 import { Badge } from "@/components/ui/badge";
@@ -30,14 +42,21 @@ function F({ label, erro, children }: { label: string; erro?: string; children: 
 
 /* ============ Editar família ============ */
 export function EditarFamiliaDialog({
-  open, onOpenChange, familia,
-}: { open: boolean; onOpenChange: (o: boolean) => void; familia: Familia }) {
+  open,
+  onOpenChange,
+  familia,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  familia: Familia;
+}) {
   const update = useFamilias((s) => s.update);
   const [form, setForm] = useState(() => toForm(familia));
-  useEffect(() => { if (open) setForm(toForm(familia)); }, [open, familia]);
+  useEffect(() => {
+    if (open) setForm(toForm(familia));
+  }, [open, familia]);
 
-  const set = (k: keyof ReturnType<typeof toForm>, v: string) =>
-    setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof ReturnType<typeof toForm>, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const salvar = () => {
     if (!form.nome.trim() || !form.responsavel.trim() || !form.documento.trim()) {
@@ -82,29 +101,93 @@ export function EditarFamiliaDialog({
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <section className="grid gap-3 md:grid-cols-2">
-            <F label="Nome da família *"><Input value={form.nome} onChange={(e) => set("nome", e.target.value)} /></F>
-            <F label="Responsável *"><Input value={form.responsavel} onChange={(e) => set("responsavel", e.target.value)} /></F>
-            <F label="CPF / RG *"><Input value={form.documento} onChange={(e) => set("documento", e.target.value)} /></F>
-            <F label="Telefone / WhatsApp"><Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} /></F>
+            <F label="Nome da família *">
+              <Input value={form.nome} onChange={(e) => set("nome", e.target.value)} />
+            </F>
+            <F label="Responsável *">
+              <Input
+                value={form.responsavel}
+                onChange={(e) => set("responsavel", e.target.value)}
+              />
+            </F>
+            <F label="CPF / RG *">
+              <Input value={form.documento} onChange={(e) => set("documento", e.target.value)} />
+            </F>
+            <F label="Telefone / WhatsApp">
+              <Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} />
+            </F>
           </section>
           <section className="grid gap-3 md:grid-cols-4">
-            <div className="md:col-span-2"><F label="Endereço"><Input value={form.endereco} onChange={(e) => set("endereco", e.target.value)} /></F></div>
-            <F label="Bairro"><Input value={form.bairro} onChange={(e) => set("bairro", e.target.value)} /></F>
-            <F label="Cidade"><Input value={form.cidade} onChange={(e) => set("cidade", e.target.value)} /></F>
-            <F label="UF"><Input maxLength={2} value={form.uf} onChange={(e) => set("uf", e.target.value.toUpperCase())} /></F>
-            <F label="CEP"><Input value={form.cep} onChange={(e) => set("cep", e.target.value)} /></F>
+            <div className="md:col-span-2">
+              <F label="Endereço">
+                <Input value={form.endereco} onChange={(e) => set("endereco", e.target.value)} />
+              </F>
+            </div>
+            <F label="Bairro">
+              <Input value={form.bairro} onChange={(e) => set("bairro", e.target.value)} />
+            </F>
+            <F label="Cidade">
+              <Input value={form.cidade} onChange={(e) => set("cidade", e.target.value)} />
+            </F>
+            <F label="UF">
+              <Input
+                maxLength={2}
+                value={form.uf}
+                onChange={(e) => set("uf", e.target.value.toUpperCase())}
+              />
+            </F>
+            <F label="CEP">
+              <Input value={form.cep} onChange={(e) => set("cep", e.target.value)} />
+            </F>
           </section>
           <section className="grid gap-3 md:grid-cols-5">
-            <F label="Moradores"><Input type="number" min={0} value={form.moradores} onChange={(e) => set("moradores", e.target.value)} /></F>
-            <F label="Crianças"><Input type="number" min={0} value={form.criancas} onChange={(e) => set("criancas", e.target.value)} /></F>
-            <F label="Idosos"><Input type="number" min={0} value={form.idosos} onChange={(e) => set("idosos", e.target.value)} /></F>
-            <F label="Gestantes"><Input type="number" min={0} value={form.gestantes} onChange={(e) => set("gestantes", e.target.value)} /></F>
-            <F label="PCD"><Input type="number" min={0} value={form.pcd} onChange={(e) => set("pcd", e.target.value)} /></F>
+            <F label="Moradores">
+              <Input
+                type="number"
+                min={0}
+                value={form.moradores}
+                onChange={(e) => set("moradores", e.target.value)}
+              />
+            </F>
+            <F label="Crianças">
+              <Input
+                type="number"
+                min={0}
+                value={form.criancas}
+                onChange={(e) => set("criancas", e.target.value)}
+              />
+            </F>
+            <F label="Idosos">
+              <Input
+                type="number"
+                min={0}
+                value={form.idosos}
+                onChange={(e) => set("idosos", e.target.value)}
+              />
+            </F>
+            <F label="Gestantes">
+              <Input
+                type="number"
+                min={0}
+                value={form.gestantes}
+                onChange={(e) => set("gestantes", e.target.value)}
+              />
+            </F>
+            <F label="PCD">
+              <Input
+                type="number"
+                min={0}
+                value={form.pcd}
+                onChange={(e) => set("pcd", e.target.value)}
+              />
+            </F>
           </section>
           <section className="grid gap-3 md:grid-cols-2">
             <F label="Tipo de cadastro">
               <Select value={form.tipoCadastro} onValueChange={(v) => set("tipoCadastro", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="definitivo">Definitivo</SelectItem>
                   <SelectItem value="extra">Avaliação</SelectItem>
@@ -113,7 +196,9 @@ export function EditarFamiliaDialog({
             </F>
             <F label="Status">
               <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="liberado">Ativa</SelectItem>
                   <SelectItem value="bloqueado">Bloqueada</SelectItem>
@@ -122,10 +207,18 @@ export function EditarFamiliaDialog({
               </Select>
             </F>
           </section>
-          <F label="Observações"><Textarea rows={3} value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></F>
+          <F label="Observações">
+            <Textarea
+              rows={3}
+              value={form.observacoes}
+              onChange={(e) => set("observacoes", e.target.value)}
+            />
+          </F>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button onClick={salvar}>Salvar alterações</Button>
         </DialogFooter>
       </DialogContent>
@@ -135,28 +228,48 @@ export function EditarFamiliaDialog({
 
 function toForm(f: Familia) {
   return {
-    nome: f.nome, responsavel: f.responsavel, documento: f.documento,
-    telefone: f.telefone ?? "", endereco: f.endereco ?? "", bairro: f.bairro ?? "",
-    cidade: f.cidade ?? "", uf: f.uf ?? "", cep: f.cep ?? "",
-    moradores: String(f.moradores ?? ""), criancas: String(f.criancas ?? ""),
-    idosos: String(f.idosos ?? ""), gestantes: String(f.gestantes ?? ""),
+    nome: f.nome,
+    responsavel: f.responsavel,
+    documento: f.documento,
+    telefone: f.telefone ?? "",
+    endereco: f.endereco ?? "",
+    bairro: f.bairro ?? "",
+    cidade: f.cidade ?? "",
+    uf: f.uf ?? "",
+    cep: f.cep ?? "",
+    moradores: String(f.moradores ?? ""),
+    criancas: String(f.criancas ?? ""),
+    idosos: String(f.idosos ?? ""),
+    gestantes: String(f.gestantes ?? ""),
     pcd: String(f.pcd ?? ""),
-    tipoCadastro: f.tipoCadastro, status: f.status,
+    tipoCadastro: f.tipoCadastro,
+    status: f.status,
     observacoes: f.observacoes ?? "",
   };
 }
 
 /* ============ Adicionar assistido ============ */
 const assistidoEmpty = {
-  nome: "", documento: "", telefone: "", nascimento: "",
-  tipoCadastro: "extra" as TipoCadastro, beneficio: "Cesta Extra",
+  nome: "",
+  documento: "",
+  telefone: "",
+  nascimento: "",
+  tipoCadastro: "extra" as TipoCadastro,
+  beneficio: "Cesta Extra",
   status: "ativo" as "ativo" | "inativo" | "bloqueado",
-  pcd: false, observacoes: "",
+  pcd: false,
+  observacoes: "",
 };
 
 export function AdicionarAssistidoDialog({
-  open, onOpenChange, familia,
-}: { open: boolean; onOpenChange: (o: boolean) => void; familia: Familia }) {
+  open,
+  onOpenChange,
+  familia,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  familia: Familia;
+}) {
   const addAssistido = useFamilias((s) => s.addAssistido);
   const addMembro = useFamilias((s) => s.addMembro);
   const existsAssistidoDoc = useFamilias((s) => s.existsAssistidoDoc);
@@ -168,13 +281,19 @@ export function AdicionarAssistidoDialog({
   const [form, setForm] = useState(assistidoEmpty);
   const [erros, setErros] = useState<Record<string, string>>({});
 
-  useEffect(() => { if (open) { setForm(assistidoEmpty); setErros({}); } }, [open]);
+  useEffect(() => {
+    if (open) {
+      setForm(assistidoEmpty);
+      setErros({});
+    }
+  }, [open]);
 
   const salvar = () => {
     const e: Record<string, string> = {};
     if (!form.nome.trim()) e.nome = "Informe o nome.";
     if (!form.documento.trim()) e.documento = "CPF/RG é obrigatório.";
-    else if (existsAssistidoDoc(form.documento)) e.documento = "Já existe assistido com este documento.";
+    else if (existsAssistidoDoc(form.documento))
+      e.documento = "Já existe assistido com este documento.";
     setErros(e);
     if (Object.keys(e).length) return;
 
@@ -201,7 +320,8 @@ export function AdicionarAssistidoDialog({
         documento: form.documento.trim(),
         telefone: form.telefone.trim() || undefined,
         nascimento: form.nascimento || undefined,
-        gestante: false, pcd: form.pcd,
+        gestante: false,
+        pcd: form.pcd,
         assistidoId: novo.id,
       });
     }
@@ -234,13 +354,26 @@ export function AdicionarAssistidoDialog({
             <F label="CPF / RG *" erro={erros.documento}>
               <Input value={form.documento} onChange={(e) => set("documento", e.target.value)} />
             </F>
-            <F label="Telefone"><Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} /></F>
-            <F label="Data de nascimento"><Input type="date" value={form.nascimento} onChange={(e) => set("nascimento", e.target.value)} /></F>
+            <F label="Telefone">
+              <Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} />
+            </F>
+            <F label="Data de nascimento">
+              <Input
+                type="date"
+                value={form.nascimento}
+                onChange={(e) => set("nascimento", e.target.value)}
+              />
+            </F>
           </section>
           <section className="grid gap-3 md:grid-cols-3">
             <F label="Tipo de cadastro">
-              <Select value={form.tipoCadastro} onValueChange={(v) => set("tipoCadastro", v as TipoCadastro)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={form.tipoCadastro}
+                onValueChange={(v) => set("tipoCadastro", v as TipoCadastro)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="definitivo">Definitivo</SelectItem>
                   <SelectItem value="extra">Avaliação</SelectItem>
@@ -249,7 +382,9 @@ export function AdicionarAssistidoDialog({
             </F>
             <F label="Benefício atual">
               <Select value={form.beneficio} onValueChange={(v) => set("beneficio", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Cesta Padrão">Cesta Padrão</SelectItem>
                   <SelectItem value="Cesta Extra">Cesta Extra</SelectItem>
@@ -259,8 +394,13 @@ export function AdicionarAssistidoDialog({
               </Select>
             </F>
             <F label="Status">
-              <Select value={form.status} onValueChange={(v) => set("status", v as typeof form.status)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={form.status}
+                onValueChange={(v) => set("status", v as typeof form.status)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ativo">Ativo</SelectItem>
                   <SelectItem value="inativo">Inativo</SelectItem>
@@ -271,12 +411,22 @@ export function AdicionarAssistidoDialog({
           </section>
           <div className="flex items-center gap-2">
             <Switch checked={form.pcd} onCheckedChange={(v) => set("pcd", v)} id="pcd-assist" />
-            <Label htmlFor="pcd-assist" className="text-sm">PCD</Label>
+            <Label htmlFor="pcd-assist" className="text-sm">
+              PCD
+            </Label>
           </div>
-          <F label="Observações"><Textarea rows={3} value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></F>
+          <F label="Observações">
+            <Textarea
+              rows={3}
+              value={form.observacoes}
+              onChange={(e) => set("observacoes", e.target.value)}
+            />
+          </F>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button onClick={salvar}>Salvar assistido</Button>
         </DialogFooter>
       </DialogContent>
@@ -286,8 +436,13 @@ export function AdicionarAssistidoDialog({
 
 /* ============ Adicionar membro familiar ============ */
 const membroEmpty = {
-  nome: "", parentesco: "", documento: "", telefone: "", nascimento: "",
-  gestante: false, pcd: false,
+  nome: "",
+  parentesco: "",
+  documento: "",
+  telefone: "",
+  nascimento: "",
+  gestante: false,
+  pcd: false,
   observacoes: "",
   tambemAssistido: false,
   tipoCadastro: "extra" as TipoCadastro,
@@ -295,8 +450,14 @@ const membroEmpty = {
 };
 
 export function AdicionarMembroDialog({
-  open, onOpenChange, familia,
-}: { open: boolean; onOpenChange: (o: boolean) => void; familia: Familia }) {
+  open,
+  onOpenChange,
+  familia,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  familia: Familia;
+}) {
   const addMembro = useFamilias((s) => s.addMembro);
   const addAssistido = useFamilias((s) => s.addAssistido);
   const existsAssistidoDoc = useFamilias((s) => s.existsAssistidoDoc);
@@ -304,7 +465,12 @@ export function AdicionarMembroDialog({
   const [form, setForm] = useState(membroEmpty);
   const [erros, setErros] = useState<Record<string, string>>({});
 
-  useEffect(() => { if (open) { setForm(membroEmpty); setErros({}); } }, [open]);
+  useEffect(() => {
+    if (open) {
+      setForm(membroEmpty);
+      setErros({});
+    }
+  }, [open]);
 
   const set = <K extends keyof typeof membroEmpty>(k: K, v: (typeof membroEmpty)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -320,7 +486,8 @@ export function AdicionarMembroDialog({
     }
     if (form.tambemAssistido) {
       if (!form.documento.trim()) e.documento = "CPF/RG obrigatório para assistido.";
-      else if (existsAssistidoDoc(form.documento)) e.documento = "Já existe assistido com este documento.";
+      else if (existsAssistidoDoc(form.documento))
+        e.documento = "Já existe assistido com este documento.";
     }
     setErros(e);
     if (Object.keys(e).length) return;
@@ -348,7 +515,8 @@ export function AdicionarMembroDialog({
       documento: form.documento.trim() || undefined,
       telefone: form.telefone.trim() || undefined,
       nascimento: form.nascimento || undefined,
-      gestante: form.gestante, pcd: form.pcd,
+      gestante: form.gestante,
+      pcd: form.pcd,
       observacoes: form.observacoes.trim() || undefined,
       assistidoId,
     });
@@ -393,47 +561,78 @@ export function AdicionarMembroDialog({
               <Input value={form.nome} onChange={(e) => set("nome", e.target.value)} />
             </F>
             <F label="Parentesco">
-              <Input value={form.parentesco} onChange={(e) => set("parentesco", e.target.value)} placeholder="Filho, cônjuge, mãe..." />
+              <Input
+                value={form.parentesco}
+                onChange={(e) => set("parentesco", e.target.value)}
+                placeholder="Filho, cônjuge, mãe..."
+              />
             </F>
             <F label="CPF / RG (opcional)" erro={erros.documento}>
               <Input value={form.documento} onChange={(e) => set("documento", e.target.value)} />
             </F>
-            <F label="Telefone (opcional)"><Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} /></F>
+            <F label="Telefone (opcional)">
+              <Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} />
+            </F>
             <F label="Data de nascimento" erro={erros.nascimento}>
               <div className="space-y-1">
-                <Input type="date" value={form.nascimento} onChange={(e) => set("nascimento", e.target.value)} />
-                {form.nascimento && !erros.nascimento && (() => {
-                  const idade = calcularIdade(form.nascimento);
-                  const faixa = calcularFaixaEtaria(form.nascimento);
-                  if (idade === null || !faixa) return null;
-                  return (
-                    <Badge variant="outline" className="text-xs">
-                      Classificação automática: {rotuloFaixaEtaria(faixa)} ({idade} {idade === 1 ? "ano" : "anos"})
-                    </Badge>
-                  );
-                })()}
+                <Input
+                  type="date"
+                  value={form.nascimento}
+                  onChange={(e) => set("nascimento", e.target.value)}
+                />
+                {form.nascimento &&
+                  !erros.nascimento &&
+                  (() => {
+                    const idade = calcularIdade(form.nascimento);
+                    const faixa = calcularFaixaEtaria(form.nascimento);
+                    if (idade === null || !faixa) return null;
+                    return (
+                      <Badge variant="outline" className="text-xs">
+                        Classificação automática: {rotuloFaixaEtaria(faixa)} ({idade}{" "}
+                        {idade === 1 ? "ano" : "anos"})
+                      </Badge>
+                    );
+                  })()}
               </div>
             </F>
           </section>
           <p className="text-xs text-muted-foreground">
-            Criança (0–12), Adolescente (13–17) e Idoso (60+) são definidos automaticamente pela data de nascimento.
+            Criança (0–12), Adolescente (13–17) e Idoso (60+) são definidos automaticamente pela
+            data de nascimento.
           </p>
           <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Toggle label="Gestante" checked={form.gestante} onChange={(v) => set("gestante", v)} />
             <Toggle label="PCD" checked={form.pcd} onChange={(v) => set("pcd", v)} />
           </section>
-          <F label="Observações"><Textarea rows={2} value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></F>
+          <F label="Observações">
+            <Textarea
+              rows={2}
+              value={form.observacoes}
+              onChange={(e) => set("observacoes", e.target.value)}
+            />
+          </F>
 
           <div className="flex items-center gap-2 rounded-md border p-3">
-            <Switch id="tambem-assist" checked={form.tambemAssistido} onCheckedChange={(v) => set("tambemAssistido", v)} />
-            <Label htmlFor="tambem-assist" className="text-sm">Este membro também será assistido?</Label>
+            <Switch
+              id="tambem-assist"
+              checked={form.tambemAssistido}
+              onCheckedChange={(v) => set("tambemAssistido", v)}
+            />
+            <Label htmlFor="tambem-assist" className="text-sm">
+              Este membro também será assistido?
+            </Label>
           </div>
 
           {form.tambemAssistido && (
             <section className="grid gap-3 md:grid-cols-2 rounded-md bg-muted/30 p-3">
               <F label="Tipo de cadastro">
-                <Select value={form.tipoCadastro} onValueChange={(v) => set("tipoCadastro", v as TipoCadastro)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={form.tipoCadastro}
+                  onValueChange={(v) => set("tipoCadastro", v as TipoCadastro)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="definitivo">Definitivo</SelectItem>
                     <SelectItem value="extra">Avaliação</SelectItem>
@@ -442,7 +641,9 @@ export function AdicionarMembroDialog({
               </F>
               <F label="Benefício atual">
                 <Select value={form.beneficio} onValueChange={(v) => set("beneficio", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Cesta Padrão">Cesta Padrão</SelectItem>
                     <SelectItem value="Cesta Extra">Cesta Extra</SelectItem>
@@ -455,7 +656,9 @@ export function AdicionarMembroDialog({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button onClick={salvar}>Salvar membro</Button>
         </DialogFooter>
       </DialogContent>
@@ -463,27 +666,53 @@ export function AdicionarMembroDialog({
   );
 }
 
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <div className="flex items-center gap-2">
       <Switch checked={checked} onCheckedChange={onChange} id={`t-${label}`} />
-      <Label htmlFor={`t-${label}`} className="text-sm">{label}</Label>
+      <Label htmlFor={`t-${label}`} className="text-sm">
+        {label}
+      </Label>
     </div>
   );
 }
 
 /* ============ Registrar observação ============ */
 export function RegistrarObservacaoDialog({
-  open, onOpenChange, familia,
-}: { open: boolean; onOpenChange: (o: boolean) => void; familia: Familia }) {
+  open,
+  onOpenChange,
+  familia,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  familia: Familia;
+}) {
   const addObservacao = useFamilias((s) => s.addObservacao);
-  const [tipo, setTipo] = useState<"Social" | "Atendimento" | "Documento" | "Endereço" | "Saúde/PCD" | "Outro">("Social");
+  const [tipo, setTipo] = useState<
+    "Social" | "Atendimento" | "Documento" | "Endereço" | "Saúde/PCD" | "Outro"
+  >("Social");
   const [texto, setTexto] = useState("");
 
-  useEffect(() => { if (open) { setTipo("Social"); setTexto(""); } }, [open]);
+  useEffect(() => {
+    if (open) {
+      setTipo("Social");
+      setTexto("");
+    }
+  }, [open]);
 
   const salvar = () => {
-    if (!texto.trim()) { toast.error("Escreva a observação."); return; }
+    if (!texto.trim()) {
+      toast.error("Escreva a observação.");
+      return;
+    }
     addObservacao({ familiaId: familia.id, tipo, texto: texto.trim() });
     registrarAuditoria({
       usuario: "operador",
@@ -506,7 +735,9 @@ export function RegistrarObservacaoDialog({
         <div className="grid gap-3 py-2">
           <F label="Tipo de observação">
             <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Social">Social</SelectItem>
                 <SelectItem value="Atendimento">Atendimento</SelectItem>
@@ -517,11 +748,17 @@ export function RegistrarObservacaoDialog({
               </SelectContent>
             </Select>
           </F>
-          <F label="Observação"><Textarea rows={5} value={texto} onChange={(e) => setTexto(e.target.value)} /></F>
-          <p className="text-xs text-muted-foreground">Data e usuário serão registrados automaticamente.</p>
+          <F label="Observação">
+            <Textarea rows={5} value={texto} onChange={(e) => setTexto(e.target.value)} />
+          </F>
+          <p className="text-xs text-muted-foreground">
+            Data e usuário serão registrados automaticamente.
+          </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button onClick={salvar}>Registrar observação</Button>
         </DialogFooter>
       </DialogContent>

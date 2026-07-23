@@ -1,5 +1,9 @@
 import { useFamilias, type Familia, type Assistido, type Membro } from "@/lib/familias-store";
-import { useAtendimentoStore, type Entrega, type TentativaBloqueada } from "@/lib/atendimento-store";
+import {
+  useAtendimentoStore,
+  type Entrega,
+  type TentativaBloqueada,
+} from "@/lib/atendimento-store";
 import { useParametros } from "@/lib/config-store";
 
 export type TipoRelatorio =
@@ -15,8 +19,8 @@ export type TipoRelatorio =
   | "liberacoes";
 
 export type FiltrosRelatorio = {
-  de?: string;         // YYYY-MM-DD
-  ate?: string;        // YYYY-MM-DD
+  de?: string; // YYYY-MM-DD
+  ate?: string; // YYYY-MM-DD
   bairro?: string;
   beneficio?: string;
   item?: string;
@@ -50,23 +54,132 @@ export const TIPOS_RELATORIO: { tipo: TipoRelatorio; titulo: string }[] = [
 
 // Base de estoque espelhada da tela /estoque (mantido em sincronia).
 export const ESTOQUE_BASE = [
-  { item: "Cesta Padrão", categoria: "Benefício montado", unidade: "unidade", saldo: 120, minimo: 30, valorUnit: 85, ultima: "20/05/2025 10:30" },
-  { item: "Cesta Extra", categoria: "Benefício montado", unidade: "unidade", saldo: 25, minimo: 20, valorUnit: 60, ultima: "20/05/2025 09:15" },
-  { item: "Arroz 5kg", categoria: "Alimento", unidade: "pacote", saldo: 200, minimo: 50, valorUnit: 24, ultima: "19/05/2025 14:20" },
-  { item: "Feijão 1kg", categoria: "Alimento", unidade: "pacote", saldo: 80, minimo: 40, valorUnit: 8.5, ultima: "19/05/2025 14:20" },
-  { item: "Óleo 900ml", categoria: "Alimento", unidade: "unidade", saldo: 15, minimo: 30, valorUnit: 7.5, ultima: "18/05/2025 16:45" },
-  { item: "Macarrão", categoria: "Alimento", unidade: "pacote", saldo: 0, minimo: 20, valorUnit: 4.2, ultima: "18/05/2025 11:00" },
-  { item: "Marmita", categoria: "Refeição", unidade: "unidade", saldo: 150, minimo: 50, valorUnit: 12, ultima: "20/05/2025 08:50" },
-  { item: "Kit Gestante", categoria: "Benefício", unidade: "unidade", saldo: 8, minimo: 10, valorUnit: 45, ultima: "17/05/2025 13:10" },
+  {
+    item: "Cesta Padrão",
+    categoria: "Benefício montado",
+    unidade: "unidade",
+    saldo: 120,
+    minimo: 30,
+    valorUnit: 85,
+    ultima: "20/05/2025 10:30",
+  },
+  {
+    item: "Cesta Extra",
+    categoria: "Benefício montado",
+    unidade: "unidade",
+    saldo: 25,
+    minimo: 20,
+    valorUnit: 60,
+    ultima: "20/05/2025 09:15",
+  },
+  {
+    item: "Arroz 5kg",
+    categoria: "Alimento",
+    unidade: "pacote",
+    saldo: 200,
+    minimo: 50,
+    valorUnit: 24,
+    ultima: "19/05/2025 14:20",
+  },
+  {
+    item: "Feijão 1kg",
+    categoria: "Alimento",
+    unidade: "pacote",
+    saldo: 80,
+    minimo: 40,
+    valorUnit: 8.5,
+    ultima: "19/05/2025 14:20",
+  },
+  {
+    item: "Óleo 900ml",
+    categoria: "Alimento",
+    unidade: "unidade",
+    saldo: 15,
+    minimo: 30,
+    valorUnit: 7.5,
+    ultima: "18/05/2025 16:45",
+  },
+  {
+    item: "Macarrão",
+    categoria: "Alimento",
+    unidade: "pacote",
+    saldo: 0,
+    minimo: 20,
+    valorUnit: 4.2,
+    ultima: "18/05/2025 11:00",
+  },
+  {
+    item: "Marmita",
+    categoria: "Refeição",
+    unidade: "unidade",
+    saldo: 150,
+    minimo: 50,
+    valorUnit: 12,
+    ultima: "20/05/2025 08:50",
+  },
+  {
+    item: "Kit Gestante",
+    categoria: "Benefício",
+    unidade: "unidade",
+    saldo: 8,
+    minimo: 10,
+    valorUnit: 45,
+    ultima: "17/05/2025 13:10",
+  },
 ];
 
 // Espelho do histórico visual de /recebimentos (mesma fonte usada na tela homologada).
 const RECEBIMENTOS_BASE = [
-  { dataISO: "2025-05-21", tipo: "Doação", parte: "Supermercado Exemplo", documento: "00.000.000/0001-00", itens: 3, valor: 6250, status: "Registrado", observacao: "" },
-  { dataISO: "2025-05-20", tipo: "Compra", parte: "Atacadão Exemplo", documento: "NF 12345", itens: 5, valor: 3850, status: "Registrado", observacao: "" },
-  { dataISO: "2025-05-18", tipo: "Investimento", parte: "Recurso interno SEAC", documento: "—", itens: 2, valor: 2500, status: "Registrado", observacao: "" },
-  { dataISO: "2025-05-15", tipo: "Doação", parte: "Padaria Bom Pão", documento: "11.111.111/0001-11", itens: 2, valor: 480, status: "Pendente conferência", observacao: "" },
-  { dataISO: "2025-05-10", tipo: "Doação", parte: "Família anônima", documento: "—", itens: 1, valor: 120, status: "Cancelado", observacao: "" },
+  {
+    dataISO: "2025-05-21",
+    tipo: "Doação",
+    parte: "Supermercado Exemplo",
+    documento: "00.000.000/0001-00",
+    itens: 3,
+    valor: 6250,
+    status: "Registrado",
+    observacao: "",
+  },
+  {
+    dataISO: "2025-05-20",
+    tipo: "Compra",
+    parte: "Atacadão Exemplo",
+    documento: "NF 12345",
+    itens: 5,
+    valor: 3850,
+    status: "Registrado",
+    observacao: "",
+  },
+  {
+    dataISO: "2025-05-18",
+    tipo: "Investimento",
+    parte: "Recurso interno SEAC",
+    documento: "—",
+    itens: 2,
+    valor: 2500,
+    status: "Registrado",
+    observacao: "",
+  },
+  {
+    dataISO: "2025-05-15",
+    tipo: "Doação",
+    parte: "Padaria Bom Pão",
+    documento: "11.111.111/0001-11",
+    itens: 2,
+    valor: 480,
+    status: "Pendente conferência",
+    observacao: "",
+  },
+  {
+    dataISO: "2025-05-10",
+    tipo: "Doação",
+    parte: "Família anônima",
+    documento: "—",
+    itens: 1,
+    valor: 120,
+    status: "Cancelado",
+    observacao: "",
+  },
 ];
 
 function normDoc(s?: string): string {
@@ -107,7 +220,9 @@ function ultimaRetiradaFamilia(
   assistidos: Assistido[],
   entregas: Entrega[],
 ): Date | null {
-  const docs = new Set(assistidos.filter((a) => a.familiaId === familiaId).map((a) => normDoc(a.documento)));
+  const docs = new Set(
+    assistidos.filter((a) => a.familiaId === familiaId).map((a) => normDoc(a.documento)),
+  );
   let melhor: Date | null = null;
   for (const e of entregas) {
     if (e.familiaId === familiaId || (e.documento && docs.has(normDoc(e.documento)))) {
@@ -133,9 +248,19 @@ function ci(a?: string, b?: string): boolean {
   return (a ?? "").toLowerCase().includes(b.toLowerCase());
 }
 
-function contarMoradores(f: Familia, assistidos: Assistido[], membros: Membro[]): {
-  total: number; assistidos: number; criancas: number; adolescentes: number;
-  adultos: number; idosos: number; gestantes: number; pcd: number;
+function contarMoradores(
+  f: Familia,
+  assistidos: Assistido[],
+  membros: Membro[],
+): {
+  total: number;
+  assistidos: number;
+  criancas: number;
+  adolescentes: number;
+  adultos: number;
+  idosos: number;
+  gestantes: number;
+  pcd: number;
 } {
   const A = assistidos.filter((a) => a.familiaId === f.id);
   const M = membros.filter((m) => m.familiaId === f.id);
@@ -146,26 +271,42 @@ function contarMoradores(f: Familia, assistidos: Assistido[], membros: Membro[])
   let extraSemDoc = 0;
   for (const m of M) {
     const d = normDoc(m.documento);
-    if (d) docs.add(d); else extraSemDoc++;
+    if (d) docs.add(d);
+    else extraSemDoc++;
   }
   const total = docs.size + extraSemDoc + (resp ? 0 : 1);
-  const criancas = M.filter((m) => m.crianca).length + (f.criancas ?? 0 ? Math.max(0, (f.criancas ?? 0) - M.filter((m) => m.crianca).length) : 0);
+  const criancas =
+    M.filter((m) => m.crianca).length +
+    ((f.criancas ?? 0) ? Math.max(0, (f.criancas ?? 0) - M.filter((m) => m.crianca).length) : 0);
   const adolescentes = M.filter((m) => m.adolescente).length;
-  const idosos = M.filter((m) => m.idoso).length + Math.max(0, (f.idosos ?? 0) - M.filter((m) => m.idoso).length);
-  const gestantes = M.filter((m) => m.gestante).length + Math.max(0, (f.gestantes ?? 0) - M.filter((m) => m.gestante).length);
-  const pcd = M.filter((m) => m.pcd).length + A.filter((a) => a.pcd).length + Math.max(0, (f.pcd ?? 0) - (M.filter((m) => m.pcd).length + A.filter((a) => a.pcd).length));
+  const idosos =
+    M.filter((m) => m.idoso).length +
+    Math.max(0, (f.idosos ?? 0) - M.filter((m) => m.idoso).length);
+  const gestantes =
+    M.filter((m) => m.gestante).length +
+    Math.max(0, (f.gestantes ?? 0) - M.filter((m) => m.gestante).length);
+  const pcd =
+    M.filter((m) => m.pcd).length +
+    A.filter((a) => a.pcd).length +
+    Math.max(0, (f.pcd ?? 0) - (M.filter((m) => m.pcd).length + A.filter((a) => a.pcd).length));
   const adultos = Math.max(0, total - criancas - adolescentes - idosos);
   return { total, assistidos: A.length, criancas, adolescentes, adultos, idosos, gestantes, pcd };
 }
 
 function labelAcompanhamento(a: Familia["acompanhamento"]): string {
   switch (a) {
-    case "em_dia": return "Em dia";
-    case "atencao_45": return "Atenção 45 dias";
-    case "atencao_60": return "Atenção 60 dias";
-    case "sem_retirada_90": return "Sem retirada 90 dias";
-    case "inativo": return "Inativo";
-    default: return "—";
+    case "em_dia":
+      return "Em dia";
+    case "atencao_45":
+      return "Atenção 45 dias";
+    case "atencao_60":
+      return "Atenção 60 dias";
+    case "sem_retirada_90":
+      return "Sem retirada 90 dias";
+    case "inativo":
+      return "Inativo";
+    default:
+      return "—";
   }
 }
 
@@ -187,10 +328,25 @@ export function gerarRelatorio(
 
   if (tipo === "familias") {
     colunas = [
-      "ID", "Nome da família", "Responsável", "Documento", "Telefone", "Bairro",
-      "Cidade", "UF", "Tipo de cadastro", "Moradores", "Assistidos",
-      "Crianças", "Adolescentes", "Adultos", "Idosos", "Gestantes", "PCD",
-      "Acompanhamento", "Status",
+      "ID",
+      "Nome da família",
+      "Responsável",
+      "Documento",
+      "Telefone",
+      "Bairro",
+      "Cidade",
+      "UF",
+      "Tipo de cadastro",
+      "Moradores",
+      "Assistidos",
+      "Crianças",
+      "Adolescentes",
+      "Adultos",
+      "Idosos",
+      "Gestantes",
+      "PCD",
+      "Acompanhamento",
+      "Status",
     ];
     linhas = familias
       .filter((f) => ci(f.bairro, filtros.bairro))
@@ -198,20 +354,48 @@ export function gerarRelatorio(
       .map((f) => {
         const c = contarMoradores(f, assistidos, membros);
         return [
-          f.id, f.nome, f.responsavel, f.documento, f.telefone ?? "", f.bairro ?? "",
-          f.cidade ?? "", f.uf ?? "", f.tipoCadastro === "definitivo" ? "Definitivo" : "Extra",
-          c.total, c.assistidos, c.criancas, c.adolescentes, c.adultos, c.idosos, c.gestantes, c.pcd,
-          labelAcompanhamento(f.acompanhamento), f.status,
+          f.id,
+          f.nome,
+          f.responsavel,
+          f.documento,
+          f.telefone ?? "",
+          f.bairro ?? "",
+          f.cidade ?? "",
+          f.uf ?? "",
+          f.tipoCadastro === "definitivo" ? "Definitivo" : "Extra",
+          c.total,
+          c.assistidos,
+          c.criancas,
+          c.adolescentes,
+          c.adultos,
+          c.idosos,
+          c.gestantes,
+          c.pcd,
+          labelAcompanhamento(f.acompanhamento),
+          f.status,
         ];
       });
   } else if (tipo === "assistidos") {
     colunas = [
-      "ID", "Nome", "Documento", "Telefone", "Família", "Responsável",
-      "Tipo de cadastro", "Benefício", "Progresso Extra", "Última retirada",
-      "Próxima data permitida", "Status", "PCD",
+      "ID",
+      "Nome",
+      "Documento",
+      "Telefone",
+      "Família",
+      "Responsável",
+      "Tipo de cadastro",
+      "Benefício",
+      "Progresso Extra",
+      "Última retirada",
+      "Próxima data permitida",
+      "Status",
+      "PCD",
     ];
     linhas = assistidos
-      .filter((a) => !filtros.beneficio || filtros.beneficio === "all" || a.beneficio === filtros.beneficio)
+      .filter(
+        (a) =>
+          !filtros.beneficio || filtros.beneficio === "all" || a.beneficio === filtros.beneficio,
+      )
       .filter((a) => !filtros.status || filtros.status === "all" || a.status === filtros.status)
       .filter((a) => {
         const f = familiaPorId(a.familiaId);
@@ -230,60 +414,153 @@ export function gerarRelatorio(
           proxima = fmtBRDate(p.toISOString());
         }
         return [
-          a.id, a.nome, a.documento, a.telefone ?? "", f?.nome ?? "", f?.responsavel ?? "",
-          a.tipoCadastro === "definitivo" ? "Definitivo" : "Extra", a.beneficio,
-          a.tipoCadastro === "extra" ? `${Math.min(extras, params.limiteExtra)}/${params.limiteExtra}` : "—",
-          ultima ? fmtBRDate(ultima) : "—", proxima, a.status, a.pcd ? "Sim" : "Não",
+          a.id,
+          a.nome,
+          a.documento,
+          a.telefone ?? "",
+          f?.nome ?? "",
+          f?.responsavel ?? "",
+          a.tipoCadastro === "definitivo" ? "Definitivo" : "Extra",
+          a.beneficio,
+          a.tipoCadastro === "extra"
+            ? `${Math.min(extras, params.limiteExtra)}/${params.limiteExtra}`
+            : "—",
+          ultima ? fmtBRDate(ultima) : "—",
+          proxima,
+          a.status,
+          a.pcd ? "Sim" : "Não",
         ];
       });
   } else if (tipo === "entregas") {
-    colunas = ["Data/hora", "Assistido", "Documento", "Família", "Benefício entregue", "Tipo de entrega", "Usuário responsável", "Status"];
+    colunas = [
+      "Data/hora",
+      "Assistido",
+      "Documento",
+      "Família",
+      "Benefício entregue",
+      "Tipo de entrega",
+      "Usuário responsável",
+      "Status",
+    ];
     linhas = entregas
       .filter((e) => within(e.dataISO, filtros.de, filtros.ate))
-      .filter((e) => !filtros.beneficio || filtros.beneficio === "all" || e.beneficio === filtros.beneficio)
+      .filter(
+        (e) =>
+          !filtros.beneficio || filtros.beneficio === "all" || e.beneficio === filtros.beneficio,
+      )
       .filter((e) => !filtros.usuario || filtros.usuario === "all" || e.usuario === filtros.usuario)
       .filter((e) => {
         const f = familiaPorId(e.familiaId);
         return ci(f?.bairro, filtros.bairro);
       })
       .map((e) => [
-        fmtBRDateTime(e.dataISO), e.nome, e.documento, e.familia, e.beneficio,
-        e.excepcional ? "Liberação excepcional" : (e.origem === "pre_cadastro" ? "Pré-cadastro" : "Padrão"),
-        e.usuario, "Registrada",
+        fmtBRDateTime(e.dataISO),
+        e.nome,
+        e.documento,
+        e.familia,
+        e.beneficio,
+        e.excepcional
+          ? "Liberação excepcional"
+          : e.origem === "pre_cadastro"
+            ? "Pré-cadastro"
+            : "Padrão",
+        e.usuario,
+        "Registrada",
       ]);
   } else if (tipo === "bloqueio_prazo" || tipo === "bloqueio_estoque") {
     const motivo: "prazo" | "estoque" = tipo === "bloqueio_prazo" ? "prazo" : "estoque";
     const base = bloqueios.filter((b) => b.motivo === motivo);
     if (motivo === "prazo") {
-      colunas = ["Data/hora", "Assistido", "Documento", "Família", "Motivo do bloqueio", "Última retirada", "Próxima data permitida", "Dias faltantes", "Usuário", "Detalhes"];
+      colunas = [
+        "Data/hora",
+        "Assistido",
+        "Documento",
+        "Família",
+        "Motivo do bloqueio",
+        "Última retirada",
+        "Próxima data permitida",
+        "Dias faltantes",
+        "Usuário",
+        "Detalhes",
+      ];
       linhas = base
         .filter((b) => within(b.dataISO, filtros.de, filtros.ate))
-        .filter((b) => !filtros.usuario || filtros.usuario === "all" || b.usuario === filtros.usuario)
+        .filter(
+          (b) => !filtros.usuario || filtros.usuario === "all" || b.usuario === filtros.usuario,
+        )
         .map((b) => {
           const doc = normDoc(b.documento);
           const ultima = entregas.find((e) => normDoc(e.documento) === doc)?.dataISO;
-          let proxima = "—"; let faltam: number | string = "—";
+          let proxima = "—";
+          let faltam: number | string = "—";
           if (ultima) {
             const p = new Date(ultima);
             p.setDate(p.getDate() + params.intervaloMinimoDias);
             proxima = fmtBRDate(p.toISOString());
-            faltam = Math.max(0, Math.ceil((p.getTime() - new Date(b.dataISO).getTime()) / 86400000));
+            faltam = Math.max(
+              0,
+              Math.ceil((p.getTime() - new Date(b.dataISO).getTime()) / 86400000),
+            );
           }
-          return [fmtBRDateTime(b.dataISO), b.nome, b.documento, b.familia, "Prazo mínimo de 25 dias", ultima ? fmtBRDate(ultima) : "—", proxima, faltam, b.usuario, b.observacao ?? ""];
+          return [
+            fmtBRDateTime(b.dataISO),
+            b.nome,
+            b.documento,
+            b.familia,
+            "Prazo mínimo de 25 dias",
+            ultima ? fmtBRDate(ultima) : "—",
+            proxima,
+            faltam,
+            b.usuario,
+            b.observacao ?? "",
+          ];
         });
     } else {
-      colunas = ["Data/hora", "Assistido", "Documento", "Família", "Benefício solicitado", "Item sem estoque", "Saldo disponível", "Usuário", "Detalhes"];
+      colunas = [
+        "Data/hora",
+        "Assistido",
+        "Documento",
+        "Família",
+        "Benefício solicitado",
+        "Item sem estoque",
+        "Saldo disponível",
+        "Usuário",
+        "Detalhes",
+      ];
       linhas = base
         .filter((b) => within(b.dataISO, filtros.de, filtros.ate))
-        .filter((b) => !filtros.usuario || filtros.usuario === "all" || b.usuario === filtros.usuario)
+        .filter(
+          (b) => !filtros.usuario || filtros.usuario === "all" || b.usuario === filtros.usuario,
+        )
         .map((b) => {
-          const beneficio = (b.observacao?.match(/Cesta [A-Za-zÁÉÍÓÚâê]+/)?.[0]) ?? "Cesta Padrão";
-          return [fmtBRDateTime(b.dataISO), b.nome, b.documento, b.familia, beneficio, beneficio, saldo[beneficio] ?? 0, b.usuario, b.observacao ?? ""];
+          const beneficio = b.observacao?.match(/Cesta [A-Za-zÁÉÍÓÚâê]+/)?.[0] ?? "Cesta Padrão";
+          return [
+            fmtBRDateTime(b.dataISO),
+            b.nome,
+            b.documento,
+            b.familia,
+            beneficio,
+            beneficio,
+            saldo[beneficio] ?? 0,
+            b.usuario,
+            b.observacao ?? "",
+          ];
         });
     }
   } else if (tipo === "atencao_45" || tipo === "contato_90") {
-    const limiteDias = tipo === "atencao_45" ? params.alertaLiberadoSemRetiradaDias : params.inatividadeContatoDias;
-    colunas = ["Família", "Responsável", "Documento", "Telefone", "Bairro", "Última retirada", "Dias sem retirada", "Acompanhamento", "Status"];
+    const limiteDias =
+      tipo === "atencao_45" ? params.alertaLiberadoSemRetiradaDias : params.inatividadeContatoDias;
+    colunas = [
+      "Família",
+      "Responsável",
+      "Documento",
+      "Telefone",
+      "Bairro",
+      "Última retirada",
+      "Dias sem retirada",
+      "Acompanhamento",
+      "Status",
+    ];
     const hoje = new Date();
     linhas = familias
       .filter((f) => ci(f.bairro, filtros.bairro))
@@ -294,34 +571,108 @@ export function gerarRelatorio(
       })
       .filter((r) => r.dias !== null && r.dias >= limiteDias)
       .map(({ f, ult, dias }) => [
-        f.nome, f.responsavel, f.documento, f.telefone ?? "", f.bairro ?? "",
-        ult ? fmtBRDate(ult.toISOString()) : "—", dias ?? "—",
-        labelAcompanhamento(f.acompanhamento), f.status,
+        f.nome,
+        f.responsavel,
+        f.documento,
+        f.telefone ?? "",
+        f.bairro ?? "",
+        ult ? fmtBRDate(ult.toISOString()) : "—",
+        dias ?? "—",
+        labelAcompanhamento(f.acompanhamento),
+        f.status,
       ]);
   } else if (tipo === "estoque") {
-    colunas = ["Item", "Categoria", "Unidade", "Saldo atual", "Estoque mínimo", "Status", "Valor médio estimado", "Valor total estimado", "Última movimentação"];
-    linhas = ESTOQUE_BASE
-      .filter((s) => !filtros.item || filtros.item === "all" || s.item === filtros.item)
+    colunas = [
+      "Item",
+      "Categoria",
+      "Unidade",
+      "Saldo atual",
+      "Estoque mínimo",
+      "Status",
+      "Valor médio estimado",
+      "Valor total estimado",
+      "Última movimentação",
+    ];
+    linhas = ESTOQUE_BASE.filter(
+      (s) => !filtros.item || filtros.item === "all" || s.item === filtros.item,
+    )
       .map((s) => {
         const saldoAtual = saldo[s.item] ?? s.saldo;
-        const status = saldoAtual <= 0 ? "Sem estoque" : saldoAtual < s.minimo * 0.5 ? "Estoque baixo" : saldoAtual < s.minimo ? "Atenção" : "Em estoque";
-        return [s.item, s.categoria, s.unidade, saldoAtual, s.minimo, status, fmtBRL(s.valorUnit), fmtBRL(saldoAtual * s.valorUnit), s.ultima];
+        const status =
+          saldoAtual <= 0
+            ? "Sem estoque"
+            : saldoAtual < s.minimo * 0.5
+              ? "Estoque baixo"
+              : saldoAtual < s.minimo
+                ? "Atenção"
+                : "Em estoque";
+        return [
+          s.item,
+          s.categoria,
+          s.unidade,
+          saldoAtual,
+          s.minimo,
+          status,
+          fmtBRL(s.valorUnit),
+          fmtBRL(saldoAtual * s.valorUnit),
+          s.ultima,
+        ];
       })
       .filter((row) => !filtros.status || filtros.status === "all" || row[5] === filtros.status);
   } else if (tipo === "recebimentos") {
-    colunas = ["Data", "Tipo", "Doador / fornecedor", "Documento ou referência", "Quantidade de itens", "Valor total estimado", "Status", "Observação"];
-    linhas = RECEBIMENTOS_BASE
-      .filter((r) => within(r.dataISO, filtros.de, filtros.ate))
+    colunas = [
+      "Data",
+      "Tipo",
+      "Doador / fornecedor",
+      "Documento ou referência",
+      "Quantidade de itens",
+      "Valor total estimado",
+      "Status",
+      "Observação",
+    ];
+    linhas = RECEBIMENTOS_BASE.filter((r) => within(r.dataISO, filtros.de, filtros.ate))
       .filter((r) => !filtros.status || filtros.status === "all" || r.status === filtros.status)
-      .map((r) => [fmtBRDate(r.dataISO), r.tipo, r.parte, r.documento, r.itens, fmtBRL(r.valor), r.status, r.observacao]);
+      .map((r) => [
+        fmtBRDate(r.dataISO),
+        r.tipo,
+        r.parte,
+        r.documento,
+        r.itens,
+        fmtBRL(r.valor),
+        r.status,
+        r.observacao,
+      ]);
   } else if (tipo === "liberacoes") {
-    colunas = ["Data/hora", "Assistido", "Documento", "Família", "Benefício", "Motivo da liberação", "Observação obrigatória", "Usuário administrador", "Status"];
+    colunas = [
+      "Data/hora",
+      "Assistido",
+      "Documento",
+      "Família",
+      "Benefício",
+      "Motivo da liberação",
+      "Observação obrigatória",
+      "Usuário administrador",
+      "Status",
+    ];
     linhas = entregas
       .filter((e) => e.excepcional)
       .filter((e) => within(e.dataISO, filtros.de, filtros.ate))
-      .filter((e) => !filtros.beneficio || filtros.beneficio === "all" || e.beneficio === filtros.beneficio)
+      .filter(
+        (e) =>
+          !filtros.beneficio || filtros.beneficio === "all" || e.beneficio === filtros.beneficio,
+      )
       .filter((e) => !filtros.usuario || filtros.usuario === "all" || e.usuario === filtros.usuario)
-      .map((e) => [fmtBRDateTime(e.dataISO), e.nome, e.documento, e.familia, e.beneficio, e.observacao ?? "—", e.observacao ?? "—", e.usuario, "Liberada"]);
+      .map((e) => [
+        fmtBRDateTime(e.dataISO),
+        e.nome,
+        e.documento,
+        e.familia,
+        e.beneficio,
+        e.observacao ?? "—",
+        e.observacao ?? "—",
+        e.usuario,
+        "Liberada",
+      ]);
   }
 
   return {

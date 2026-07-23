@@ -90,8 +90,23 @@ function AtendimentoPage() {
     | { status: "idle" }
     | { status: "invalid" }
     | { status: "found"; assistido: Assistido }
-    | { status: "family_only"; familiaId: number; nome: string; responsavel: string; documento: string; telefone?: string; bairro?: string }
-    | { status: "member_only"; familiaId: number; familiaNome: string; nome: string; documento?: string; parentesco: string }
+    | {
+        status: "family_only";
+        familiaId: number;
+        nome: string;
+        responsavel: string;
+        documento: string;
+        telefone?: string;
+        bairro?: string;
+      }
+    | {
+        status: "member_only";
+        familiaId: number;
+        familiaNome: string;
+        nome: string;
+        documento?: string;
+        parentesco: string;
+      }
     | { status: "not_found" };
   const [result, setResult] = useState<SearchResult>({ status: "idle" });
 
@@ -128,11 +143,8 @@ function AtendimentoPage() {
     const ativos = assistidosAll.filter((a) => a.status === "ativo");
     const match = ativos.find((a) => {
       const nameHit = normalize(a.nome).includes(qNorm);
-      const docHit =
-        qDigits.length >= 3 && onlyDigits(a.documento).includes(qDigits);
-      const telHit =
-        qDigits.length >= 3 &&
-        onlyDigits(a.telefone ?? "").includes(qDigits);
+      const docHit = qDigits.length >= 3 && onlyDigits(a.documento).includes(qDigits);
+      const telHit = qDigits.length >= 3 && onlyDigits(a.telefone ?? "").includes(qDigits);
       return nameHit || docHit || telHit;
     });
     if (match) {
@@ -160,8 +172,10 @@ function AtendimentoPage() {
     // Sem família → checar membro familiar.
     const membro = membrosAll.find((m) => {
       const nameHit = normalize(m.nome).includes(qNorm);
-      const docHit = qDigits.length >= 3 && !!m.documento && onlyDigits(m.documento).includes(qDigits);
-      const telHit = qDigits.length >= 3 && !!m.telefone && onlyDigits(m.telefone).includes(qDigits);
+      const docHit =
+        qDigits.length >= 3 && !!m.documento && onlyDigits(m.documento).includes(qDigits);
+      const telHit =
+        qDigits.length >= 3 && !!m.telefone && onlyDigits(m.telefone).includes(qDigits);
       return nameHit || docHit || telHit;
     });
     if (membro) {
@@ -229,9 +243,7 @@ function AtendimentoPage() {
           <p
             className={
               "mt-2 text-xs " +
-              (result.status === "invalid"
-                ? "text-destructive"
-                : "text-muted-foreground")
+              (result.status === "invalid" ? "text-destructive" : "text-muted-foreground")
             }
           >
             Digite pelo menos 3 caracteres para buscar.
@@ -285,32 +297,57 @@ function AtendimentoPage() {
       </div>
 
       <Accordion type="single" collapsible className="mt-6">
-        <AccordionItem value="regras" className="rounded-md border border-border bg-background px-4">
+        <AccordionItem
+          value="regras"
+          className="rounded-md border border-border bg-background px-4"
+        >
           <AccordionTrigger className="text-sm">Regras e fluxo (referência)</AccordionTrigger>
           <AccordionContent>
             <div className="grid gap-4 pb-2 lg:grid-cols-2">
               <div>
-                <p className="text-xs font-medium uppercase text-muted-foreground">Regras importantes</p>
+                <p className="text-xs font-medium uppercase text-muted-foreground">
+                  Regras importantes
+                </p>
                 <ul className="mt-2 space-y-1 text-sm text-foreground/85">
-                  <li>• <span className="font-medium">Cesta Extra</span>: para assistidos novos, pré-cadastrados ou em avaliação.</li>
-                  <li>• <span className="font-medium">Cesta Padrão</span>: para assistidos com cadastro definitivo/aprovado.</li>
+                  <li>
+                    • <span className="font-medium">Cesta Extra</span>: para assistidos novos,
+                    pré-cadastrados ou em avaliação.
+                  </li>
+                  <li>
+                    • <span className="font-medium">Cesta Padrão</span>: para assistidos com
+                    cadastro definitivo/aprovado.
+                  </li>
                   <li>• Intervalo mínimo de 25 dias vale para ambas.</li>
                   <li>• Após 3 retiradas extras, coordenação avalia efetivação.</li>
-                  <li>• Liberação excepcional apenas admin, com observação obrigatória, e não vale para falta de estoque.</li>
+                  <li>
+                    • Liberação excepcional apenas admin, com observação obrigatória, e não vale
+                    para falta de estoque.
+                  </li>
                 </ul>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase text-muted-foreground">Fluxo da Cesta Extra</p>
+                <p className="text-xs font-medium uppercase text-muted-foreground">
+                  Fluxo da Cesta Extra
+                </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-foreground/85">
-                  <FlowStep icon={<UserPlus className="h-4 w-4" />} label="Novo / sem cadastro definitivo" />
+                  <FlowStep
+                    icon={<UserPlus className="h-4 w-4" />}
+                    label="Novo / sem cadastro definitivo"
+                  />
                   <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  <FlowStep icon={<ShoppingBasket className="h-4 w-4" />} label="Recebe Cesta Extra" />
+                  <FlowStep
+                    icon={<ShoppingBasket className="h-4 w-4" />}
+                    label="Recebe Cesta Extra"
+                  />
                   <ArrowRight className="h-3 w-3 text-muted-foreground" />
                   <FlowStep icon={<Clock className="h-4 w-4" />} label="Até 3 retiradas" />
                   <ArrowRight className="h-3 w-3 text-muted-foreground" />
                   <FlowStep icon={<UserCog className="h-4 w-4" />} label="Avaliar cadastro" />
                   <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  <FlowStep icon={<CheckCircle2 className="h-4 w-4" />} label="Se aprovado, Cesta Padrão" />
+                  <FlowStep
+                    icon={<CheckCircle2 className="h-4 w-4" />}
+                    label="Se aprovado, Cesta Padrão"
+                  />
                 </div>
               </div>
             </div>
@@ -340,8 +377,7 @@ function ResultadoAssistido({
     intervaloMinimoDias: params.intervaloMinimoDias,
     limiteExtra: params.limiteExtra,
   });
-  const tipo: "padrao" | "extra" =
-    assistido.tipoCadastro === "definitivo" ? "padrao" : "extra";
+  const tipo: "padrao" | "extra" = assistido.tipoCadastro === "definitivo" ? "padrao" : "extra";
   const progressoAtual =
     el.cenario === "liberado_extra"
       ? el.progresso
@@ -365,9 +401,7 @@ function ResultadoAssistido({
   // Acompanhamento por inatividade (não bloqueia entrega).
   const diasDesdeUltima = assistido.ultimaRetiradaISO
     ? Math.floor(
-        (Date.now() -
-          new Date(assistido.ultimaRetiradaISO + "T00:00:00").getTime()) /
-          86400000,
+        (Date.now() - new Date(assistido.ultimaRetiradaISO + "T00:00:00").getTime()) / 86400000,
       )
     : null;
   const acompanhamento: "em_dia" | "atencao_45" | "contato_90" =
@@ -416,13 +450,7 @@ function renderAcao(
         />
       );
     case "extra_completou":
-      return (
-        <LiberadoAction
-          assistido={assistido}
-          beneficio="Cesta Extra"
-          progresso={3}
-        />
-      );
+      return <LiberadoAction assistido={assistido} beneficio="Cesta Extra" progresso={3} />;
     case "bloqueio_25dias":
       return (
         <Bloqueio25Action
@@ -456,7 +484,8 @@ function EmptyState() {
         </div>
         <p className="text-sm font-medium">Nenhuma busca realizada</p>
         <p className="max-w-md text-xs text-muted-foreground">
-          Informe CPF, RG, nome ou telefone para localizar o assistido e verificar a elegibilidade da entrega.
+          Informe CPF, RG, nome ou telefone para localizar o assistido e verificar a elegibilidade
+          da entrega.
         </p>
       </CardContent>
     </Card>
@@ -472,9 +501,11 @@ function NaoEncontradoState() {
             <SearchX className="h-6 w-6 text-muted-foreground" />
           </div>
           <div>
-              <p className="text-sm font-medium">Nenhum assistido encontrado para os dados informados.</p>
+            <p className="text-sm font-medium">
+              Nenhum assistido encontrado para os dados informados.
+            </p>
             <p className="text-xs text-muted-foreground">
-                É possível criar um pré-cadastro e, se necessário, entregar a primeira Cesta Extra.
+              É possível criar um pré-cadastro e, se necessário, entregar a primeira Cesta Extra.
             </p>
           </div>
         </div>
@@ -488,9 +519,7 @@ function NaoEncontradoState() {
           </Button>
           <Button
             className="gap-2"
-            onClick={() =>
-              toast.success("Pré-cadastro criado e Cesta Extra entregue.")
-            }
+            onClick={() => toast.success("Pré-cadastro criado e Cesta Extra entregue.")}
           >
             <ShoppingBasket className="h-4 w-4" /> Criar pré-cadastro e entregar Cesta Extra
           </Button>
@@ -501,7 +530,12 @@ function NaoEncontradoState() {
 }
 
 function FamilySemAssistidoState({
-  nome, responsavel, documento, telefone, bairro, onAdicionar,
+  nome,
+  responsavel,
+  documento,
+  telefone,
+  bairro,
+  onAdicionar,
 }: {
   familiaId: number;
   nome: string;
@@ -523,11 +557,25 @@ function FamilySemAssistidoState({
               Família encontrada, mas nenhum assistido ativo foi localizado para atendimento.
             </p>
             <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-              <span><span className="font-medium text-foreground">Família:</span> {nome}</span>
-              <span><span className="font-medium text-foreground">Responsável:</span> {responsavel}</span>
-              <span><span className="font-medium text-foreground">Documento:</span> {documento}</span>
-              {telefone && <span><span className="font-medium text-foreground">Telefone:</span> {telefone}</span>}
-              {bairro && <span><span className="font-medium text-foreground">Bairro:</span> {bairro}</span>}
+              <span>
+                <span className="font-medium text-foreground">Família:</span> {nome}
+              </span>
+              <span>
+                <span className="font-medium text-foreground">Responsável:</span> {responsavel}
+              </span>
+              <span>
+                <span className="font-medium text-foreground">Documento:</span> {documento}
+              </span>
+              {telefone && (
+                <span>
+                  <span className="font-medium text-foreground">Telefone:</span> {telefone}
+                </span>
+              )}
+              {bairro && (
+                <span>
+                  <span className="font-medium text-foreground">Bairro:</span> {bairro}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -542,7 +590,11 @@ function FamilySemAssistidoState({
 }
 
 function MembroSemAssistidoState({
-  familiaNome, nome, documento, parentesco, onCadastrar,
+  familiaNome,
+  nome,
+  documento,
+  parentesco,
+  onCadastrar,
 }: {
   familiaId: number;
   familiaNome: string;
@@ -563,13 +615,22 @@ function MembroSemAssistidoState({
               Pessoa encontrada como membro familiar, mas ainda não está cadastrada como assistido.
             </p>
             <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-              <span><span className="font-medium text-foreground">Nome:</span> {nome}</span>
-              <span><span className="font-medium text-foreground">Documento:</span> {documento || "—"}</span>
-              <span><span className="font-medium text-foreground">Família:</span> {familiaNome}</span>
-              <span><span className="font-medium text-foreground">Parentesco:</span> {parentesco}</span>
+              <span>
+                <span className="font-medium text-foreground">Nome:</span> {nome}
+              </span>
+              <span>
+                <span className="font-medium text-foreground">Documento:</span> {documento || "—"}
+              </span>
+              <span>
+                <span className="font-medium text-foreground">Família:</span> {familiaNome}
+              </span>
+              <span>
+                <span className="font-medium text-foreground">Parentesco:</span> {parentesco}
+              </span>
             </div>
             <p className="mt-2 text-[11px] text-amber-700">
-              A entrega de cesta não é permitida enquanto a pessoa estiver apenas como membro familiar.
+              A entrega de cesta não é permitida enquanto a pessoa estiver apenas como membro
+              familiar.
             </p>
           </div>
         </div>
@@ -653,13 +714,17 @@ function PersonCard({
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-medium uppercase text-muted-foreground">Situação do cadastro</p>
+          <p className="text-xs font-medium uppercase text-muted-foreground">
+            Situação do cadastro
+          </p>
           {isExtra ? (
             <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 p-4">
               <div className="flex items-start gap-2">
                 <UserCog className="mt-0.5 h-4 w-4 text-amber-600" />
                 <div>
-                  <p className="text-sm font-medium text-amber-800">Cadastro Extra / em avaliação</p>
+                  <p className="text-sm font-medium text-amber-800">
+                    Cadastro Extra / em avaliação
+                  </p>
                   <p className="text-xs text-amber-700">
                     Assistido realizando retiradas extras antes da avaliação definitiva.
                   </p>
@@ -672,7 +737,8 @@ function PersonCard({
                 <ExtraProgress current={progresso ?? 0} />
               </div>
               <p className="mt-3 rounded-md border border-sky-200 bg-sky-50 p-2 text-[11px] text-sky-800">
-                Após a 3ª retirada extra, o assistido deverá ser avaliado para cadastro definitivo e terá direito à Cesta Padrão no próximo mês.
+                Após a 3ª retirada extra, o assistido deverá ser avaliado para cadastro definitivo e
+                terá direito à Cesta Padrão no próximo mês.
               </p>
             </div>
           ) : (
@@ -682,7 +748,8 @@ function PersonCard({
                 <div>
                   <p className="text-sm font-medium text-primary">Cadastro definitivo</p>
                   <p className="text-xs text-foreground/75">
-                    Assistido aprovado. Recebe <span className="font-medium">Cesta Padrão</span> mensalmente.
+                    Assistido aprovado. Recebe <span className="font-medium">Cesta Padrão</span>{" "}
+                    mensalmente.
                   </p>
                 </div>
               </div>
@@ -778,7 +845,8 @@ function LiberadoAction({
           <div className="flex items-start gap-2">
             <InfoIcon className="mt-0.5 h-4 w-4 text-primary" />
             <p className="text-foreground/85">
-              Assistido completou <span className="font-medium">3 retiradas extras</span>. Encaminhar para avaliação do cadastro definitivo.
+              Assistido completou <span className="font-medium">3 retiradas extras</span>.
+              Encaminhar para avaliação do cadastro definitivo.
             </p>
           </div>
           <Button size="sm" variant="outline" className="gap-2 border-primary/40 text-primary">
@@ -796,17 +864,31 @@ function LiberadoAction({
             </DialogDescription>
           </DialogHeader>
           <ul className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-xs text-foreground/85">
-            <li>• Assistido: <span className="font-medium">{assistido.nome}</span></li>
-            <li>• Família: <span className="font-medium">{assistido.familia}</span></li>
-            <li>• Benefício: <span className="font-medium">{beneficio}</span></li>
-            <li>• Data/hora: <span className="font-medium">agora</span></li>
-            <li>• Usuário responsável: <span className="font-medium">Administrador</span></li>
-            <li>• Tipo de entrega: <span className="font-medium">Retirada no local</span></li>
+            <li>
+              • Assistido: <span className="font-medium">{assistido.nome}</span>
+            </li>
+            <li>
+              • Família: <span className="font-medium">{assistido.familia}</span>
+            </li>
+            <li>
+              • Benefício: <span className="font-medium">{beneficio}</span>
+            </li>
+            <li>
+              • Data/hora: <span className="font-medium">agora</span>
+            </li>
+            <li>
+              • Usuário responsável: <span className="font-medium">Administrador</span>
+            </li>
+            <li>
+              • Tipo de entrega: <span className="font-medium">Retirada no local</span>
+            </li>
             <li>• Baixa automática no estoque</li>
             <li>• Registro no histórico da família</li>
           </ul>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={confirmar}>Confirmar entrega</Button>
           </DialogFooter>
         </DialogContent>
@@ -899,7 +981,9 @@ function Bloqueio25Action({
               <p className="font-medium text-foreground">
                 Intervalo mínimo de {intervaloMinimoDias} dias não completado.
               </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">Vale para Cesta Extra e Cesta Padrão.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Vale para Cesta Extra e Cesta Padrão.
+              </p>
             </div>
             {isAdmin && (
               <Button
@@ -912,7 +996,8 @@ function Bloqueio25Action({
               </Button>
             )}
             <p className="text-[11px] text-amber-700">
-              Ação restrita a perfil <span className="font-medium">Administrador</span>. Exige observação obrigatória.
+              Ação restrita a perfil <span className="font-medium">Administrador</span>. Exige
+              observação obrigatória.
             </p>
           </div>
         }
@@ -923,7 +1008,8 @@ function Bloqueio25Action({
           <DialogHeader>
             <DialogTitle>Liberação excepcional</DialogTitle>
             <DialogDescription>
-              Informe o motivo da liberação antes dos 25 dias. Esta ação ficará registrada no histórico da família.
+              Informe o motivo da liberação antes dos 25 dias. Esta ação ficará registrada no
+              histórico da família.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -937,7 +1023,9 @@ function Bloqueio25Action({
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={liberar}>Confirmar liberação</Button>
           </DialogFooter>
         </DialogContent>
@@ -984,7 +1072,8 @@ function SemEstoqueAction({ assistido }: { assistido: Assistido }) {
             <ShieldAlert className="h-4 w-4" /> Registrar tentativa bloqueada
           </Button>
           <p className="text-[11px] text-destructive/80">
-            Sem saldo em estoque, <span className="font-medium">não é permitida</span> liberação excepcional. Apenas registrar a tentativa.
+            Sem saldo em estoque, <span className="font-medium">não é permitida</span> liberação
+            excepcional. Apenas registrar a tentativa.
           </p>
         </div>
       }
@@ -1053,7 +1142,11 @@ function FlowStep({ icon, label }: { icon: React.ReactNode; label: string }) {
 }
 
 function StatusCard({
-  variant, icon, title, text, action,
+  variant,
+  icon,
+  title,
+  text,
+  action,
 }: {
   variant: "ok" | "warn" | "danger";
   icon: React.ReactNode;
@@ -1069,7 +1162,9 @@ function StatusCard({
   return (
     <Card className={colors + " border"}>
       <CardContent className="p-4">
-        <div className="flex items-center gap-2 font-medium">{icon} {title}</div>
+        <div className="flex items-center gap-2 font-medium">
+          {icon} {title}
+        </div>
         <p className="mt-1 text-sm text-foreground/80">{text}</p>
         <div className="mt-3">{action}</div>
       </CardContent>

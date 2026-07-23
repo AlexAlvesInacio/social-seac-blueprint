@@ -1,13 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  Pencil,
-  Plus,
-  ShoppingBasket,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { AlertTriangle, Pencil, Plus, ShoppingBasket, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,10 +10,19 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 
 export const Route = createFileRoute("/composicao-cesta")({
@@ -90,8 +92,7 @@ const saldoEstoque: Record<string, number> = {
   "Fralda descartável": 12,
 };
 
-const brl = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function ComposicaoPage() {
   const [beneficio, setBeneficio] = useState<BeneficioKey>("padrao");
@@ -120,10 +121,7 @@ function ComposicaoPage() {
   const [editandoItem, setEditandoItem] = useState<string | null>(null);
 
   const itens = composicoes[beneficio];
-  const custoTotal = useMemo(
-    () => itens.reduce((s, i) => s + i.custo * i.quantidade, 0),
-    [itens],
-  );
+  const custoTotal = useMemo(() => itens.reduce((s, i) => s + i.custo * i.quantidade, 0), [itens]);
 
   const resetForm = () => {
     setNovoItem("");
@@ -142,8 +140,7 @@ function ComposicaoPage() {
     }
   };
 
-  const podeAdicionar =
-    novoItem.trim() !== "" && Number(novaQtd) > 0 && novaUnidade.trim() !== "";
+  const podeAdicionar = novoItem.trim() !== "" && Number(novaQtd) > 0 && novaUnidade.trim() !== "";
 
   const handleAdicionar = () => {
     if (!podeAdicionar) return;
@@ -213,12 +210,48 @@ function ComposicaoPage() {
 
       {/* Cards de resumo */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Benefícios configurados" value="3" hint="benefícios" tone="emerald" />
-        <ResumoCard icon={<Users className="h-5 w-5" />} label="Itens na Cesta Padrão" value={String(composicoes.padrao.length)} hint="itens" tone="teal" />
-        <ResumoCard icon={<Users className="h-5 w-5" />} label="Itens na Cesta Extra" value={String(composicoes.extra.length)} hint="itens" tone="teal" />
-        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Custo estimado Cesta Padrão" value={brl(custoPadrao)} hint="por cesta" tone="emerald" />
-        <ResumoCard icon={<ShoppingBasket className="h-5 w-5" />} label="Custo estimado Cesta Extra" value={brl(custoExtra)} hint="por cesta" tone="emerald" />
-        <ResumoCard icon={<AlertTriangle className="h-5 w-5" />} label="Alertas de estoque" value="2" hint="itens com atenção" tone="amber" />
+        <ResumoCard
+          icon={<ShoppingBasket className="h-5 w-5" />}
+          label="Benefícios configurados"
+          value="3"
+          hint="benefícios"
+          tone="emerald"
+        />
+        <ResumoCard
+          icon={<Users className="h-5 w-5" />}
+          label="Itens na Cesta Padrão"
+          value={String(composicoes.padrao.length)}
+          hint="itens"
+          tone="teal"
+        />
+        <ResumoCard
+          icon={<Users className="h-5 w-5" />}
+          label="Itens na Cesta Extra"
+          value={String(composicoes.extra.length)}
+          hint="itens"
+          tone="teal"
+        />
+        <ResumoCard
+          icon={<ShoppingBasket className="h-5 w-5" />}
+          label="Custo estimado Cesta Padrão"
+          value={brl(custoPadrao)}
+          hint="por cesta"
+          tone="emerald"
+        />
+        <ResumoCard
+          icon={<ShoppingBasket className="h-5 w-5" />}
+          label="Custo estimado Cesta Extra"
+          value={brl(custoExtra)}
+          hint="por cesta"
+          tone="emerald"
+        />
+        <ResumoCard
+          icon={<AlertTriangle className="h-5 w-5" />}
+          label="Alertas de estoque"
+          value="2"
+          hint="itens com atenção"
+          tone="amber"
+        />
       </div>
 
       <Tabs defaultValue="composicao">
@@ -236,19 +269,30 @@ function ComposicaoPage() {
                   <div>
                     <p className="text-sm font-semibold">Composição do benefício</p>
                     <p className="text-xs text-muted-foreground">
-                      Esta configuração define os itens que compõem cada benefício. A alteração não movimenta estoque automaticamente.
+                      Esta configuração define os itens que compõem cada benefício. A alteração não
+                      movimenta estoque automaticamente.
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSalvar}>Salvar composição</Button>
+                    <Button size="sm" onClick={handleSalvar}>
+                      Salvar composição
+                    </Button>
                   </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Benefício</Label>
-                    <Select value={beneficio} onValueChange={(v) => { setBeneficio(v as BeneficioKey); resetForm(); }}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select
+                      value={beneficio}
+                      onValueChange={(v) => {
+                        setBeneficio(v as BeneficioKey);
+                        resetForm();
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="padrao">Cesta Padrão</SelectItem>
                         <SelectItem value="extra">Cesta Extra</SelectItem>
@@ -272,24 +316,43 @@ function ComposicaoPage() {
                     <TableBody>
                       {itens.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                          <TableCell
+                            colSpan={5}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
                             Nenhum item na composição. Use o formulário abaixo para adicionar.
                           </TableCell>
                         </TableRow>
-                      ) : itens.map((i) => (
-                        <TableRow key={i.item}>
-                          <TableCell className="font-medium">{i.item}</TableCell>
-                          <TableCell>{i.quantidade}</TableCell>
-                          <TableCell>{i.unidade}</TableCell>
-                          <TableCell>{brl(i.custo)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditar(i)}><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleExcluir(i.item)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      ) : (
+                        itens.map((i) => (
+                          <TableRow key={i.item}>
+                            <TableCell className="font-medium">{i.item}</TableCell>
+                            <TableCell>{i.quantidade}</TableCell>
+                            <TableCell>{i.unidade}</TableCell>
+                            <TableCell>{brl(i.custo)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleEditar(i)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleExcluir(i.item)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -308,22 +371,34 @@ function ComposicaoPage() {
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Item</Label>
                       <Select value={novoItem} onValueChange={handleSelectItem}>
-                        <SelectTrigger><SelectValue placeholder="Selecione o item" /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o item" />
+                        </SelectTrigger>
                         <SelectContent>
                           {catalogoItens.map((c) => (
-                            <SelectItem key={c.nome} value={c.nome}>{c.nome}</SelectItem>
+                            <SelectItem key={c.nome} value={c.nome}>
+                              {c.nome}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Quantidade</Label>
-                      <Input type="number" min={1} placeholder="Ex.: 1" value={novaQtd} onChange={(e) => setNovaQtd(e.target.value)} />
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Ex.: 1"
+                        value={novaQtd}
+                        onChange={(e) => setNovaQtd(e.target.value)}
+                      />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Unidade</Label>
                       <Select value={novaUnidade} onValueChange={setNovaUnidade}>
-                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="unidade">unidade</SelectItem>
                           <SelectItem value="pacote">pacote</SelectItem>
@@ -335,13 +410,26 @@ function ComposicaoPage() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Custo estimado</Label>
-                      <Input type="number" step="0.01" min={0} placeholder="0,00" value={novoCusto} onChange={(e) => setNovoCusto(e.target.value)} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        placeholder="0,00"
+                        value={novoCusto}
+                        onChange={(e) => setNovoCusto(e.target.value)}
+                      />
                     </div>
                     <div className="flex items-end gap-2">
                       {editandoItem && (
-                        <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
+                        <Button type="button" variant="outline" onClick={resetForm}>
+                          Cancelar
+                        </Button>
                       )}
-                      <Button className="w-full gap-2" disabled={!podeAdicionar} onClick={handleAdicionar}>
+                      <Button
+                        className="w-full gap-2"
+                        disabled={!podeAdicionar}
+                        onClick={handleAdicionar}
+                      >
                         <Plus className="h-4 w-4" /> {editandoItem ? "Salvar" : "Adicionar"}
                       </Button>
                     </div>
@@ -354,9 +442,30 @@ function ComposicaoPage() {
             <Card>
               <CardContent className="space-y-3 p-4">
                 <p className="text-sm font-semibold">Comparativo dos benefícios</p>
-                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Padrão" tag="Cadastro definitivo" itens={composicoes.padrao.length} custo={brl(custoPadrao)} tone="emerald" />
-                <BeneficioMini icon={<ShoppingBasket className="h-4 w-4" />} nome="Cesta Extra" tag="Cadastro em avaliação" itens={composicoes.extra.length} custo={brl(custoExtra)} tone="amber" />
-                <BeneficioMini icon={<Users className="h-4 w-4" />} nome="Kit Gestante" tag="Benefício específico" itens={composicoes.gestante.length} custo={brl(custoGestante)} tone="violet" />
+                <BeneficioMini
+                  icon={<ShoppingBasket className="h-4 w-4" />}
+                  nome="Cesta Padrão"
+                  tag="Cadastro definitivo"
+                  itens={composicoes.padrao.length}
+                  custo={brl(custoPadrao)}
+                  tone="emerald"
+                />
+                <BeneficioMini
+                  icon={<ShoppingBasket className="h-4 w-4" />}
+                  nome="Cesta Extra"
+                  tag="Cadastro em avaliação"
+                  itens={composicoes.extra.length}
+                  custo={brl(custoExtra)}
+                  tone="amber"
+                />
+                <BeneficioMini
+                  icon={<Users className="h-4 w-4" />}
+                  nome="Kit Gestante"
+                  tag="Benefício específico"
+                  itens={composicoes.gestante.length}
+                  custo={brl(custoGestante)}
+                  tone="violet"
+                />
               </CardContent>
             </Card>
           </div>
@@ -376,8 +485,13 @@ function ComposicaoPage() {
               <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Benefício</Label>
-                  <Select value={beneficioMontagem} onValueChange={(v) => setBeneficioMontagem(v as BeneficioKey)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={beneficioMontagem}
+                    onValueChange={(v) => setBeneficioMontagem(v as BeneficioKey)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="padrao">Cesta Padrão</SelectItem>
                       <SelectItem value="extra">Cesta Extra</SelectItem>
@@ -387,7 +501,11 @@ function ComposicaoPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Quantidade a montar</Label>
-                  <Input type="number" value={quantidade} onChange={(e) => setQuantidade(Number(e.target.value) || 0)} />
+                  <Input
+                    type="number"
+                    value={quantidade}
+                    onChange={(e) => setQuantidade(Number(e.target.value) || 0)}
+                  />
                 </div>
                 <div className="flex items-end">
                   <Button className="w-full">Montar preview</Button>
@@ -396,7 +514,9 @@ function ComposicaoPage() {
 
               <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
                 <div>
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">Itens que serão consumidos</p>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    Itens que serão consumidos
+                  </p>
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>
@@ -416,8 +536,12 @@ function ComposicaoPage() {
                             <TableCell>{p.quantidade}</TableCell>
                             <TableCell>{p.total}</TableCell>
                             <TableCell>{p.saldo}</TableCell>
-                            <TableCell className={p.depois < 0 ? "font-semibold text-red-600" : ""}>{p.depois}</TableCell>
-                            <TableCell><StatusBadge status={p.status} /></TableCell>
+                            <TableCell className={p.depois < 0 ? "font-semibold text-red-600" : ""}>
+                              {p.depois}
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={p.status} />
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -431,22 +555,30 @@ function ComposicaoPage() {
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="mt-0.5 h-4 w-4 text-red-600" />
                         <div>
-                          <p className="text-sm font-semibold text-red-700">Não é possível montar esta quantidade.</p>
-                          <p className="text-xs text-red-600">Existem itens com saldo insuficiente.</p>
+                          <p className="text-sm font-semibold text-red-700">
+                            Não é possível montar esta quantidade.
+                          </p>
+                          <p className="text-xs text-red-600">
+                            Existem itens com saldo insuficiente.
+                          </p>
                         </div>
                       </div>
                       <ul className="mt-2 space-y-1 text-xs">
-                        {preview.filter((p) => p.status !== "ok").map((p) => (
-                          <li key={p.item} className="flex items-center gap-2">
-                            <span className={`h-2 w-2 rounded-full ${p.status === "sem" ? "bg-red-500" : "bg-amber-500"}`} />
-                            <span className="font-medium">{p.item}</span>
-                            <span className="text-muted-foreground">
-                              {p.status === "sem"
-                                ? `Faltam ${Math.abs(p.depois)} unidades`
-                                : `Saldo ficará baixo (${p.depois} unidades)`}
-                            </span>
-                          </li>
-                        ))}
+                        {preview
+                          .filter((p) => p.status !== "ok")
+                          .map((p) => (
+                            <li key={p.item} className="flex items-center gap-2">
+                              <span
+                                className={`h-2 w-2 rounded-full ${p.status === "sem" ? "bg-red-500" : "bg-amber-500"}`}
+                              />
+                              <span className="font-medium">{p.item}</span>
+                              <span className="text-muted-foreground">
+                                {p.status === "sem"
+                                  ? `Faltam ${Math.abs(p.depois)} unidades`
+                                  : `Saldo ficará baixo (${p.depois} unidades)`}
+                              </span>
+                            </li>
+                          ))}
                       </ul>
                     </div>
                   ) : (
@@ -455,20 +587,19 @@ function ComposicaoPage() {
                     </div>
                   )}
 
-                  <Button
-                    disabled={temFalta}
-                    className="w-full gap-2"
-                  >
+                  <Button disabled={temFalta} className="w-full gap-2">
                     <ShoppingBasket className="h-4 w-4" /> Montar cestas
                   </Button>
                 </div>
               </div>
 
               <p className="text-xs text-muted-foreground">
-                A montagem de cestas consumirá itens do estoque e aumentará o saldo do benefício montado futuramente. Nesta etapa, é apenas visual.
+                A montagem de cestas consumirá itens do estoque e aumentará o saldo do benefício
+                montado futuramente. Nesta etapa, é apenas visual.
               </p>
               <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700">
-                Preview visual. A montagem real e a movimentação de estoque serão implementadas futuramente.
+                Preview visual. A montagem real e a movimentação de estoque serão implementadas
+                futuramente.
               </div>
             </CardContent>
           </Card>
@@ -479,9 +610,16 @@ function ComposicaoPage() {
 }
 
 function ResumoCard({
-  icon, label, value, hint, tone,
+  icon,
+  label,
+  value,
+  hint,
+  tone,
 }: {
-  icon: React.ReactNode; label: string; value: string; hint?: string;
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  hint?: string;
   tone: "emerald" | "teal" | "amber" | "violet" | "sky";
 }) {
   const tones: Record<string, string> = {
@@ -508,9 +646,18 @@ function ResumoCard({
 }
 
 function BeneficioMini({
-  icon, nome, tag, itens, custo, tone,
+  icon,
+  nome,
+  tag,
+  itens,
+  custo,
+  tone,
 }: {
-  icon: React.ReactNode; nome: string; tag: string; itens: number; custo: string;
+  icon: React.ReactNode;
+  nome: string;
+  tag: string;
+  itens: number;
+  custo: string;
   tone: "emerald" | "amber" | "violet" | "sky";
 }) {
   const tones: Record<string, string> = {
@@ -521,21 +668,29 @@ function BeneficioMini({
   };
   return (
     <div className="flex items-start gap-3 rounded-md border p-3">
-      <div className={`flex h-9 w-9 items-center justify-center rounded-md ${tones[tone]}`}>{icon}</div>
+      <div className={`flex h-9 w-9 items-center justify-center rounded-md ${tones[tone]}`}>
+        {icon}
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold">{nome}</p>
-          <Badge variant="outline" className="text-[10px]">{tag}</Badge>
+          <Badge variant="outline" className="text-[10px]">
+            {tag}
+          </Badge>
         </div>
         <p className="text-xs text-muted-foreground">{itens} itens</p>
-        <p className="text-xs text-muted-foreground">Custo estimado: <span className="font-medium text-foreground">{custo}</span></p>
+        <p className="text-xs text-muted-foreground">
+          Custo estimado: <span className="font-medium text-foreground">{custo}</span>
+        </p>
       </div>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: "ok" | "atencao" | "sem" }) {
-  if (status === "ok") return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">OK</Badge>;
-  if (status === "atencao") return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Atenção</Badge>;
+  if (status === "ok")
+    return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">OK</Badge>;
+  if (status === "atencao")
+    return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Atenção</Badge>;
   return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Sem estoque suficiente</Badge>;
 }
