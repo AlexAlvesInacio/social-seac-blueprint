@@ -117,6 +117,7 @@ function mapMembro(
     nome: pessoa.nome,
     parentesco: row.parentesco ?? "—",
     documento: pessoa.documento,
+    tipoDocumento: pessoa.tipoDocumento,
     telefone: pessoa.telefone,
     nascimento: pessoa.nascimento,
     crianca: idade !== null && idade <= 12,
