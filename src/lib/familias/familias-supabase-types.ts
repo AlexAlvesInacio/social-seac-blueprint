@@ -309,7 +309,11 @@ export class FamiliasSupabaseQueryError extends Error {
 
 /* ============ Escrita (RPCs transacionais) ============ */
 
-export type FamiliasSupabaseWriteOperation = "criar_familia" | "criar_assistido" | "criar_membro";
+export type FamiliasSupabaseWriteOperation =
+  | "criar_familia"
+  | "criar_assistido"
+  | "criar_membro"
+  | "atualizar_familia";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -343,6 +347,11 @@ export interface CriarMembroResult {
   familia_id: FamiliaSupabaseId;
   pessoa_id: PessoaSupabaseId;
   membro_familiar_id: MembroFamiliarSupabaseId;
+}
+
+/** Retorno de `public.atualizar_familia`. */
+export interface AtualizarFamiliaResult {
+  familia_id: FamiliaSupabaseId;
 }
 
 // Mensagens amigáveis para os errcode que as RPCs lançam explicitamente.
