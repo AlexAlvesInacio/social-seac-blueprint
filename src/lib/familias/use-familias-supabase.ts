@@ -3,10 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
+  criarMembroEmFamiliaNoSupabase,
   getFamiliaFromSupabaseById,
   listFamiliasFromSupabase,
   type CriarAssistidoInput,
   type CriarFamiliaInput,
+  type CriarMembroInput,
 } from "@/lib/familias/familias-repository";
 import {
   FamiliasSupabaseQueryError,
@@ -70,6 +72,24 @@ export function useCriarAssistidoSupabase() {
   return useMutation({
     mutationFn: async (input: CriarAssistidoInput) => {
       const result = await criarAssistidoEmFamiliaNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
+      });
+    },
+  });
+}
+
+export function useCriarMembroSupabase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CriarMembroInput) => {
+      const result = await criarMembroEmFamiliaNoSupabase(input);
       if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
       return result.data;
     },
