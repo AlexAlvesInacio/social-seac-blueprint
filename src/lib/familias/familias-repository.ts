@@ -3,18 +3,25 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { mapFamiliaFromSupabase, mapFamiliasFromSupabase } from "@/lib/familias/familias-mapper";
 import type {
   AssistidoSupabaseRow,
+  AssistidoTipoCadastroSupabase,
+  CriarAssistidoResult,
+  CriarFamiliaResult,
   FamiliaSupabaseId,
   FamiliaSupabaseReadModel,
   FamiliaSupabaseRow,
   FamiliasSupabaseReadOperation,
   FamiliasSupabaseReadResult,
+  FamiliasSupabaseWriteResult,
   MembroFamiliarSupabaseRow,
   ObservacaoSocialSupabaseRow,
   PessoaSupabaseRow,
+  PessoaTipoDocumentoSupabase,
 } from "@/lib/familias/familias-supabase-types";
 import {
   toFamiliasSupabaseReadError,
+  toFamiliasSupabaseWriteError,
   toUnexpectedFamiliasSupabaseReadError,
+  toUnexpectedFamiliasSupabaseWriteError,
 } from "@/lib/familias/familias-supabase-types";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -215,5 +222,143 @@ export async function getFamiliaFromSupabaseById(
     return await getFamiliaById(id);
   } catch (error) {
     return unexpectedFailure("buscar_familia", error);
+  }
+}
+
+/* ============ Escrita via RPCs transacionais ============ */
+
+// As RPCs normalizam e recusam vazios, mas enviamos null para os opcionais
+// em branco para não gravar strings vazias em colunas anuláveis.
+function nullableParam(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export interface CriarFamiliaInput {
+  nomeReferencia: string;
+  responsavelNome: string;
+  responsavelTipoDocumento: PessoaTipoDocumentoSupabase;
+  responsavelDocumento: string;
+  responsavelTelefone?: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+}
+
+export interface CriarAssistidoInput {
+  familiaId: string;
+  nome: string;
+  tipoDocumento: PessoaTipoDocumentoSupabase;
+  documento: string;
+  tipoCadastro: AssistidoTipoCadastroSupabase;
+  parentesco?: string;
+  telefone?: string;
+  nascimento?: string;
+  pcd?: boolean;
+  gestante?: boolean;
+}
+
+function firstRow<T>(data: unknown): T | null {
+  if (Array.isArray(data)) return (data[0] as T) ?? null;
+  return (data as T) ?? null;
+}
+
+async function criarFamilia(
+  input: CriarFamiliaInput,
+): Promise<FamiliasSupabaseWriteResult<CriarFamiliaResult>> {
+  const { data, error } = await getSupabaseClient().rpc("criar_familia_com_responsavel", {
+    p_nome_referencia: input.nomeReferencia.trim(),
+    p_responsavel_nome: input.responsavelNome.trim(),
+    p_responsavel_tipo_documento: input.responsavelTipoDocumento,
+    p_responsavel_documento: input.responsavelDocumento.trim(),
+    p_responsavel_telefone: nullableParam(input.responsavelTelefone),
+    p_endereco: nullableParam(input.endereco),
+    p_numero: nullableParam(input.numero),
+    p_complemento: nullableParam(input.complemento),
+    p_bairro: nullableParam(input.bairro),
+    p_cidade: nullableParam(input.cidade),
+    p_uf: nullableParam(input.uf),
+    p_cep: nullableParam(input.cep),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("criar_familia", error) };
+  }
+
+  const row = firstRow<CriarFamiliaResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "criar_familia",
+        code: "EMPTY_RESULT",
+        message: "A criação da família não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function criarFamiliaComResponsavelNoSupabase(
+  input: CriarFamiliaInput,
+): Promise<FamiliasSupabaseWriteResult<CriarFamiliaResult>> {
+  try {
+    return await criarFamilia(input);
+  } catch (error) {
+    return { data: null, error: toUnexpectedFamiliasSupabaseWriteError("criar_familia", error) };
+  }
+}
+
+async function criarAssistido(
+  input: CriarAssistidoInput,
+): Promise<FamiliasSupabaseWriteResult<CriarAssistidoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("criar_assistido_em_familia", {
+    p_familia_id: input.familiaId,
+    p_nome: input.nome.trim(),
+    p_tipo_documento: input.tipoDocumento,
+    p_documento: input.documento.trim(),
+    p_tipo_cadastro: input.tipoCadastro,
+    p_parentesco: nullableParam(input.parentesco),
+    p_telefone: nullableParam(input.telefone),
+    p_nascimento: nullableParam(input.nascimento),
+    p_pcd: input.pcd ?? false,
+    p_gestante: input.gestante ?? false,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("criar_assistido", error) };
+  }
+
+  const row = firstRow<CriarAssistidoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "criar_assistido",
+        code: "EMPTY_RESULT",
+        message: "A criação do assistido não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function criarAssistidoEmFamiliaNoSupabase(
+  input: CriarAssistidoInput,
+): Promise<FamiliasSupabaseWriteResult<CriarAssistidoResult>> {
+  try {
+    return await criarAssistido(input);
+  } catch (error) {
+    return { data: null, error: toUnexpectedFamiliasSupabaseWriteError("criar_assistido", error) };
   }
 }

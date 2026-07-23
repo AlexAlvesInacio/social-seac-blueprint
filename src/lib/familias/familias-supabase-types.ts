@@ -306,3 +306,84 @@ export class FamiliasSupabaseQueryError extends Error {
     this.hint = error.hint;
   }
 }
+
+/* ============ Escrita (RPCs transacionais) ============ */
+
+export type FamiliasSupabaseWriteOperation = "criar_familia" | "criar_assistido";
+
+export interface FamiliasSupabaseWriteError {
+  operation: FamiliasSupabaseWriteOperation;
+  code: string;
+  message: string;
+  details: string | null;
+  hint: string | null;
+}
+
+export type FamiliasSupabaseWriteResult<T> =
+  | { data: T; error: null }
+  | { data: null; error: FamiliasSupabaseWriteError };
+
+/** Retorno de `public.criar_familia_com_responsavel`. */
+export interface CriarFamiliaResult {
+  familia_id: FamiliaSupabaseId;
+  pessoa_id: PessoaSupabaseId;
+  membro_familiar_id: MembroFamiliarSupabaseId;
+}
+
+/** Retorno de `public.criar_assistido_em_familia`. */
+export interface CriarAssistidoResult {
+  familia_id: FamiliaSupabaseId;
+  pessoa_id: PessoaSupabaseId;
+  membro_familiar_id: MembroFamiliarSupabaseId;
+  assistido_id: AssistidoSupabaseId;
+}
+
+// Mensagens amigáveis para os errcode que as RPCs lançam explicitamente.
+const mensagemPorCodigoDeEscrita: Record<string, string> = {
+  "42501":
+    "Você não tem permissão para esta ação. É necessário um perfil de administrador ou atendente ativo.",
+  "22023": "Preencha todos os campos obrigatórios.",
+  "23505": "Já existe um cadastro com este documento.",
+};
+
+export function toFamiliasSupabaseWriteError(
+  operation: FamiliasSupabaseWriteOperation,
+  error: PostgrestError,
+): FamiliasSupabaseWriteError {
+  return {
+    operation,
+    code: error.code,
+    message: mensagemPorCodigoDeEscrita[error.code] ?? error.message,
+    details: error.details || null,
+    hint: error.hint || null,
+  };
+}
+
+export function toUnexpectedFamiliasSupabaseWriteError(
+  operation: FamiliasSupabaseWriteOperation,
+  error: unknown,
+): FamiliasSupabaseWriteError {
+  return {
+    operation,
+    code: "SUPABASE_WRITE_ERROR",
+    message: error instanceof Error ? error.message : "Falha inesperada na gravação do Supabase.",
+    details: null,
+    hint: null,
+  };
+}
+
+export class FamiliasSupabaseWriteQueryError extends Error {
+  readonly operation: FamiliasSupabaseWriteOperation;
+  readonly code: string;
+  readonly details: string | null;
+  readonly hint: string | null;
+
+  constructor(error: FamiliasSupabaseWriteError) {
+    super(error.message);
+    this.name = "FamiliasSupabaseWriteQueryError";
+    this.operation = error.operation;
+    this.code = error.code;
+    this.details = error.details;
+    this.hint = error.hint;
+  }
+}
