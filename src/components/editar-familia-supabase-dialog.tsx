@@ -18,10 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAtualizarFamiliaSupabase } from "@/lib/familias/use-familias-supabase";
+import {
+  useAtualizarFamiliaSupabase,
+  useAtualizarResponsavelSupabase,
+} from "@/lib/familias/use-familias-supabase";
 import type {
   FamiliaStatusSupabase,
   FamiliaSupabaseReadModel,
+  PessoaTipoDocumentoSupabase,
 } from "@/lib/familias/familias-supabase-types";
 
 type Props = {
@@ -31,6 +35,7 @@ type Props = {
 };
 
 function toForm(f: FamiliaSupabaseReadModel) {
+  const resp = f.responsavelPrincipal;
   return {
     nome: f.nome ?? "",
     endereco: f.endereco ?? "",
@@ -41,6 +46,10 @@ function toForm(f: FamiliaSupabaseReadModel) {
     uf: f.uf ?? "",
     cep: f.cep ?? "",
     status: f.status,
+    respNome: resp?.nome ?? f.responsavel ?? "",
+    respTipoDocumento: (resp?.tipoDocumento ?? "cpf") as PessoaTipoDocumentoSupabase,
+    respDocumento: resp?.documento ?? f.documento ?? "",
+    respTelefone: resp?.telefone ?? f.telefone ?? "",
   };
 }
 
@@ -53,6 +62,8 @@ export function EditarFamiliaSupabaseDialog({ open, onOpenChange, familia }: Pro
   const [form, setForm] = useState(() => toForm(familia));
   const [erros, setErros] = useState<Record<string, string>>({});
   const atualizarFamilia = useAtualizarFamiliaSupabase();
+  const atualizarResponsavel = useAtualizarResponsavelSupabase();
+  const salvando = atualizarFamilia.isPending || atualizarResponsavel.isPending;
 
   useEffect(() => {
     if (open) {
@@ -65,12 +76,23 @@ export function EditarFamiliaSupabaseDialog({ open, onOpenChange, familia }: Pro
     setForm((f) => ({ ...f, [k]: v }));
 
   const salvar = async () => {
-    if (!form.nome.trim()) {
-      setErros({ nome: "Informe o nome da família." });
-      return;
-    }
-    setErros({});
+    const e: Record<string, string> = {};
+    if (!form.nome.trim()) e.nome = "Informe o nome da família.";
+    if (!form.respNome.trim()) e.respNome = "Informe o nome do responsável.";
+    if (!form.respDocumento.trim()) e.respDocumento = "Informe o documento do responsável.";
+    setErros(e);
+    if (Object.keys(e).length) return;
+
     try {
+      // Responsável primeiro: se o documento colidir (23505), a família não é
+      // alterada. As duas escritas são atômicas cada uma, mas não entre si.
+      await atualizarResponsavel.mutateAsync({
+        familiaId: familia.id,
+        nome: form.respNome,
+        tipoDocumento: form.respTipoDocumento,
+        documento: form.respDocumento,
+        telefone: form.respTelefone,
+      });
       await atualizarFamilia.mutateAsync({
         familiaId: familia.id,
         nomeReferencia: form.nome,
@@ -86,6 +108,9 @@ export function EditarFamiliaSupabaseDialog({ open, onOpenChange, familia }: Pro
       toast.success("Família atualizada.");
       onOpenChange(false);
     } catch (err) {
+      if (err instanceof Error && "code" in err && (err as { code?: string }).code === "23505") {
+        setErros({ respDocumento: "Já existe um cadastro com este documento." });
+      }
       toast.error(err instanceof Error ? err.message : "Não foi possível atualizar a família.");
     }
   };
@@ -96,7 +121,7 @@ export function EditarFamiliaSupabaseDialog({ open, onOpenChange, familia }: Pro
         <DialogHeader>
           <DialogTitle>Editar família</DialogTitle>
           <DialogDescription>
-            Atualize nome, endereço e status. O responsável é editado à parte.
+            Atualize os dados da família, o status e o responsável principal.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
@@ -153,13 +178,49 @@ export function EditarFamiliaSupabaseDialog({ open, onOpenChange, familia }: Pro
               <Input value={form.cep} onChange={(e) => set("cep", e.target.value)} />
             </F>
           </section>
+
+          <div className="border-t pt-3">
+            <p className="mb-2 text-sm font-medium">Responsável principal</p>
+            <section className="grid gap-3 md:grid-cols-2">
+              <F label="Nome do responsável *" erro={erros.respNome}>
+                <Input value={form.respNome} onChange={(e) => set("respNome", e.target.value)} />
+              </F>
+              <F label="Telefone / WhatsApp">
+                <Input
+                  value={form.respTelefone}
+                  onChange={(e) => set("respTelefone", e.target.value)}
+                />
+              </F>
+              <F label="Tipo de documento">
+                <Select
+                  value={form.respTipoDocumento}
+                  onValueChange={(v) => set("respTipoDocumento", v as PessoaTipoDocumentoSupabase)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cpf">CPF</SelectItem>
+                    <SelectItem value="rg">RG</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </F>
+              <F label="CPF / RG *" erro={erros.respDocumento}>
+                <Input
+                  value={form.respDocumento}
+                  onChange={(e) => set("respDocumento", e.target.value)}
+                />
+              </F>
+            </section>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button disabled={atualizarFamilia.isPending} onClick={() => void salvar()}>
-            {atualizarFamilia.isPending ? "Salvando..." : "Salvar alterações"}
+          <Button disabled={salvando} onClick={() => void salvar()}>
+            {salvando ? "Salvando..." : "Salvar alterações"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -5,6 +5,7 @@ import type {
   AssistidoSupabaseRow,
   AssistidoTipoCadastroSupabase,
   AtualizarFamiliaResult,
+  AtualizarResponsavelResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
   CriarMembroResult,
@@ -298,6 +299,14 @@ export interface CriarObservacaoInput {
   texto: string;
 }
 
+export interface AtualizarResponsavelInput {
+  familiaId: string;
+  nome: string;
+  tipoDocumento: PessoaTipoDocumentoSupabase;
+  documento: string;
+  telefone?: string;
+}
+
 function firstRow<T>(data: unknown): T | null {
   if (Array.isArray(data)) return (data[0] as T) ?? null;
   return (data as T) ?? null;
@@ -541,6 +550,51 @@ export async function criarObservacaoSocialNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseWriteError("criar_observacao", error),
+    };
+  }
+}
+
+async function atualizarResponsavel(
+  input: AtualizarResponsavelInput,
+): Promise<FamiliasSupabaseWriteResult<AtualizarResponsavelResult>> {
+  const { data, error } = await getSupabaseClient().rpc("atualizar_responsavel_familia", {
+    p_familia_id: input.familiaId,
+    p_nome: input.nome.trim(),
+    p_tipo_documento: input.tipoDocumento,
+    p_documento: input.documento.trim(),
+    p_telefone: nullableParam(input.telefone),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("atualizar_responsavel", error) };
+  }
+
+  const row = firstRow<AtualizarResponsavelResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "atualizar_responsavel",
+        code: "EMPTY_RESULT",
+        message: "A atualização do responsável não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function atualizarResponsavelFamiliaNoSupabase(
+  input: AtualizarResponsavelInput,
+): Promise<FamiliasSupabaseWriteResult<AtualizarResponsavelResult>> {
+  try {
+    return await atualizarResponsavel(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("atualizar_responsavel", error),
     };
   }
 }

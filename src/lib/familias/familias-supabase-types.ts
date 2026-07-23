@@ -158,6 +158,7 @@ export interface MembroFamiliarSupabaseReadModel {
   nome: string;
   parentesco: string;
   documento: string;
+  tipoDocumento: PessoaTipoDocumentoSupabase;
   telefone?: string;
   nascimento?: string;
   crianca: boolean;
@@ -314,7 +315,8 @@ export type FamiliasSupabaseWriteOperation =
   | "criar_assistido"
   | "criar_membro"
   | "atualizar_familia"
-  | "criar_observacao";
+  | "criar_observacao"
+  | "atualizar_responsavel";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -358,6 +360,12 @@ export interface AtualizarFamiliaResult {
 /** Retorno do insert em `observacoes_sociais`. */
 export interface CriarObservacaoResult {
   id: ObservacaoSocialSupabaseId;
+}
+
+/** Retorno de `public.atualizar_responsavel_familia`. */
+export interface AtualizarResponsavelResult {
+  familia_id: FamiliaSupabaseId;
+  pessoa_id: PessoaSupabaseId;
 }
 
 // Mensagens amigáveis para os errcode que as RPCs lançam explicitamente.
