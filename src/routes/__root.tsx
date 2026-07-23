@@ -78,9 +78,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "SEAC Social — Gestão de famílias e cestas básicas" },
-      { name: "description", content: "Sistema da entidade SEAC para gerenciar famílias assistidas, atendimento, estoque e entrega de cestas básicas." },
+      {
+        name: "description",
+        content:
+          "Sistema da entidade SEAC para gerenciar famílias assistidas, atendimento, estoque e entrega de cestas básicas.",
+      },
       { property: "og:title", content: "SEAC Social" },
-      { property: "og:description", content: "Gestão de famílias, atendimento e estoque para entidade social." },
+      {
+        property: "og:description",
+        content: "Gestão de famílias, atendimento e estoque para entidade social.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

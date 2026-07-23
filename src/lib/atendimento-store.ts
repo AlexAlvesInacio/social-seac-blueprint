@@ -33,9 +33,7 @@ type State = {
   entregas: Entrega[];
   bloqueios: TentativaBloqueada[];
   saldo: Record<string, number>;
-  registrarEntrega: (
-    e: Omit<Entrega, "id" | "dataISO"> & { dataISO?: string },
-  ) => Entrega;
+  registrarEntrega: (e: Omit<Entrega, "id" | "dataISO"> & { dataISO?: string }) => Entrega;
   registrarBloqueio: (
     b: Omit<TentativaBloqueada, "id" | "dataISO"> & { dataISO?: string },
   ) => TentativaBloqueada;
@@ -84,9 +82,7 @@ export const useAtendimentoStore = create<State>()(
           ultimo &&
           normDoc(ultimo.documento) === normDoc(b.documento) &&
           ultimo.motivo === b.motivo &&
-          Math.abs(
-            new Date(dataISO).getTime() - new Date(ultimo.dataISO).getTime(),
-          ) < 3000
+          Math.abs(new Date(dataISO).getTime() - new Date(ultimo.dataISO).getTime()) < 3000
         ) {
           return ultimo;
         }

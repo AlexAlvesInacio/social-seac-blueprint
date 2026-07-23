@@ -78,19 +78,13 @@ export function verificarElegibilidadeAtendimento(
     assistido.tipoCadastro === "definitivo" ? "Cesta Padrão" : "Cesta Extra";
 
   // 1) Extra que já completou 3 retiradas: aguardar avaliação, não entrega.
-  if (
-    assistido.tipoCadastro === "extra" &&
-    assistido.retiradasExtras >= limiteExtra
-  ) {
+  if (assistido.tipoCadastro === "extra" && assistido.retiradasExtras >= limiteExtra) {
     return { cenario: "extra_completou", beneficio: "Cesta Extra" };
   }
 
   // 2) Regra dos 25 dias.
   if (assistido.ultimaRetiradaISO) {
-    const proximaDataISO = addDays(
-      assistido.ultimaRetiradaISO,
-      intervaloMinimo,
-    );
+    const proximaDataISO = addDays(assistido.ultimaRetiradaISO, intervaloMinimo);
     const diasRestantes = diffDays(hojeISO, proximaDataISO);
     if (diasRestantes > 0) {
       return {
@@ -103,8 +97,7 @@ export function verificarElegibilidadeAtendimento(
   }
 
   // 3) Estoque.
-  const saldo =
-    beneficio === "Cesta Padrão" ? estoque.cestaPadrao : estoque.cestaExtra;
+  const saldo = beneficio === "Cesta Padrão" ? estoque.cestaPadrao : estoque.cestaExtra;
   if (saldo <= 0) {
     return { cenario: "bloqueio_estoque", beneficio };
   }
@@ -113,10 +106,7 @@ export function verificarElegibilidadeAtendimento(
   if (assistido.tipoCadastro === "definitivo") {
     return { cenario: "liberado_padrao", beneficio: "Cesta Padrão" };
   }
-  const progresso = Math.min(
-    limiteExtra,
-    assistido.retiradasExtras + 1,
-  ) as 1 | 2 | 3;
+  const progresso = Math.min(limiteExtra, assistido.retiradasExtras + 1) as 1 | 2 | 3;
   return { cenario: "liberado_extra", beneficio: "Cesta Extra", progresso };
 }
 

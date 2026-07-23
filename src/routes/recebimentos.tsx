@@ -7,15 +7,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
-  Inbox, HandCoins, ShoppingCart, Landmark, Wallet, Package, Plus, Trash2, Eye, PackagePlus, Info,
+  Inbox,
+  HandCoins,
+  ShoppingCart,
+  Landmark,
+  Wallet,
+  Package,
+  Plus,
+  Trash2,
+  Eye,
+  PackagePlus,
+  Info,
 } from "lucide-react";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 
 export const Route = createFileRoute("/recebimentos")({
@@ -24,12 +43,48 @@ export const Route = createFileRoute("/recebimentos")({
 });
 
 const kpis = [
-  { label: "Recebimentos no mês", value: "12", hint: "Maio/2025", icon: Inbox, tone: "bg-primary/10 text-primary" },
-  { label: "Doações recebidas", value: "8", hint: "No mês", icon: HandCoins, tone: "bg-emerald-100 text-emerald-700" },
-  { label: "Compras registradas", value: "3", hint: "No mês", icon: ShoppingCart, tone: "bg-sky-100 text-sky-700" },
-  { label: "Investimentos", value: "1", hint: "No mês", icon: Landmark, tone: "bg-violet-100 text-violet-700" },
-  { label: "Valor estimado", value: "R$ 18.450,00", hint: "Recebido no mês", icon: Wallet, tone: "bg-emerald-100 text-emerald-700" },
-  { label: "Itens recebidos", value: "2.430", hint: "Unidades / pacotes", icon: Package, tone: "bg-amber-100 text-amber-700" },
+  {
+    label: "Recebimentos no mês",
+    value: "12",
+    hint: "Maio/2025",
+    icon: Inbox,
+    tone: "bg-primary/10 text-primary",
+  },
+  {
+    label: "Doações recebidas",
+    value: "8",
+    hint: "No mês",
+    icon: HandCoins,
+    tone: "bg-emerald-100 text-emerald-700",
+  },
+  {
+    label: "Compras registradas",
+    value: "3",
+    hint: "No mês",
+    icon: ShoppingCart,
+    tone: "bg-sky-100 text-sky-700",
+  },
+  {
+    label: "Investimentos",
+    value: "1",
+    hint: "No mês",
+    icon: Landmark,
+    tone: "bg-violet-100 text-violet-700",
+  },
+  {
+    label: "Valor estimado",
+    value: "R$ 18.450,00",
+    hint: "Recebido no mês",
+    icon: Wallet,
+    tone: "bg-emerald-100 text-emerald-700",
+  },
+  {
+    label: "Itens recebidos",
+    value: "2.430",
+    hint: "Unidades / pacotes",
+    icon: Package,
+    tone: "bg-amber-100 text-amber-700",
+  },
 ];
 
 const itensRecebimento = [
@@ -41,42 +96,95 @@ const itensRecebimento = [
 type StatusRec = "Registrado" | "Pendente conferência" | "Cancelado";
 
 const historico: {
-  data: string; tipo: "Doação" | "Compra" | "Investimento"; parte: string;
-  itens: string; valor: string; status: StatusRec;
+  data: string;
+  tipo: "Doação" | "Compra" | "Investimento";
+  parte: string;
+  itens: string;
+  valor: string;
+  status: StatusRec;
 }[] = [
-  { data: "21/05/2025", tipo: "Doação", parte: "Supermercado Exemplo", itens: "3 itens", valor: "R$ 6.250,00", status: "Registrado" },
-  { data: "20/05/2025", tipo: "Compra", parte: "Atacadão Exemplo", itens: "5 itens", valor: "R$ 3.850,00", status: "Registrado" },
-  { data: "18/05/2025", tipo: "Investimento", parte: "Recurso interno SEAC", itens: "2 itens", valor: "R$ 2.500,00", status: "Registrado" },
-  { data: "15/05/2025", tipo: "Doação", parte: "Padaria Bom Pão", itens: "2 itens", valor: "R$ 480,00", status: "Pendente conferência" },
-  { data: "10/05/2025", tipo: "Doação", parte: "Família anônima", itens: "1 item", valor: "R$ 120,00", status: "Cancelado" },
+  {
+    data: "21/05/2025",
+    tipo: "Doação",
+    parte: "Supermercado Exemplo",
+    itens: "3 itens",
+    valor: "R$ 6.250,00",
+    status: "Registrado",
+  },
+  {
+    data: "20/05/2025",
+    tipo: "Compra",
+    parte: "Atacadão Exemplo",
+    itens: "5 itens",
+    valor: "R$ 3.850,00",
+    status: "Registrado",
+  },
+  {
+    data: "18/05/2025",
+    tipo: "Investimento",
+    parte: "Recurso interno SEAC",
+    itens: "2 itens",
+    valor: "R$ 2.500,00",
+    status: "Registrado",
+  },
+  {
+    data: "15/05/2025",
+    tipo: "Doação",
+    parte: "Padaria Bom Pão",
+    itens: "2 itens",
+    valor: "R$ 480,00",
+    status: "Pendente conferência",
+  },
+  {
+    data: "10/05/2025",
+    tipo: "Doação",
+    parte: "Família anônima",
+    itens: "1 item",
+    valor: "R$ 120,00",
+    status: "Cancelado",
+  },
 ];
 
 function tipoBadge(tipo: "Doação" | "Compra" | "Investimento") {
   const map = {
-    "Doação": "bg-emerald-100 text-emerald-700 border-emerald-200",
-    "Compra": "bg-sky-100 text-sky-700 border-sky-200",
-    "Investimento": "bg-violet-100 text-violet-700 border-violet-200",
+    Doação: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    Compra: "bg-sky-100 text-sky-700 border-sky-200",
+    Investimento: "bg-violet-100 text-violet-700 border-violet-200",
   } as const;
-  return <Badge variant="outline" className={map[tipo]}>{tipo}</Badge>;
+  return (
+    <Badge variant="outline" className={map[tipo]}>
+      {tipo}
+    </Badge>
+  );
 }
 
 function statusBadge(status: StatusRec) {
   const map: Record<StatusRec, string> = {
-    "Registrado": "bg-emerald-100 text-emerald-700 border-emerald-200",
+    Registrado: "bg-emerald-100 text-emerald-700 border-emerald-200",
     "Pendente conferência": "bg-amber-100 text-amber-700 border-amber-200",
-    "Cancelado": "bg-red-100 text-red-700 border-red-200",
+    Cancelado: "bg-red-100 text-red-700 border-red-200",
   };
-  return <Badge variant="outline" className={map[status]}>{status}</Badge>;
+  return (
+    <Badge variant="outline" className={map[status]}>
+      {status}
+    </Badge>
+  );
 }
 
 function RecebimentosPage() {
   const [tipo, setTipo] = useState<"doacao" | "compra" | "investimento">("doacao");
-  const parteLabel = tipo === "compra" ? "Fornecedor" : tipo === "investimento" ? "Origem do recurso" : "Doador ou fornecedor";
-  const partePlaceholder = tipo === "compra"
-    ? "Nome do fornecedor"
-    : tipo === "investimento"
-      ? "Ex.: Recurso interno SEAC, campanha, parceiro"
-      : "Nome do doador ou fornecedor";
+  const parteLabel =
+    tipo === "compra"
+      ? "Fornecedor"
+      : tipo === "investimento"
+        ? "Origem do recurso"
+        : "Doador ou fornecedor";
+  const partePlaceholder =
+    tipo === "compra"
+      ? "Nome do fornecedor"
+      : tipo === "investimento"
+        ? "Ex.: Recurso interno SEAC, campanha, parceiro"
+        : "Nome do doador ou fornecedor";
   return (
     <AppShell title="Recebimentos">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -91,7 +199,9 @@ function RecebimentosPage() {
                 <div className="min-w-0">
                   <p className="text-xs leading-tight text-muted-foreground">{k.label}</p>
                   <p className="mt-0.5 text-xl font-semibold leading-tight">{k.value}</p>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{k.hint}</p>
+                  <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {k.hint}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -101,7 +211,10 @@ function RecebimentosPage() {
 
       <div className="mt-3 flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>Recebimentos registram a origem dos alimentos, compras e investimentos. A entrada efetiva no estoque será controlada nas movimentações de estoque.</p>
+        <p>
+          Recebimentos registram a origem dos alimentos, compras e investimentos. A entrada efetiva
+          no estoque será controlada nas movimentações de estoque.
+        </p>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
@@ -109,7 +222,9 @@ function RecebimentosPage() {
           <CardContent className="space-y-4 p-4">
             <div>
               <p className="text-sm font-semibold">Novo recebimento</p>
-              <p className="text-xs text-muted-foreground">Selecione o tipo e preencha os dados abaixo.</p>
+              <p className="text-xs text-muted-foreground">
+                Selecione o tipo e preencha os dados abaixo.
+              </p>
             </div>
 
             <Tabs value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
@@ -121,10 +236,14 @@ function RecebimentosPage() {
             </Tabs>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Data do recebimento"><Input type="date" defaultValue="2025-05-21" /></Field>
+              <Field label="Data do recebimento">
+                <Input type="date" defaultValue="2025-05-21" />
+              </Field>
               <Field label="Tipo / origem">
                 <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="doacao">Doação</SelectItem>
                     <SelectItem value="compra">Compra</SelectItem>
@@ -132,28 +251,43 @@ function RecebimentosPage() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label={parteLabel}><Input placeholder={partePlaceholder} /></Field>
-              <Field label="Documento ou referência (opcional)"><Input placeholder="CNPJ, NF, protocolo..." /></Field>
+              <Field label={parteLabel}>
+                <Input placeholder={partePlaceholder} />
+              </Field>
+              <Field label="Documento ou referência (opcional)">
+                <Input placeholder="CNPJ, NF, protocolo..." />
+              </Field>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Valor total estimado (R$)</Label>
                 <Input placeholder="0,00" />
-                <p className="text-[11px] text-muted-foreground">Pode ser preenchido manualmente ou conferido com o total dos itens.</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Pode ser preenchido manualmente ou conferido com o total dos itens.
+                </p>
               </div>
-              <Field label="Comprovante / anexo"><Input type="file" /></Field>
+              <Field label="Comprovante / anexo">
+                <Input type="file" />
+              </Field>
             </div>
-            <Field label="Observação"><Textarea placeholder="Observação opcional" /></Field>
+            <Field label="Observação">
+              <Textarea placeholder="Observação opcional" />
+            </Field>
 
             {/* Itens recebidos */}
             <div className="rounded-md border">
               <div className="border-b p-3">
                 <p className="text-sm font-semibold">Itens recebidos</p>
-                <p className="text-xs text-muted-foreground">Um recebimento pode conter vários itens.</p>
+                <p className="text-xs text-muted-foreground">
+                  Um recebimento pode conter vários itens.
+                </p>
               </div>
 
               <div className="space-y-3 border-b p-3">
                 <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                   <Field label="Item">
-                    <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="arroz">Arroz 5kg</SelectItem>
                         <SelectItem value="feijao">Feijão 1kg</SelectItem>
@@ -161,9 +295,14 @@ function RecebimentosPage() {
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Field label="Quantidade"><Input type="number" placeholder="Informe a quantidade" /></Field>
+                  <Field label="Quantidade">
+                    <Input type="number" placeholder="Informe a quantidade" />
+                  </Field>
                   <Field label="Unidade">
-                    <Select><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="un">unidade</SelectItem>
                         <SelectItem value="pc">pacote</SelectItem>
@@ -174,9 +313,15 @@ function RecebimentosPage() {
                   </Field>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                  <Field label="Valor unitário estimado (R$)"><Input placeholder="0,00" /></Field>
-                  <Field label="Valor total do item (R$)"><Input placeholder="0,00" /></Field>
-                  <Button variant="outline" className="gap-2 sm:col-span-2 md:col-span-1"><Plus className="h-4 w-4" /> Adicionar item</Button>
+                  <Field label="Valor unitário estimado (R$)">
+                    <Input placeholder="0,00" />
+                  </Field>
+                  <Field label="Valor total do item (R$)">
+                    <Input placeholder="0,00" />
+                  </Field>
+                  <Button variant="outline" className="gap-2 sm:col-span-2 md:col-span-1">
+                    <Plus className="h-4 w-4" /> Adicionar item
+                  </Button>
                 </div>
               </div>
 
@@ -199,7 +344,15 @@ function RecebimentosPage() {
                       <TableCell>{i.unidade}</TableCell>
                       <TableCell>{i.vu}</TableCell>
                       <TableCell>{i.total}</TableCell>
-                      <TableCell><Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                      <TableCell>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -211,7 +364,9 @@ function RecebimentosPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">Salvar recebimento</Button>
+              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                Salvar recebimento
+              </Button>
               <Button variant="outline">Limpar</Button>
               <Button variant="ghost">Cancelar edição</Button>
             </div>
@@ -247,8 +402,23 @@ function RecebimentosPage() {
                     <TableCell>{statusBadge(h.status)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" title="Ver detalhes"><Eye className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" title="Gerar entrada no estoque (em breve)" disabled><PackagePlus className="h-4 w-4" /></Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          title="Ver detalhes"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground"
+                          title="Gerar entrada no estoque (em breve)"
+                          disabled
+                        >
+                          <PackagePlus className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -264,5 +434,10 @@ function RecebimentosPage() {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1"><Label className="text-xs text-muted-foreground">{label}</Label>{children}</div>;
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
 }

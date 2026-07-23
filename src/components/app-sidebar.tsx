@@ -61,11 +61,7 @@ export function AppSidebar() {
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.url}>
-              <SidebarMenuButton
-                asChild
-                isActive={isActive(item.url)}
-                tooltip={item.title}
-              >
+              <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
                 <Link to={item.url} className="flex items-center gap-3">
                   <item.icon className="h-4 w-4" />
                   <span>{item.title}</span>
@@ -82,18 +78,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <Link to="/painel" className="flex items-center gap-2 px-2 py-3">
-          <img
-            src={seacLogo.url}
-            alt="SEAC Social"
-            className="h-9 w-9 rounded-lg object-contain"
-          />
+          <img src={seacLogo.url} alt="SEAC Social" className="h-9 w-9 rounded-lg object-contain" />
           <div className="flex flex-col leading-tight">
             <span className="text-base font-semibold text-foreground">
               SEAC <span className="text-primary">Social</span>
             </span>
-            <span className="text-[10px] text-muted-foreground">
-              Gestão social
-            </span>
+            <span className="text-[10px] text-muted-foreground">Gestão social</span>
           </div>
         </Link>
       </SidebarHeader>

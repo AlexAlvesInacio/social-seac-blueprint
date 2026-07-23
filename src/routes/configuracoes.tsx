@@ -1,7 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  Package, Ruler, FolderTree, Gift, HeartHandshake, Truck, Settings2,
-  Plus, Pencil, Trash2, PowerOff, Power,
+  Package,
+  Ruler,
+  FolderTree,
+  Gift,
+  HeartHandshake,
+  Truck,
+  Settings2,
+  Plus,
+  Pencil,
+  Trash2,
+  PowerOff,
+  Power,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -12,26 +22,57 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  useItens, useUnidades, useCategorias, useBeneficios, useDoadores, useFornecedores,
+  useItens,
+  useUnidades,
+  useCategorias,
+  useBeneficios,
+  useDoadores,
+  useFornecedores,
   useParametros,
-  type Item, type Unidade, type Categoria, type Beneficio, type Doador, type Fornecedor,
-  type Parametros, type Status,
+  type Item,
+  type Unidade,
+  type Categoria,
+  type Beneficio,
+  type Doador,
+  type Fornecedor,
+  type Parametros,
+  type Status,
 } from "@/lib/config-store";
 import { registrarAuditoria } from "@/lib/auditoria-store";
 
@@ -62,13 +103,25 @@ function useMounted() {
 
 function StatusBadge({ status }: { status: Status }) {
   return status === "ativo" ? (
-    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/10">Ativo</Badge>
+    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/10">
+      Ativo
+    </Badge>
   ) : (
-    <Badge variant="outline" className="text-muted-foreground">Inativo</Badge>
+    <Badge variant="outline" className="text-muted-foreground">
+      Inativo
+    </Badge>
   );
 }
 
-function F({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function F({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1">
       <Label className="text-xs text-muted-foreground">{label}</Label>
@@ -82,7 +135,8 @@ function validateDoc(doc?: string): string | undefined {
   if (!doc) return undefined;
   const digits = doc.replace(/\D/g, "");
   if (digits.length === 0) return undefined;
-  if (digits.length !== 11 && digits.length !== 14) return "Documento deve ser CPF (11) ou CNPJ (14 dígitos)";
+  if (digits.length !== 11 && digits.length !== 14)
+    return "Documento deve ser CPF (11) ou CNPJ (14 dígitos)";
   return undefined;
 }
 
@@ -97,7 +151,14 @@ type RowActionsProps = {
   hasVinculo: boolean;
 };
 
-function RowActions({ onEdit, onToggleStatus, onDelete, onDeleteBlocked, status, hasVinculo }: RowActionsProps) {
+function RowActions({
+  onEdit,
+  onToggleStatus,
+  onDelete,
+  onDeleteBlocked,
+  status,
+  hasVinculo,
+}: RowActionsProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   function openDelete() {
     if (hasVinculo) onDeleteBlocked?.();
@@ -129,7 +190,9 @@ function RowActions({ onEdit, onToggleStatus, onDelete, onDeleteBlocked, status,
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{hasVinculo ? "Não é possível excluir" : "Confirmar exclusão"}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {hasVinculo ? "Não é possível excluir" : "Confirmar exclusão"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {hasVinculo
                 ? "Este cadastro possui vínculo com movimentações ou histórico. Não é possível excluir. Você pode inativar o cadastro."
@@ -144,7 +207,10 @@ function RowActions({ onEdit, onToggleStatus, onDelete, onDeleteBlocked, status,
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => { onDelete(); setConfirmOpen(false); }}
+                  onClick={() => {
+                    onDelete();
+                    setConfirmOpen(false);
+                  }}
                 >
                   Excluir
                 </AlertDialogAction>
@@ -159,20 +225,47 @@ function RowActions({ onEdit, onToggleStatus, onDelete, onDeleteBlocked, status,
 
 /* ---------- ITENS ---------- */
 
-function ItemForm({ open, onOpenChange, editing }: { open: boolean; onOpenChange: (v: boolean) => void; editing: Item | null }) {
+function ItemForm({
+  open,
+  onOpenChange,
+  editing,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: Item | null;
+}) {
   const upsert = useItens((s) => s.upsert);
   const rows = useItens((s) => s.rows);
   const categorias = useCategorias((s) => s.rows);
   const unidades = useUnidades((s) => s.rows);
 
-  const [form, setForm] = useState<Item>(() => editing ?? {
-    codigo: "", nome: "", categoria: "", unidade: "", estoqueMinimo: 0, status: "ativo", observacao: "",
-  });
+  const [form, setForm] = useState<Item>(
+    () =>
+      editing ?? {
+        codigo: "",
+        nome: "",
+        categoria: "",
+        unidade: "",
+        estoqueMinimo: 0,
+        status: "ativo",
+        observacao: "",
+      },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
-      setForm(editing ?? { codigo: "", nome: "", categoria: "", unidade: "", estoqueMinimo: 0, status: "ativo", observacao: "" });
+      setForm(
+        editing ?? {
+          codigo: "",
+          nome: "",
+          categoria: "",
+          unidade: "",
+          estoqueMinimo: 0,
+          status: "ativo",
+          observacao: "",
+        },
+      );
       setErrors({});
     }
   }, [open, editing]);
@@ -180,7 +273,8 @@ function ItemForm({ open, onOpenChange, editing }: { open: boolean; onOpenChange
   function save() {
     const e: Record<string, string> = {};
     if (!form.codigo.trim()) e.codigo = "Código obrigatório";
-    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim())) e.codigo = "Código já existe";
+    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim()))
+      e.codigo = "Código já existe";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
     if (!form.categoria) e.categoria = "Categoria obrigatória";
     if (!form.unidade) e.unidade = "Unidade obrigatória";
@@ -208,48 +302,86 @@ function ItemForm({ open, onOpenChange, editing }: { open: boolean; onOpenChange
         </SheetHeader>
         <div className="grid gap-3 py-4">
           <F label="Código" error={errors.codigo}>
-            <Input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} disabled={!!editing} placeholder="0011" />
+            <Input
+              value={form.codigo}
+              onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+              disabled={!!editing}
+              placeholder="0011"
+            />
           </F>
           <F label="Nome do item" error={errors.nome}>
-            <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex.: Arroz 5kg" />
+            <Input
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              placeholder="Ex.: Arroz 5kg"
+            />
           </F>
           <F label="Categoria" error={errors.categoria}>
-            <Select value={form.categoria} onValueChange={(v) => setForm({ ...form, categoria: v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <Select
+              value={form.categoria}
+              onValueChange={(v) => setForm({ ...form, categoria: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
               <SelectContent>
-                {categorias.filter((c) => c.status === "ativo").map((c) => (
-                  <SelectItem key={c.codigo} value={c.codigo}>{c.nome}</SelectItem>
-                ))}
+                {categorias
+                  .filter((c) => c.status === "ativo")
+                  .map((c) => (
+                    <SelectItem key={c.codigo} value={c.codigo}>
+                      {c.nome}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </F>
           <F label="Unidade padrão" error={errors.unidade}>
             <Select value={form.unidade} onValueChange={(v) => setForm({ ...form, unidade: v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
               <SelectContent>
-                {unidades.filter((u) => u.status === "ativo").map((u) => (
-                  <SelectItem key={u.codigo} value={u.codigo}>{u.nome}</SelectItem>
-                ))}
+                {unidades
+                  .filter((u) => u.status === "ativo")
+                  .map((u) => (
+                    <SelectItem key={u.codigo} value={u.codigo}>
+                      {u.nome}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </F>
           <F label="Estoque mínimo" error={errors.estoqueMinimo}>
-            <Input type="number" min={0} value={form.estoqueMinimo}
-              onChange={(e) => setForm({ ...form, estoqueMinimo: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              value={form.estoqueMinimo}
+              onChange={(e) => setForm({ ...form, estoqueMinimo: Number(e.target.value) })}
+            />
           </F>
           <F label="Descrição / observação">
-            <Textarea value={form.observacao ?? ""} onChange={(e) => setForm({ ...form, observacao: e.target.value })} />
+            <Textarea
+              value={form.observacao ?? ""}
+              onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+            />
           </F>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
             <div>
               <div className="text-sm font-medium">Status</div>
-              <div className="text-xs text-muted-foreground">{form.status === "ativo" ? "Ativo" : "Inativo"}</div>
+              <div className="text-xs text-muted-foreground">
+                {form.status === "ativo" ? "Ativo" : "Inativo"}
+              </div>
             </div>
-            <Switch checked={form.status === "ativo"} onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })} />
+            <Switch
+              checked={form.status === "ativo"}
+              onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })}
+            />
           </div>
         </div>
         <SheetFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button onClick={save}>Salvar</Button>
         </SheetFooter>
       </SheetContent>
@@ -269,11 +401,16 @@ function ItensTab() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
 
-  const filtered = useMemo(() => rows.filter((r) => {
-    const bm = !busca || r.nome.toLowerCase().includes(busca.toLowerCase()) || r.codigo.includes(busca);
-    const cm = filtroCat === "all" || r.categoria === filtroCat;
-    return bm && cm;
-  }), [rows, busca, filtroCat]);
+  const filtered = useMemo(
+    () =>
+      rows.filter((r) => {
+        const bm =
+          !busca || r.nome.toLowerCase().includes(busca.toLowerCase()) || r.codigo.includes(busca);
+        const cm = filtroCat === "all" || r.categoria === filtroCat;
+        return bm && cm;
+      }),
+    [rows, busca, filtroCat],
+  );
 
   const catName = (c: string) => categorias.find((x) => x.codigo === c)?.nome ?? c;
   const uniName = (u: string) => unidades.find((x) => x.codigo === u)?.nome ?? u;
@@ -283,29 +420,53 @@ function ItensTab() {
       <CardContent className="p-4">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
           <div className="grid grid-cols-2 gap-3">
-            <div><Label className="text-xs text-muted-foreground">Buscar item</Label>
-              <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar" />
+            <div>
+              <Label className="text-xs text-muted-foreground">Buscar item</Label>
+              <Input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar"
+              />
             </div>
-            <div><Label className="text-xs text-muted-foreground">Categoria</Label>
+            <div>
+              <Label className="text-xs text-muted-foreground">Categoria</Label>
               <Select value={filtroCat} onValueChange={setFiltroCat}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {categorias.map((c) => <SelectItem key={c.codigo} value={c.codigo}>{c.nome}</SelectItem>)}
+                  {categorias.map((c) => (
+                    <SelectItem key={c.codigo} value={c.codigo}>
+                      {c.nome}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <Button className="gap-2" onClick={() => { setEditing(null); setOpen(true); }}>
+          <Button
+            className="gap-2"
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4" /> Novo item
           </Button>
         </div>
         <Table>
-          <TableHeader><TableRow>
-            <TableHead>Código</TableHead><TableHead>Nome</TableHead><TableHead>Categoria</TableHead>
-            <TableHead>Unidade padrão</TableHead><TableHead>Estoque mínimo</TableHead>
-            <TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
-          </TableRow></TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Nome</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Unidade padrão</TableHead>
+              <TableHead>Estoque mínimo</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {filtered.map((r) => (
               <TableRow key={r.codigo}>
@@ -314,32 +475,57 @@ function ItensTab() {
                 <TableCell>{catName(r.categoria)}</TableCell>
                 <TableCell>{uniName(r.unidade)}</TableCell>
                 <TableCell>{r.estoqueMinimo}</TableCell>
-                <TableCell><StatusBadge status={r.status} /></TableCell>
+                <TableCell>
+                  <StatusBadge status={r.status} />
+                </TableCell>
                 <TableCell>
                   <RowActions
                     status={r.status}
                     hasVinculo={false}
-                    onEdit={() => { setEditing(r); setOpen(true); }}
+                    onEdit={() => {
+                      setEditing(r);
+                      setOpen(true);
+                    }}
                     onToggleStatus={() => {
                       const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
                       setStatus(r.codigo, ns);
-                      registrarAuditoria({ usuario: USUARIO_ATUAL, acao: ns === "ativo" ? "Item reativado" : "Item inativado", modulo: "Configurações › Itens", registro: `${r.codigo} — ${r.nome}` });
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: ns === "ativo" ? "Item reativado" : "Item inativado",
+                        modulo: "Configurações › Itens",
+                        registro: `${r.codigo} — ${r.nome}`,
+                      });
                       toast.success(ns === "ativo" ? "Item reativado" : "Item inativado");
                     }}
                     onDelete={() => {
                       remove(r.codigo);
-                      registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Item excluído", modulo: "Configurações › Itens", registro: `${r.codigo} — ${r.nome}` });
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Item excluído",
+                        modulo: "Configurações › Itens",
+                        registro: `${r.codigo} — ${r.nome}`,
+                      });
                       toast.success("Item excluído");
                     }}
                     onDeleteBlocked={() => {
-                      registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Itens", registro: `${r.codigo} — ${r.nome}`, observacao: "Registro possui vínculo com movimentações ou histórico" });
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Tentativa de exclusão bloqueada",
+                        modulo: "Configurações › Itens",
+                        registro: `${r.codigo} — ${r.nome}`,
+                        observacao: "Registro possui vínculo com movimentações ou histórico",
+                      });
                     }}
                   />
                 </TableCell>
               </TableRow>
             ))}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">Nenhum item encontrado.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  Nenhum item encontrado.
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>
@@ -351,25 +537,44 @@ function ItensTab() {
 
 /* ---------- UNIDADES ---------- */
 
-function UnidadeForm({ open, onOpenChange, editing }: { open: boolean; onOpenChange: (v: boolean) => void; editing: Unidade | null }) {
+function UnidadeForm({
+  open,
+  onOpenChange,
+  editing,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: Unidade | null;
+}) {
   const upsert = useUnidades((s) => s.upsert);
   const rows = useUnidades((s) => s.rows);
-  const [form, setForm] = useState<Unidade>(() => editing ?? { codigo: "", nome: "", sigla: "", usadaEstoque: true, status: "ativo" });
+  const [form, setForm] = useState<Unidade>(
+    () => editing ?? { codigo: "", nome: "", sigla: "", usadaEstoque: true, status: "ativo" },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
-    if (open) { setForm(editing ?? { codigo: "", nome: "", sigla: "", usadaEstoque: true, status: "ativo" }); setErrors({}); }
+    if (open) {
+      setForm(editing ?? { codigo: "", nome: "", sigla: "", usadaEstoque: true, status: "ativo" });
+      setErrors({});
+    }
   }, [open, editing]);
 
   function save() {
     const e: Record<string, string> = {};
     if (!form.codigo.trim()) e.codigo = "Código obrigatório";
-    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim())) e.codigo = "Código já existe";
+    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim()))
+      e.codigo = "Código já existe";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
     if (!form.sigla.trim()) e.sigla = "Sigla obrigatória";
     setErrors(e);
     if (Object.keys(e).length) return;
     upsert({ ...form, codigo: form.codigo.trim() });
-    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: editing ? "Unidade editada" : "Unidade criada", modulo: "Configurações › Unidades", registro: `${form.codigo} — ${form.nome}` });
+    registrarAuditoria({
+      usuario: USUARIO_ATUAL,
+      acao: editing ? "Unidade editada" : "Unidade criada",
+      modulo: "Configurações › Unidades",
+      registro: `${form.codigo} — ${form.nome}`,
+    });
     toast.success(editing ? "Unidade atualizada" : "Unidade cadastrada");
     onOpenChange(false);
   }
@@ -377,21 +582,54 @@ function UnidadeForm({ open, onOpenChange, editing }: { open: boolean; onOpenCha
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader><SheetTitle>{editing ? "Editar unidade" : "Nova unidade"}</SheetTitle></SheetHeader>
+        <SheetHeader>
+          <SheetTitle>{editing ? "Editar unidade" : "Nova unidade"}</SheetTitle>
+        </SheetHeader>
         <div className="grid gap-3 py-4">
-          <F label="Código" error={errors.codigo}><Input value={form.codigo} disabled={!!editing} onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })} /></F>
-          <F label="Nome da unidade" error={errors.nome}><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></F>
-          <F label="Sigla" error={errors.sigla}><Input value={form.sigla} onChange={(e) => setForm({ ...form, sigla: e.target.value })} /></F>
+          <F label="Código" error={errors.codigo}>
+            <Input
+              value={form.codigo}
+              disabled={!!editing}
+              onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
+            />
+          </F>
+          <F label="Nome da unidade" error={errors.nome}>
+            <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+          </F>
+          <F label="Sigla" error={errors.sigla}>
+            <Input
+              value={form.sigla}
+              onChange={(e) => setForm({ ...form, sigla: e.target.value })}
+            />
+          </F>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
-            <div><div className="text-sm font-medium">Usada em estoque</div></div>
-            <Switch checked={form.usadaEstoque} onCheckedChange={(v) => setForm({ ...form, usadaEstoque: v })} />
+            <div>
+              <div className="text-sm font-medium">Usada em estoque</div>
+            </div>
+            <Switch
+              checked={form.usadaEstoque}
+              onCheckedChange={(v) => setForm({ ...form, usadaEstoque: v })}
+            />
           </div>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
-            <div><div className="text-sm font-medium">Status</div><div className="text-xs text-muted-foreground">{form.status === "ativo" ? "Ativo" : "Inativo"}</div></div>
-            <Switch checked={form.status === "ativo"} onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })} />
+            <div>
+              <div className="text-sm font-medium">Status</div>
+              <div className="text-xs text-muted-foreground">
+                {form.status === "ativo" ? "Ativo" : "Inativo"}
+              </div>
+            </div>
+            <Switch
+              checked={form.status === "ativo"}
+              onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })}
+            />
           </div>
         </div>
-        <SheetFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={save}>Salvar</Button></SheetFooter>
+        <SheetFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={save}>Salvar</Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
@@ -408,70 +646,129 @@ function UnidadesTab() {
   const usedIn = (codigo: string) => itens.some((i) => i.unidade === codigo);
 
   return (
-    <Card><CardContent className="p-4">
-      <div className="mb-3 flex justify-end">
-        <Button className="gap-2" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Nova unidade</Button>
-      </div>
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead>Código</TableHead><TableHead>Nome da unidade</TableHead><TableHead>Sigla</TableHead>
-          <TableHead>Usada em estoque</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
-        </TableRow></TableHeader>
-        <TableBody>
-          {rows.map((r) => (
-            <TableRow key={r.codigo}>
-              <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
-              <TableCell className="font-medium">{r.nome}</TableCell>
-              <TableCell>{r.sigla}</TableCell>
-              <TableCell>{r.usadaEstoque ? "Sim" : "Não"}</TableCell>
-              <TableCell><StatusBadge status={r.status} /></TableCell>
-              <TableCell>
-                <RowActions
-                  status={r.status}
-                  hasVinculo={usedIn(r.codigo)}
-                  onEdit={() => { setEditing(r); setOpen(true); }}
-                  onToggleStatus={() => {
-                    const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                    setStatus(r.codigo, ns);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: ns === "ativo" ? "Unidade reativada" : "Unidade inativada", modulo: "Configurações › Unidades", registro: `${r.codigo} — ${r.nome}` });
-                    toast.success(ns === "ativo" ? "Unidade reativada" : "Unidade inativada");
-                  }}
-                  onDelete={() => {
-                    remove(r.codigo);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Unidade excluída", modulo: "Configurações › Unidades", registro: `${r.codigo} — ${r.nome}` });
-                    toast.success("Unidade excluída");
-                  }}
-                  onDeleteBlocked={() => {
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Unidades", registro: `${r.codigo} — ${r.nome}`, observacao: "Unidade está em uso por itens cadastrados" });
-                  }}
-                />
-              </TableCell>
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex justify-end">
+          <Button
+            className="gap-2"
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Nova unidade
+          </Button>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Nome da unidade</TableHead>
+              <TableHead>Sigla</TableHead>
+              <TableHead>Usada em estoque</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </CardContent><UnidadeForm open={open} onOpenChange={setOpen} editing={editing} /></Card>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={r.codigo}>
+                <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
+                <TableCell className="font-medium">{r.nome}</TableCell>
+                <TableCell>{r.sigla}</TableCell>
+                <TableCell>{r.usadaEstoque ? "Sim" : "Não"}</TableCell>
+                <TableCell>
+                  <StatusBadge status={r.status} />
+                </TableCell>
+                <TableCell>
+                  <RowActions
+                    status={r.status}
+                    hasVinculo={usedIn(r.codigo)}
+                    onEdit={() => {
+                      setEditing(r);
+                      setOpen(true);
+                    }}
+                    onToggleStatus={() => {
+                      const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
+                      setStatus(r.codigo, ns);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: ns === "ativo" ? "Unidade reativada" : "Unidade inativada",
+                        modulo: "Configurações › Unidades",
+                        registro: `${r.codigo} — ${r.nome}`,
+                      });
+                      toast.success(ns === "ativo" ? "Unidade reativada" : "Unidade inativada");
+                    }}
+                    onDelete={() => {
+                      remove(r.codigo);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Unidade excluída",
+                        modulo: "Configurações › Unidades",
+                        registro: `${r.codigo} — ${r.nome}`,
+                      });
+                      toast.success("Unidade excluída");
+                    }}
+                    onDeleteBlocked={() => {
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Tentativa de exclusão bloqueada",
+                        modulo: "Configurações › Unidades",
+                        registro: `${r.codigo} — ${r.nome}`,
+                        observacao: "Unidade está em uso por itens cadastrados",
+                      });
+                    }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <UnidadeForm open={open} onOpenChange={setOpen} editing={editing} />
+    </Card>
   );
 }
 
 /* ---------- CATEGORIAS ---------- */
 
-function CategoriaForm({ open, onOpenChange, editing }: { open: boolean; onOpenChange: (v: boolean) => void; editing: Categoria | null }) {
+function CategoriaForm({
+  open,
+  onOpenChange,
+  editing,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: Categoria | null;
+}) {
   const upsert = useCategorias((s) => s.upsert);
   const rows = useCategorias((s) => s.rows);
-  const [form, setForm] = useState<Categoria>(() => editing ?? { codigo: "", nome: "", descricao: "", status: "ativo" });
+  const [form, setForm] = useState<Categoria>(
+    () => editing ?? { codigo: "", nome: "", descricao: "", status: "ativo" },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
-  useEffect(() => { if (open) { setForm(editing ?? { codigo: "", nome: "", descricao: "", status: "ativo" }); setErrors({}); } }, [open, editing]);
+  useEffect(() => {
+    if (open) {
+      setForm(editing ?? { codigo: "", nome: "", descricao: "", status: "ativo" });
+      setErrors({});
+    }
+  }, [open, editing]);
 
   function save() {
     const e: Record<string, string> = {};
     if (!form.codigo.trim()) e.codigo = "Código obrigatório";
-    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim())) e.codigo = "Código já existe";
+    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim()))
+      e.codigo = "Código já existe";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
     setErrors(e);
     if (Object.keys(e).length) return;
     upsert({ ...form, codigo: form.codigo.trim() });
-    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: editing ? "Categoria editada" : "Categoria criada", modulo: "Configurações › Categorias", registro: `${form.codigo} — ${form.nome}` });
+    registrarAuditoria({
+      usuario: USUARIO_ATUAL,
+      acao: editing ? "Categoria editada" : "Categoria criada",
+      modulo: "Configurações › Categorias",
+      registro: `${form.codigo} — ${form.nome}`,
+    });
     toast.success(editing ? "Categoria atualizada" : "Categoria cadastrada");
     onOpenChange(false);
   }
@@ -479,17 +776,42 @@ function CategoriaForm({ open, onOpenChange, editing }: { open: boolean; onOpenC
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader><SheetTitle>{editing ? "Editar categoria" : "Nova categoria"}</SheetTitle></SheetHeader>
+        <SheetHeader>
+          <SheetTitle>{editing ? "Editar categoria" : "Nova categoria"}</SheetTitle>
+        </SheetHeader>
         <div className="grid gap-3 py-4">
-          <F label="Código" error={errors.codigo}><Input value={form.codigo} disabled={!!editing} onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })} /></F>
-          <F label="Nome da categoria" error={errors.nome}><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></F>
-          <F label="Descrição"><Textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} /></F>
+          <F label="Código" error={errors.codigo}>
+            <Input
+              value={form.codigo}
+              disabled={!!editing}
+              onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
+            />
+          </F>
+          <F label="Nome da categoria" error={errors.nome}>
+            <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+          </F>
+          <F label="Descrição">
+            <Textarea
+              value={form.descricao}
+              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            />
+          </F>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
-            <div><div className="text-sm font-medium">Status</div></div>
-            <Switch checked={form.status === "ativo"} onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })} />
+            <div>
+              <div className="text-sm font-medium">Status</div>
+            </div>
+            <Switch
+              checked={form.status === "ativo"}
+              onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })}
+            />
           </div>
         </div>
-        <SheetFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={save}>Salvar</Button></SheetFooter>
+        <SheetFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={save}>Salvar</Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
@@ -505,70 +827,150 @@ function CategoriasTab() {
   const usedIn = (codigo: string) => itens.some((i) => i.categoria === codigo);
 
   return (
-    <Card><CardContent className="p-4">
-      <div className="mb-3 flex justify-end">
-        <Button className="gap-2" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Nova categoria</Button>
-      </div>
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead>Código</TableHead><TableHead>Nome da categoria</TableHead><TableHead>Descrição</TableHead>
-          <TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
-        </TableRow></TableHeader>
-        <TableBody>
-          {rows.map((r) => (
-            <TableRow key={r.codigo}>
-              <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
-              <TableCell className="font-medium">{r.nome}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">{r.descricao}</TableCell>
-              <TableCell><StatusBadge status={r.status} /></TableCell>
-              <TableCell>
-                <RowActions
-                  status={r.status}
-                  hasVinculo={usedIn(r.codigo)}
-                  onEdit={() => { setEditing(r); setOpen(true); }}
-                  onToggleStatus={() => {
-                    const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                    setStatus(r.codigo, ns);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: ns === "ativo" ? "Categoria reativada" : "Categoria inativada", modulo: "Configurações › Categorias", registro: `${r.codigo} — ${r.nome}` });
-                  }}
-                  onDelete={() => {
-                    remove(r.codigo);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Categoria excluída", modulo: "Configurações › Categorias", registro: `${r.codigo} — ${r.nome}` });
-                  }}
-                  onDeleteBlocked={() => {
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Categorias", registro: `${r.codigo} — ${r.nome}`, observacao: "Categoria em uso por itens cadastrados" });
-                  }}
-                />
-              </TableCell>
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex justify-end">
+          <Button
+            className="gap-2"
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Nova categoria
+          </Button>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Nome da categoria</TableHead>
+              <TableHead>Descrição</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </CardContent><CategoriaForm open={open} onOpenChange={setOpen} editing={editing} /></Card>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={r.codigo}>
+                <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
+                <TableCell className="font-medium">{r.nome}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{r.descricao}</TableCell>
+                <TableCell>
+                  <StatusBadge status={r.status} />
+                </TableCell>
+                <TableCell>
+                  <RowActions
+                    status={r.status}
+                    hasVinculo={usedIn(r.codigo)}
+                    onEdit={() => {
+                      setEditing(r);
+                      setOpen(true);
+                    }}
+                    onToggleStatus={() => {
+                      const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
+                      setStatus(r.codigo, ns);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: ns === "ativo" ? "Categoria reativada" : "Categoria inativada",
+                        modulo: "Configurações › Categorias",
+                        registro: `${r.codigo} — ${r.nome}`,
+                      });
+                    }}
+                    onDelete={() => {
+                      remove(r.codigo);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Categoria excluída",
+                        modulo: "Configurações › Categorias",
+                        registro: `${r.codigo} — ${r.nome}`,
+                      });
+                    }}
+                    onDeleteBlocked={() => {
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Tentativa de exclusão bloqueada",
+                        modulo: "Configurações › Categorias",
+                        registro: `${r.codigo} — ${r.nome}`,
+                        observacao: "Categoria em uso por itens cadastrados",
+                      });
+                    }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <CategoriaForm open={open} onOpenChange={setOpen} editing={editing} />
+    </Card>
   );
 }
 
 /* ---------- BENEFÍCIOS ---------- */
 
-const TIPOS_BENEFICIO = ["Cadastro definitivo", "Cadastro em avaliação", "Benefício específico", "Ação social"];
+const TIPOS_BENEFICIO = [
+  "Cadastro definitivo",
+  "Cadastro em avaliação",
+  "Benefício específico",
+  "Ação social",
+];
 
-function BeneficioForm({ open, onOpenChange, editing }: { open: boolean; onOpenChange: (v: boolean) => void; editing: Beneficio | null }) {
+function BeneficioForm({
+  open,
+  onOpenChange,
+  editing,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: Beneficio | null;
+}) {
   const upsert = useBeneficios((s) => s.upsert);
   const rows = useBeneficios((s) => s.rows);
-  const [form, setForm] = useState<Beneficio>(() => editing ?? { codigo: "", nome: "", tipo: "", controlaEstoque: true, status: "ativo", observacao: "" });
+  const [form, setForm] = useState<Beneficio>(
+    () =>
+      editing ?? {
+        codigo: "",
+        nome: "",
+        tipo: "",
+        controlaEstoque: true,
+        status: "ativo",
+        observacao: "",
+      },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
-  useEffect(() => { if (open) { setForm(editing ?? { codigo: "", nome: "", tipo: "", controlaEstoque: true, status: "ativo", observacao: "" }); setErrors({}); } }, [open, editing]);
+  useEffect(() => {
+    if (open) {
+      setForm(
+        editing ?? {
+          codigo: "",
+          nome: "",
+          tipo: "",
+          controlaEstoque: true,
+          status: "ativo",
+          observacao: "",
+        },
+      );
+      setErrors({});
+    }
+  }, [open, editing]);
 
   function save() {
     const e: Record<string, string> = {};
     if (!form.codigo.trim()) e.codigo = "Código obrigatório";
-    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim())) e.codigo = "Código já existe";
+    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim()))
+      e.codigo = "Código já existe";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
     if (!form.tipo) e.tipo = "Tipo obrigatório";
     setErrors(e);
     if (Object.keys(e).length) return;
     upsert({ ...form, codigo: form.codigo.trim() });
-    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: editing ? "Benefício editado" : "Benefício criado", modulo: "Configurações › Benefícios", registro: `${form.codigo} — ${form.nome}` });
+    registrarAuditoria({
+      usuario: USUARIO_ATUAL,
+      acao: editing ? "Benefício editado" : "Benefício criado",
+      modulo: "Configurações › Benefícios",
+      registro: `${form.codigo} — ${form.nome}`,
+    });
     toast.success(editing ? "Benefício atualizado" : "Benefício cadastrado");
     onOpenChange(false);
   }
@@ -576,27 +978,65 @@ function BeneficioForm({ open, onOpenChange, editing }: { open: boolean; onOpenC
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader><SheetTitle>{editing ? "Editar benefício" : "Novo benefício"}</SheetTitle></SheetHeader>
+        <SheetHeader>
+          <SheetTitle>{editing ? "Editar benefício" : "Novo benefício"}</SheetTitle>
+        </SheetHeader>
         <div className="grid gap-3 py-4">
-          <F label="Código" error={errors.codigo}><Input value={form.codigo} disabled={!!editing} onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })} /></F>
-          <F label="Nome do benefício" error={errors.nome}><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></F>
+          <F label="Código" error={errors.codigo}>
+            <Input
+              value={form.codigo}
+              disabled={!!editing}
+              onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
+            />
+          </F>
+          <F label="Nome do benefício" error={errors.nome}>
+            <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+          </F>
           <F label="Tipo do benefício" error={errors.tipo}>
             <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>{TIPOS_BENEFICIO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIPOS_BENEFICIO.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </F>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
-            <div><div className="text-sm font-medium">Controla estoque</div></div>
-            <Switch checked={form.controlaEstoque} onCheckedChange={(v) => setForm({ ...form, controlaEstoque: v })} />
+            <div>
+              <div className="text-sm font-medium">Controla estoque</div>
+            </div>
+            <Switch
+              checked={form.controlaEstoque}
+              onCheckedChange={(v) => setForm({ ...form, controlaEstoque: v })}
+            />
           </div>
-          <F label="Observação"><Textarea value={form.observacao ?? ""} onChange={(e) => setForm({ ...form, observacao: e.target.value })} /></F>
+          <F label="Observação">
+            <Textarea
+              value={form.observacao ?? ""}
+              onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+            />
+          </F>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
-            <div><div className="text-sm font-medium">Status</div></div>
-            <Switch checked={form.status === "ativo"} onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })} />
+            <div>
+              <div className="text-sm font-medium">Status</div>
+            </div>
+            <Switch
+              checked={form.status === "ativo"}
+              onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })}
+            />
           </div>
         </div>
-        <SheetFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={save}>Salvar</Button></SheetFooter>
+        <SheetFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={save}>Salvar</Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
@@ -610,63 +1050,132 @@ function BeneficiosTab() {
   const [editing, setEditing] = useState<Beneficio | null>(null);
 
   return (
-    <Card><CardContent className="p-4">
-      <div className="mb-3 flex justify-end">
-        <Button className="gap-2" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Novo benefício</Button>
-      </div>
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead>Código</TableHead><TableHead>Nome do benefício</TableHead><TableHead>Tipo</TableHead>
-          <TableHead>Controla estoque</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
-        </TableRow></TableHeader>
-        <TableBody>
-          {rows.map((r) => (
-            <TableRow key={r.codigo}>
-              <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
-              <TableCell className="font-medium">{r.nome}</TableCell>
-              <TableCell>{r.tipo}</TableCell>
-              <TableCell>{r.controlaEstoque ? "Sim" : "Não"}</TableCell>
-              <TableCell><StatusBadge status={r.status} /></TableCell>
-              <TableCell>
-                <RowActions
-                  status={r.status}
-                  hasVinculo={false}
-                  onEdit={() => { setEditing(r); setOpen(true); }}
-                  onToggleStatus={() => {
-                    const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                    setStatus(r.codigo, ns);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: ns === "ativo" ? "Benefício reativado" : "Benefício inativado", modulo: "Configurações › Benefícios", registro: `${r.codigo} — ${r.nome}` });
-                  }}
-                  onDelete={() => {
-                    remove(r.codigo);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Benefício excluído", modulo: "Configurações › Benefícios", registro: `${r.codigo} — ${r.nome}` });
-                  }}
-                  onDeleteBlocked={() => {
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Benefícios", registro: `${r.codigo} — ${r.nome}`, observacao: "Benefício possui vínculo com entregas ou estoque" });
-                  }}
-                />
-              </TableCell>
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex justify-end">
+          <Button
+            className="gap-2"
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Novo benefício
+          </Button>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Nome do benefício</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Controla estoque</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </CardContent><BeneficioForm open={open} onOpenChange={setOpen} editing={editing} /></Card>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={r.codigo}>
+                <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
+                <TableCell className="font-medium">{r.nome}</TableCell>
+                <TableCell>{r.tipo}</TableCell>
+                <TableCell>{r.controlaEstoque ? "Sim" : "Não"}</TableCell>
+                <TableCell>
+                  <StatusBadge status={r.status} />
+                </TableCell>
+                <TableCell>
+                  <RowActions
+                    status={r.status}
+                    hasVinculo={false}
+                    onEdit={() => {
+                      setEditing(r);
+                      setOpen(true);
+                    }}
+                    onToggleStatus={() => {
+                      const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
+                      setStatus(r.codigo, ns);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: ns === "ativo" ? "Benefício reativado" : "Benefício inativado",
+                        modulo: "Configurações › Benefícios",
+                        registro: `${r.codigo} — ${r.nome}`,
+                      });
+                    }}
+                    onDelete={() => {
+                      remove(r.codigo);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Benefício excluído",
+                        modulo: "Configurações › Benefícios",
+                        registro: `${r.codigo} — ${r.nome}`,
+                      });
+                    }}
+                    onDeleteBlocked={() => {
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Tentativa de exclusão bloqueada",
+                        modulo: "Configurações › Benefícios",
+                        registro: `${r.codigo} — ${r.nome}`,
+                        observacao: "Benefício possui vínculo com entregas ou estoque",
+                      });
+                    }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <BeneficioForm open={open} onOpenChange={setOpen} editing={editing} />
+    </Card>
   );
 }
 
 /* ---------- DOADORES ---------- */
 
-function DoadorForm({ open, onOpenChange, editing }: { open: boolean; onOpenChange: (v: boolean) => void; editing: Doador | null }) {
+function DoadorForm({
+  open,
+  onOpenChange,
+  editing,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: Doador | null;
+}) {
   const upsert = useDoadores((s) => s.upsert);
   const rows = useDoadores((s) => s.rows);
   const nextCode = () => `DOA${String(rows.length + 1).padStart(3, "0")}`;
-  const [form, setForm] = useState<Doador>(() => editing ?? {
-    codigo: nextCode(), nome: "", tipo: "Empresa", documento: "", telefone: "", email: "", endereco: "", status: "ativo", observacao: "",
-  });
+  const [form, setForm] = useState<Doador>(
+    () =>
+      editing ?? {
+        codigo: nextCode(),
+        nome: "",
+        tipo: "Empresa",
+        documento: "",
+        telefone: "",
+        email: "",
+        endereco: "",
+        status: "ativo",
+        observacao: "",
+      },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (open) {
-      setForm(editing ?? { codigo: nextCode(), nome: "", tipo: "Empresa", documento: "", telefone: "", email: "", endereco: "", status: "ativo", observacao: "" });
+      setForm(
+        editing ?? {
+          codigo: nextCode(),
+          nome: "",
+          tipo: "Empresa",
+          documento: "",
+          telefone: "",
+          email: "",
+          endereco: "",
+          status: "ativo",
+          observacao: "",
+        },
+      );
       setErrors({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -675,12 +1184,20 @@ function DoadorForm({ open, onOpenChange, editing }: { open: boolean; onOpenChan
   function save() {
     const e: Record<string, string> = {};
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
-    const de = form.documento && form.documento !== "Não informado" ? validateDoc(form.documento) : undefined;
+    const de =
+      form.documento && form.documento !== "Não informado"
+        ? validateDoc(form.documento)
+        : undefined;
     if (de) e.documento = de;
     setErrors(e);
     if (Object.keys(e).length) return;
     upsert(form);
-    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: editing ? "Doador editado" : "Doador criado", modulo: "Configurações › Doadores", registro: form.nome });
+    registrarAuditoria({
+      usuario: USUARIO_ATUAL,
+      acao: editing ? "Doador editado" : "Doador criado",
+      modulo: "Configurações › Doadores",
+      registro: form.nome,
+    });
     toast.success(editing ? "Doador atualizado" : "Doador cadastrado");
     onOpenChange(false);
   }
@@ -688,12 +1205,21 @@ function DoadorForm({ open, onOpenChange, editing }: { open: boolean; onOpenChan
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader><SheetTitle>{editing ? "Editar doador" : "Novo doador"}</SheetTitle></SheetHeader>
+        <SheetHeader>
+          <SheetTitle>{editing ? "Editar doador" : "Novo doador"}</SheetTitle>
+        </SheetHeader>
         <div className="grid gap-3 py-4">
-          <F label="Nome" error={errors.nome}><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></F>
+          <F label="Nome" error={errors.nome}>
+            <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+          </F>
           <F label="Tipo">
-            <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as Doador["tipo"] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.tipo}
+              onValueChange={(v) => setForm({ ...form, tipo: v as Doador["tipo"] })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Pessoa física">Pessoa física</SelectItem>
                 <SelectItem value="Empresa">Empresa</SelectItem>
@@ -701,17 +1227,53 @@ function DoadorForm({ open, onOpenChange, editing }: { open: boolean; onOpenChan
               </SelectContent>
             </Select>
           </F>
-          <F label="Documento (CPF ou CNPJ)" error={errors.documento}><Input value={form.documento ?? ""} onChange={(e) => setForm({ ...form, documento: e.target.value })} /></F>
-          <F label="Telefone"><Input value={form.telefone ?? ""} onChange={(e) => setForm({ ...form, telefone: e.target.value })} /></F>
-          <F label="E-mail"><Input type="email" value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></F>
-          <F label="Endereço"><Input value={form.endereco ?? ""} onChange={(e) => setForm({ ...form, endereco: e.target.value })} /></F>
-          <F label="Observação"><Textarea value={form.observacao ?? ""} onChange={(e) => setForm({ ...form, observacao: e.target.value })} /></F>
+          <F label="Documento (CPF ou CNPJ)" error={errors.documento}>
+            <Input
+              value={form.documento ?? ""}
+              onChange={(e) => setForm({ ...form, documento: e.target.value })}
+            />
+          </F>
+          <F label="Telefone">
+            <Input
+              value={form.telefone ?? ""}
+              onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+            />
+          </F>
+          <F label="E-mail">
+            <Input
+              type="email"
+              value={form.email ?? ""}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </F>
+          <F label="Endereço">
+            <Input
+              value={form.endereco ?? ""}
+              onChange={(e) => setForm({ ...form, endereco: e.target.value })}
+            />
+          </F>
+          <F label="Observação">
+            <Textarea
+              value={form.observacao ?? ""}
+              onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+            />
+          </F>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
-            <div><div className="text-sm font-medium">Status</div></div>
-            <Switch checked={form.status === "ativo"} onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })} />
+            <div>
+              <div className="text-sm font-medium">Status</div>
+            </div>
+            <Switch
+              checked={form.status === "ativo"}
+              onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })}
+            />
           </div>
         </div>
-        <SheetFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={save}>Salvar</Button></SheetFooter>
+        <SheetFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={save}>Salvar</Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
@@ -727,68 +1289,138 @@ function DoadoresTab() {
   const filtered = rows.filter((r) => !busca || r.nome.toLowerCase().includes(busca.toLowerCase()));
 
   return (
-    <Card><CardContent className="p-4">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div><Label className="text-xs text-muted-foreground">Buscar doador</Label>
-          <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar" />
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <Label className="text-xs text-muted-foreground">Buscar doador</Label>
+            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar" />
+          </div>
+          <Button
+            className="gap-2"
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Novo doador
+          </Button>
         </div>
-        <Button className="gap-2" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Novo doador</Button>
-      </div>
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Documento</TableHead>
-          <TableHead>Telefone</TableHead><TableHead>Última doação</TableHead>
-          <TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
-        </TableRow></TableHeader>
-        <TableBody>
-          {filtered.map((r) => (
-            <TableRow key={r.codigo}>
-              <TableCell className="font-medium">{r.nome}</TableCell>
-              <TableCell>{r.tipo}</TableCell>
-              <TableCell className="font-mono text-xs">{r.documento || "—"}</TableCell>
-              <TableCell>{r.telefone || "—"}</TableCell>
-              <TableCell>{r.ultimaDoacao ? new Date(r.ultimaDoacao).toLocaleDateString("pt-BR") : "—"}</TableCell>
-              <TableCell><StatusBadge status={r.status} /></TableCell>
-              <TableCell>
-                <RowActions
-                  status={r.status}
-                  hasVinculo={!!r.ultimaDoacao}
-                  onEdit={() => { setEditing(r); setOpen(true); }}
-                  onToggleStatus={() => {
-                    const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                    setStatus(r.codigo, ns);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: ns === "ativo" ? "Doador reativado" : "Doador inativado", modulo: "Configurações › Doadores", registro: r.nome });
-                  }}
-                  onDelete={() => {
-                    remove(r.codigo);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Doador excluído", modulo: "Configurações › Doadores", registro: r.nome });
-                  }}
-                  onDeleteBlocked={() => {
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Doadores", registro: r.nome, observacao: "Doador possui doações registradas" });
-                  }}
-                />
-              </TableCell>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Documento</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Última doação</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </CardContent><DoadorForm open={open} onOpenChange={setOpen} editing={editing} /></Card>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((r) => (
+              <TableRow key={r.codigo}>
+                <TableCell className="font-medium">{r.nome}</TableCell>
+                <TableCell>{r.tipo}</TableCell>
+                <TableCell className="font-mono text-xs">{r.documento || "—"}</TableCell>
+                <TableCell>{r.telefone || "—"}</TableCell>
+                <TableCell>
+                  {r.ultimaDoacao ? new Date(r.ultimaDoacao).toLocaleDateString("pt-BR") : "—"}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={r.status} />
+                </TableCell>
+                <TableCell>
+                  <RowActions
+                    status={r.status}
+                    hasVinculo={!!r.ultimaDoacao}
+                    onEdit={() => {
+                      setEditing(r);
+                      setOpen(true);
+                    }}
+                    onToggleStatus={() => {
+                      const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
+                      setStatus(r.codigo, ns);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: ns === "ativo" ? "Doador reativado" : "Doador inativado",
+                        modulo: "Configurações › Doadores",
+                        registro: r.nome,
+                      });
+                    }}
+                    onDelete={() => {
+                      remove(r.codigo);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Doador excluído",
+                        modulo: "Configurações › Doadores",
+                        registro: r.nome,
+                      });
+                    }}
+                    onDeleteBlocked={() => {
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Tentativa de exclusão bloqueada",
+                        modulo: "Configurações › Doadores",
+                        registro: r.nome,
+                        observacao: "Doador possui doações registradas",
+                      });
+                    }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <DoadorForm open={open} onOpenChange={setOpen} editing={editing} />
+    </Card>
   );
 }
 
 /* ---------- FORNECEDORES ---------- */
 
-function FornecedorForm({ open, onOpenChange, editing }: { open: boolean; onOpenChange: (v: boolean) => void; editing: Fornecedor | null }) {
+function FornecedorForm({
+  open,
+  onOpenChange,
+  editing,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: Fornecedor | null;
+}) {
   const upsert = useFornecedores((s) => s.upsert);
   const rows = useFornecedores((s) => s.rows);
   const nextCode = () => `FOR${String(rows.length + 1).padStart(3, "0")}`;
-  const [form, setForm] = useState<Fornecedor>(() => editing ?? {
-    codigo: nextCode(), nome: "", documento: "", telefone: "", email: "", categoria: "Alimentos", status: "ativo", observacao: "",
-  });
+  const [form, setForm] = useState<Fornecedor>(
+    () =>
+      editing ?? {
+        codigo: nextCode(),
+        nome: "",
+        documento: "",
+        telefone: "",
+        email: "",
+        categoria: "Alimentos",
+        status: "ativo",
+        observacao: "",
+      },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (open) {
-      setForm(editing ?? { codigo: nextCode(), nome: "", documento: "", telefone: "", email: "", categoria: "Alimentos", status: "ativo", observacao: "" });
+      setForm(
+        editing ?? {
+          codigo: nextCode(),
+          nome: "",
+          documento: "",
+          telefone: "",
+          email: "",
+          categoria: "Alimentos",
+          status: "ativo",
+          observacao: "",
+        },
+      );
       setErrors({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -803,7 +1435,12 @@ function FornecedorForm({ open, onOpenChange, editing }: { open: boolean; onOpen
     setErrors(e);
     if (Object.keys(e).length) return;
     upsert(form);
-    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: editing ? "Fornecedor editado" : "Fornecedor criado", modulo: "Configurações › Fornecedores", registro: form.nome });
+    registrarAuditoria({
+      usuario: USUARIO_ATUAL,
+      acao: editing ? "Fornecedor editado" : "Fornecedor criado",
+      modulo: "Configurações › Fornecedores",
+      registro: form.nome,
+    });
     toast.success(editing ? "Fornecedor atualizado" : "Fornecedor cadastrado");
     onOpenChange(false);
   }
@@ -811,20 +1448,60 @@ function FornecedorForm({ open, onOpenChange, editing }: { open: boolean; onOpen
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader><SheetTitle>{editing ? "Editar fornecedor" : "Novo fornecedor"}</SheetTitle></SheetHeader>
+        <SheetHeader>
+          <SheetTitle>{editing ? "Editar fornecedor" : "Novo fornecedor"}</SheetTitle>
+        </SheetHeader>
         <div className="grid gap-3 py-4">
-          <F label="Nome" error={errors.nome}><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></F>
-          <F label="CNPJ / Documento" error={errors.documento}><Input value={form.documento ?? ""} onChange={(e) => setForm({ ...form, documento: e.target.value })} /></F>
-          <F label="Telefone"><Input value={form.telefone ?? ""} onChange={(e) => setForm({ ...form, telefone: e.target.value })} /></F>
-          <F label="E-mail"><Input type="email" value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></F>
-          <F label="Categoria" error={errors.categoria}><Input value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} /></F>
-          <F label="Observação"><Textarea value={form.observacao ?? ""} onChange={(e) => setForm({ ...form, observacao: e.target.value })} /></F>
+          <F label="Nome" error={errors.nome}>
+            <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+          </F>
+          <F label="CNPJ / Documento" error={errors.documento}>
+            <Input
+              value={form.documento ?? ""}
+              onChange={(e) => setForm({ ...form, documento: e.target.value })}
+            />
+          </F>
+          <F label="Telefone">
+            <Input
+              value={form.telefone ?? ""}
+              onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+            />
+          </F>
+          <F label="E-mail">
+            <Input
+              type="email"
+              value={form.email ?? ""}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </F>
+          <F label="Categoria" error={errors.categoria}>
+            <Input
+              value={form.categoria}
+              onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+            />
+          </F>
+          <F label="Observação">
+            <Textarea
+              value={form.observacao ?? ""}
+              onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+            />
+          </F>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
-            <div><div className="text-sm font-medium">Status</div></div>
-            <Switch checked={form.status === "ativo"} onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })} />
+            <div>
+              <div className="text-sm font-medium">Status</div>
+            </div>
+            <Switch
+              checked={form.status === "ativo"}
+              onCheckedChange={(v) => setForm({ ...form, status: v ? "ativo" : "inativo" })}
+            />
           </div>
         </div>
-        <SheetFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={save}>Salvar</Button></SheetFooter>
+        <SheetFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={save}>Salvar</Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
@@ -840,50 +1517,89 @@ function FornecedoresTab() {
   const filtered = rows.filter((r) => !busca || r.nome.toLowerCase().includes(busca.toLowerCase()));
 
   return (
-    <Card><CardContent className="p-4">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div><Label className="text-xs text-muted-foreground">Buscar fornecedor</Label>
-          <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar" />
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <Label className="text-xs text-muted-foreground">Buscar fornecedor</Label>
+            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar" />
+          </div>
+          <Button
+            className="gap-2"
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Novo fornecedor
+          </Button>
         </div>
-        <Button className="gap-2" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Novo fornecedor</Button>
-      </div>
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead>Nome</TableHead><TableHead>CNPJ/Documento</TableHead><TableHead>Telefone</TableHead>
-          <TableHead>Categoria</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
-        </TableRow></TableHeader>
-        <TableBody>
-          {filtered.map((r) => (
-            <TableRow key={r.codigo}>
-              <TableCell className="font-medium">{r.nome}</TableCell>
-              <TableCell className="font-mono text-xs">{r.documento || "—"}</TableCell>
-              <TableCell>{r.telefone || "—"}</TableCell>
-              <TableCell>{r.categoria}</TableCell>
-              <TableCell><StatusBadge status={r.status} /></TableCell>
-              <TableCell>
-                <RowActions
-                  status={r.status}
-                  hasVinculo={false}
-                  onEdit={() => { setEditing(r); setOpen(true); }}
-                  onToggleStatus={() => {
-                    const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                    setStatus(r.codigo, ns);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: ns === "ativo" ? "Fornecedor reativado" : "Fornecedor inativado", modulo: "Configurações › Fornecedores", registro: r.nome });
-                  }}
-                  onDelete={() => {
-                    remove(r.codigo);
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Fornecedor excluído", modulo: "Configurações › Fornecedores", registro: r.nome });
-                  }}
-                  onDeleteBlocked={() => {
-                    registrarAuditoria({ usuario: USUARIO_ATUAL, acao: "Tentativa de exclusão bloqueada", modulo: "Configurações › Fornecedores", registro: r.nome, observacao: "Fornecedor possui recebimentos registrados" });
-                  }}
-                />
-              </TableCell>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>CNPJ/Documento</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </CardContent><FornecedorForm open={open} onOpenChange={setOpen} editing={editing} /></Card>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((r) => (
+              <TableRow key={r.codigo}>
+                <TableCell className="font-medium">{r.nome}</TableCell>
+                <TableCell className="font-mono text-xs">{r.documento || "—"}</TableCell>
+                <TableCell>{r.telefone || "—"}</TableCell>
+                <TableCell>{r.categoria}</TableCell>
+                <TableCell>
+                  <StatusBadge status={r.status} />
+                </TableCell>
+                <TableCell>
+                  <RowActions
+                    status={r.status}
+                    hasVinculo={false}
+                    onEdit={() => {
+                      setEditing(r);
+                      setOpen(true);
+                    }}
+                    onToggleStatus={() => {
+                      const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
+                      setStatus(r.codigo, ns);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: ns === "ativo" ? "Fornecedor reativado" : "Fornecedor inativado",
+                        modulo: "Configurações › Fornecedores",
+                        registro: r.nome,
+                      });
+                    }}
+                    onDelete={() => {
+                      remove(r.codigo);
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Fornecedor excluído",
+                        modulo: "Configurações › Fornecedores",
+                        registro: r.nome,
+                      });
+                    }}
+                    onDeleteBlocked={() => {
+                      registrarAuditoria({
+                        usuario: USUARIO_ATUAL,
+                        acao: "Tentativa de exclusão bloqueada",
+                        modulo: "Configurações › Fornecedores",
+                        registro: r.nome,
+                        observacao: "Fornecedor possui recebimentos registrados",
+                      });
+                    }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <FornecedorForm open={open} onOpenChange={setOpen} editing={editing} />
+    </Card>
   );
 }
 
@@ -917,7 +1633,9 @@ function ParametrosTab() {
       <CardContent className="p-4">
         <div className="mb-4">
           <h3 className="text-sm font-semibold">Regras e parâmetros do sistema</h3>
-          <p className="text-xs text-muted-foreground">Valores usados pelas regras de atendimento, estoque e auditoria.</p>
+          <p className="text-xs text-muted-foreground">
+            Valores usados pelas regras de atendimento, estoque e auditoria.
+          </p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <ParamNum
@@ -941,25 +1659,56 @@ function ParametrosTab() {
             onChange={(v) => setForm({ ...form, inatividadeContatoDias: v })}
             descricao="A partir desse prazo, sinalizar contato necessário. Não bloquear automaticamente e não tornar inativo automaticamente."
           />
-          <ParamNum label="Limite de Cesta Extra (retiradas)" value={form.limiteExtra} onChange={(v) => setForm({ ...form, limiteExtra: v })} />
-          <ParamText label="Após limite de retiradas extras" value={form.aposLimiteExtra} onChange={(v) => setForm({ ...form, aposLimiteExtra: v })} />
+          <ParamNum
+            label="Limite de Cesta Extra (retiradas)"
+            value={form.limiteExtra}
+            onChange={(v) => setForm({ ...form, limiteExtra: v })}
+          />
+          <ParamText
+            label="Após limite de retiradas extras"
+            value={form.aposLimiteExtra}
+            onChange={(v) => setForm({ ...form, aposLimiteExtra: v })}
+          />
           <div className="flex items-center justify-between rounded-md border border-border bg-card p-3">
             <div className="pr-3">
               <div className="text-sm font-medium">Liberação excepcional</div>
               <div className="text-xs text-muted-foreground">Quem pode liberar fora das regras</div>
             </div>
-            <Select value={form.liberacaoExcepcional} onValueChange={(v) => setForm({ ...form, liberacaoExcepcional: v as Parametros["liberacaoExcepcional"] })}>
-              <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <Select
+              value={form.liberacaoExcepcional}
+              onValueChange={(v) =>
+                setForm({ ...form, liberacaoExcepcional: v as Parametros["liberacaoExcepcional"] })
+              }
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Apenas Administrador</SelectItem>
                 <SelectItem value="admin_atendente">Administrador e Atendente</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <ParamSwitch label="Bloqueio por falta de estoque" value={form.bloqueioSemEstoque} onChange={(v) => setForm({ ...form, bloqueioSemEstoque: v })} />
-          <ParamSwitch label="Observação obrigatória na liberação excepcional" value={form.observacaoObrigatoriaLiberacao} onChange={(v) => setForm({ ...form, observacaoObrigatoriaLiberacao: v })} />
-          <ParamSwitch label="Registrar auditoria de alterações" value={form.auditoriaAtiva} onChange={(v) => setForm({ ...form, auditoriaAtiva: v })} />
-          <ParamSwitch label="Baixa automática no estoque após entrega" value={form.baixaAutomatica} onChange={(v) => setForm({ ...form, baixaAutomatica: v })} />
+          <ParamSwitch
+            label="Bloqueio por falta de estoque"
+            value={form.bloqueioSemEstoque}
+            onChange={(v) => setForm({ ...form, bloqueioSemEstoque: v })}
+          />
+          <ParamSwitch
+            label="Observação obrigatória na liberação excepcional"
+            value={form.observacaoObrigatoriaLiberacao}
+            onChange={(v) => setForm({ ...form, observacaoObrigatoriaLiberacao: v })}
+          />
+          <ParamSwitch
+            label="Registrar auditoria de alterações"
+            value={form.auditoriaAtiva}
+            onChange={(v) => setForm({ ...form, auditoriaAtiva: v })}
+          />
+          <ParamSwitch
+            label="Baixa automática no estoque após entrega"
+            value={form.baixaAutomatica}
+            onChange={(v) => setForm({ ...form, baixaAutomatica: v })}
+          />
         </div>
         <div className="mt-4 flex justify-end">
           <Button onClick={salvar}>Salvar parâmetros</Button>
@@ -987,7 +1736,13 @@ function ParamNum({
       <div className="flex items-center justify-between gap-3">
         <div className="pr-3 text-sm font-medium">{label}</div>
         <div className="flex items-center gap-2">
-          <Input type="number" min={0} className="w-24" value={value} onChange={(e) => onChange(Number(e.target.value))} />
+          <Input
+            type="number"
+            min={0}
+            className="w-24"
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+          />
           {unidade && <span className="text-xs text-muted-foreground">{unidade}</span>}
         </div>
       </div>
@@ -995,7 +1750,15 @@ function ParamNum({
     </div>
   );
 }
-function ParamText({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ParamText({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="flex items-center justify-between rounded-md border border-border bg-card p-3">
       <div className="pr-3 text-sm font-medium">{label}</div>
@@ -1003,7 +1766,15 @@ function ParamText({ label, value, onChange }: { label: string; value: string; o
     </div>
   );
 }
-function ParamSwitch({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+function ParamSwitch({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <div className="flex items-center justify-between rounded-md border border-border bg-card p-3">
       <div className="pr-3">
@@ -1024,8 +1795,14 @@ function ConfigPage() {
       <Tabs defaultValue="itens">
         <TabsList className="h-auto flex-wrap gap-2 bg-transparent p-0">
           {tabs.map((t) => (
-            <TabsTrigger key={t.value} value={t.value} className="flex-col items-start gap-0.5 border border-border bg-card p-3 data-[state=active]:border-primary data-[state=active]:bg-primary/5">
-              <div className="flex items-center gap-2 text-sm font-medium"><t.icon className="h-4 w-4" /> {t.label}</div>
+            <TabsTrigger
+              key={t.value}
+              value={t.value}
+              className="flex-col items-start gap-0.5 border border-border bg-card p-3 data-[state=active]:border-primary data-[state=active]:bg-primary/5"
+            >
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <t.icon className="h-4 w-4" /> {t.label}
+              </div>
               <span className="text-[10px] text-muted-foreground">{t.desc}</span>
             </TabsTrigger>
           ))}
@@ -1033,13 +1810,27 @@ function ConfigPage() {
 
         {mounted ? (
           <>
-            <TabsContent value="itens" className="mt-4"><ItensTab /></TabsContent>
-            <TabsContent value="unidades" className="mt-4"><UnidadesTab /></TabsContent>
-            <TabsContent value="categorias" className="mt-4"><CategoriasTab /></TabsContent>
-            <TabsContent value="beneficios" className="mt-4"><BeneficiosTab /></TabsContent>
-            <TabsContent value="doadores" className="mt-4"><DoadoresTab /></TabsContent>
-            <TabsContent value="fornecedores" className="mt-4"><FornecedoresTab /></TabsContent>
-            <TabsContent value="parametros" className="mt-4"><ParametrosTab /></TabsContent>
+            <TabsContent value="itens" className="mt-4">
+              <ItensTab />
+            </TabsContent>
+            <TabsContent value="unidades" className="mt-4">
+              <UnidadesTab />
+            </TabsContent>
+            <TabsContent value="categorias" className="mt-4">
+              <CategoriasTab />
+            </TabsContent>
+            <TabsContent value="beneficios" className="mt-4">
+              <BeneficiosTab />
+            </TabsContent>
+            <TabsContent value="doadores" className="mt-4">
+              <DoadoresTab />
+            </TabsContent>
+            <TabsContent value="fornecedores" className="mt-4">
+              <FornecedoresTab />
+            </TabsContent>
+            <TabsContent value="parametros" className="mt-4">
+              <ParametrosTab />
+            </TabsContent>
           </>
         ) : (
           <div className="mt-4 h-64 animate-pulse rounded-md bg-muted/30" />

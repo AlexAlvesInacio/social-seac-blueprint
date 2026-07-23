@@ -84,11 +84,11 @@
   --border: oklch(0.92 0.01 180);
   --input: oklch(0.92 0.01 180);
   --ring: oklch(0.58 0.14 165);
-  --chart-1: #1E5AA8;
-  --chart-2: #E8712A;
-  --chart-3: #4C8FD1;
-  --chart-4: #F4A96B;
-  --chart-5: #0F3D7A;
+  --chart-1: #1e5aa8;
+  --chart-2: #e8712a;
+  --chart-3: #4c8fd1;
+  --chart-4: #f4a96b;
+  --chart-5: #0f3d7a;
   --sidebar: oklch(0.995 0 0);
   --sidebar-foreground: oklch(0.3 0.03 180);
   --sidebar-primary: oklch(0.58 0.14 165);

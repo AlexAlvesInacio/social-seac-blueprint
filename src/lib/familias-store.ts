@@ -34,11 +34,16 @@ export function calcularFaixaEtaria(nascimento?: string): FaixaEtaria | null {
 
 export function rotuloFaixaEtaria(faixa: FaixaEtaria | null): string {
   switch (faixa) {
-    case "crianca": return "Criança";
-    case "adolescente": return "Adolescente";
-    case "adulto": return "Adulto";
-    case "idoso": return "Idoso";
-    default: return "—";
+    case "crianca":
+      return "Criança";
+    case "adolescente":
+      return "Adolescente";
+    case "adulto":
+      return "Adulto";
+    case "idoso":
+      return "Idoso";
+    default:
+      return "—";
   }
 }
 
@@ -115,12 +120,90 @@ export type Familia = {
 };
 
 const SEED: Familia[] = [
-  { id: 15, nome: "Família da Silva", responsavel: "João da Silva", documento: "987.654.321-00", telefone: "(11) 97654-3210", bairro: "São João", tipoCadastro: "definitivo", progressoExtra: null, ultimaRetirada: "16/05/2025", proximaData: "10/06/2025 (Faltam 18 dias)", acompanhamento: "em_dia", status: "liberado" },
-  { id: 23, nome: "Família Santos", responsavel: "Maria Santos", documento: "321.654.987-00", telefone: "(11) 91234-5678", bairro: "Vila Nova", tipoCadastro: "extra", progressoExtra: "2/3", ultimaRetirada: "20/05/2025", proximaData: "13/06/2025 (Faltam 21 dias)", acompanhamento: "em_dia", status: "liberado" },
-  { id: 31, nome: "Família Oliveira", responsavel: "Carlos Oliveira", documento: "123.987.654-00", telefone: "(11) 99876-5432", bairro: "Jardim Esperança", tipoCadastro: "extra", progressoExtra: "3/3", ultimaRetirada: "18/05/2025", proximaData: "11/06/2025 (Faltam 19 dias)", acompanhamento: "em_dia", status: "avaliar" },
-  { id: 42, nome: "Família Souza", responsavel: "Ana Souza", documento: "456.123.789-00", telefone: "(11) 95555-1212", bairro: "Cidade Alta", tipoCadastro: "definitivo", progressoExtra: null, ultimaRetirada: "05/05/2025", proximaData: "30/05/2025 (Atrasado)", acompanhamento: "atencao_60", status: "bloqueado" },
-  { id: 57, nome: "Família Lima", responsavel: "Pedro Lima", documento: "789.321.456-00", telefone: "(11) 93333-4444", bairro: "São José", tipoCadastro: "extra", progressoExtra: "1/3", ultimaRetirada: "10/02/2025", proximaData: "04/06/2025 (Faltam 12 dias)", acompanhamento: "sem_retirada_90", status: "liberado" },
-  { id: 68, nome: "Família Martins", responsavel: "Luciana Martins", documento: "654.987.321-00", telefone: "(11) 94444-5555", bairro: "Vila Esperança", tipoCadastro: "extra", progressoExtra: "novo", ultimaRetirada: "—", proximaData: "—", acompanhamento: "inativo", status: "inativo" },
+  {
+    id: 15,
+    nome: "Família da Silva",
+    responsavel: "João da Silva",
+    documento: "987.654.321-00",
+    telefone: "(11) 97654-3210",
+    bairro: "São João",
+    tipoCadastro: "definitivo",
+    progressoExtra: null,
+    ultimaRetirada: "16/05/2025",
+    proximaData: "10/06/2025 (Faltam 18 dias)",
+    acompanhamento: "em_dia",
+    status: "liberado",
+  },
+  {
+    id: 23,
+    nome: "Família Santos",
+    responsavel: "Maria Santos",
+    documento: "321.654.987-00",
+    telefone: "(11) 91234-5678",
+    bairro: "Vila Nova",
+    tipoCadastro: "extra",
+    progressoExtra: "2/3",
+    ultimaRetirada: "20/05/2025",
+    proximaData: "13/06/2025 (Faltam 21 dias)",
+    acompanhamento: "em_dia",
+    status: "liberado",
+  },
+  {
+    id: 31,
+    nome: "Família Oliveira",
+    responsavel: "Carlos Oliveira",
+    documento: "123.987.654-00",
+    telefone: "(11) 99876-5432",
+    bairro: "Jardim Esperança",
+    tipoCadastro: "extra",
+    progressoExtra: "3/3",
+    ultimaRetirada: "18/05/2025",
+    proximaData: "11/06/2025 (Faltam 19 dias)",
+    acompanhamento: "em_dia",
+    status: "avaliar",
+  },
+  {
+    id: 42,
+    nome: "Família Souza",
+    responsavel: "Ana Souza",
+    documento: "456.123.789-00",
+    telefone: "(11) 95555-1212",
+    bairro: "Cidade Alta",
+    tipoCadastro: "definitivo",
+    progressoExtra: null,
+    ultimaRetirada: "05/05/2025",
+    proximaData: "30/05/2025 (Atrasado)",
+    acompanhamento: "atencao_60",
+    status: "bloqueado",
+  },
+  {
+    id: 57,
+    nome: "Família Lima",
+    responsavel: "Pedro Lima",
+    documento: "789.321.456-00",
+    telefone: "(11) 93333-4444",
+    bairro: "São José",
+    tipoCadastro: "extra",
+    progressoExtra: "1/3",
+    ultimaRetirada: "10/02/2025",
+    proximaData: "04/06/2025 (Faltam 12 dias)",
+    acompanhamento: "sem_retirada_90",
+    status: "liberado",
+  },
+  {
+    id: 68,
+    nome: "Família Martins",
+    responsavel: "Luciana Martins",
+    documento: "654.987.321-00",
+    telefone: "(11) 94444-5555",
+    bairro: "Vila Esperança",
+    tipoCadastro: "extra",
+    progressoExtra: "novo",
+    ultimaRetirada: "—",
+    proximaData: "—",
+    acompanhamento: "inativo",
+    status: "inativo",
+  },
 ];
 
 type State = {
@@ -134,7 +217,9 @@ type State = {
   existsAssistidoDoc: (doc: string) => boolean;
   addAssistido: (a: Omit<Assistido, "id">) => Assistido;
   addMembro: (m: Omit<Membro, "id" | "crianca" | "adolescente" | "idoso">) => Membro;
-  addObservacao: (o: Omit<Observacao, "id" | "data" | "usuario"> & { usuario?: string }) => Observacao;
+  addObservacao: (
+    o: Omit<Observacao, "id" | "data" | "usuario"> & { usuario?: string },
+  ) => Observacao;
 };
 
 export const useFamilias = create<State>()(

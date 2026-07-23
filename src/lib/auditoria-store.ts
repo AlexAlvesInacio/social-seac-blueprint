@@ -32,9 +32,7 @@ export const useAuditoria = create<AuditoriaState>()(
             ultimo.modulo === e.modulo &&
             ultimo.registro === e.registro &&
             (ultimo.observacao ?? "") === (e.observacao ?? "") &&
-            Math.abs(
-              new Date(datahora).getTime() - new Date(ultimo.datahora).getTime(),
-            ) < 3000
+            Math.abs(new Date(datahora).getTime() - new Date(ultimo.datahora).getTime()) < 3000
           ) {
             return s;
           }
