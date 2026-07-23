@@ -1,41 +1,43 @@
 # Status de implementação
 
-Avaliação baseada no código atual. “Homologado” em documentos anteriores pode
-significar experiência visual ou funcionamento local, não produção.
+Avaliação baseada no código atual (atualizado em 2026-07-23, após a migração do
+domínio de famílias para o Supabase — PRs #10 a #17). “Homologado” em documentos
+anteriores pode significar experiência visual ou funcionamento local, não produção.
 
 | Área | Classificação | Evidência e limite atual |
 | --- | --- | --- |
-| Login | Protótipo visual | `/auth` apenas navega ao painel; não chama o serviço Supabase. |
-| Usuários | Protótipo visual | Tabela vazia e botões sem persistência ou autorização real. |
-| Famílias | Funcional apenas localmente | CRUD parcial em Zustand/localStorage com dados seed. |
-| Assistidos | Funcional apenas localmente | Inclusão e consulta no store local; sem banco/RLS. |
-| Membros | Funcional apenas localmente | Inclusão, faixa etária e vínculo no store local. |
-| Atendimento | Implementação parcial local | Busca, elegibilidade, entregas e bloqueios funcionam em stores locais; admin é simulado e os botões de pré-cadastro da busca sem resultado apenas exibem mensagens, sem persistir. |
-| Estoque | Implementação parcial local | Entrega confirmada reduz o saldo local do benefício; bases complementares são estáticas, diálogos de entrada/saída/ajuste não salvam e não há persistência real. |
+| Login | Implementado (Supabase Auth) | `/auth` chama `signIn` real, valida sessão e status (`pendente`/`inativo`), e protege rotas via `RequireActiveProfile`. |
+| Usuários | Implementado (Supabase) | Fluxo administrativo por RPC (`aprovar_usuario`, `inativar_usuario`, `alterar_papel_usuario`) com RLS em `profiles`. |
+| Famílias | Migrado ao Supabase (leitura + escrita) | Schema + RLS + RPCs. Lista (com fallback ao store local) e detalhe por UUID; criação e edição de família e edição do responsável via RPC. O store local ainda coexiste (dual-source) até homologação. |
+| Assistidos | Migrado ao Supabase (criação + leitura) | Criação via `criar_assistido_em_familia` no detalhe remoto; leitura no agregado da família. |
+| Membros | Migrado ao Supabase (criação + leitura) | Criação via `criar_membro_em_familia`; leitura no agregado. Faixa etária calculada em leitura. |
+| Observações sociais | Migrado ao Supabase | Registro por INSERT (policy de equipe ativa) e leitura no detalhe remoto. |
+| Atendimento | Implementação parcial local | Busca, elegibilidade (`verificarElegibilidadeAtendimento`), entregas e bloqueios funcionam em stores locais. **Sem tabela/RPC no banco: as regras dos 25 dias e de estoque não têm enforcement server-side nem auditoria persistente.** |
+| Estoque | Implementação parcial local | Entrega confirmada reduz o saldo local; bases complementares estáticas; diálogos de entrada/saída/ajuste não persistem. Sem tabela no Supabase. |
 | Recebimentos | Protótipo visual | KPIs, formulário e histórico estáticos; salvar não persiste nem movimenta estoque. |
-| Auditoria | Funcional apenas localmente | Eventos Zustand/localStorage; pode ser limpa pela interface, portanto não é imutável. |
+| Auditoria | Funcional apenas localmente | Módulo de auditoria em Zustand/localStorage, mutável pela interface. As tabelas de famílias no banco têm autoria por trigger, mas não há trilha imutável do módulo de Auditoria. |
 | Relatórios | Funcional apenas localmente | Gera tabelas/CSV de stores e bases estáticas locais. |
 | Painel | Funcional apenas localmente | Consolida stores locais e algumas bases estáticas. |
-| Supabase | Não implementado funcionalmente | Fundação de cliente/auth existe, mas sem schema, migrations, conexão aos fluxos ou dados remotos. |
-| Segurança | Não implementado | Sem proteção de rotas, RLS, autorização real, política de backup ou auditoria imutável. |
-| Testes | Não implementado | Não há script ou suíte automatizada de testes no projeto. |
+| Supabase | Implementado para auth e famílias | Cliente, migrations versionadas, RLS e RPCs cobrindo `profiles` e o domínio de famílias (`familias`, `pessoas`, `membros_familiares`, `assistidos`, `observacoes_sociais`). Atendimento, estoque, recebimentos e relatórios ainda não têm backend. |
+| Segurança | Parcial | RLS em todas as tabelas expostas; RPCs de escrita `SECURITY INVOKER`; `SECURITY DEFINER` só em bootstrap/triggers com `search_path=''`; proteção de rota por perfil ativo; autoria/timestamps por trigger. Faltam: backup testado, auditoria imutável do módulo Auditoria e enforcement das regras de atendimento/estoque no banco. |
+| Testes | Não implementado | Sem suíte automatizada. A migração de famílias foi validada por build, `typecheck` e testes manuais end-to-end (navegador headless). |
 
-## Divergências relevantes
+## Divergências e riscos relevantes
 
-- `HOMOLOGACAO_SEAC_SOCIAL.md` descreve login do administrador, usuários
-  pendentes/inativos e logout como homologados, mas o código atual não
-  implementa autenticação.
-- O mesmo documento descreve recebimentos aumentando estoque; a tela atual é
-  estática e informa que a entrada efetiva será controlada posteriormente.
-- Estoque é descrito como funcional para entradas, saídas e ajustes, porém os
-  botões de salvar dos diálogos apenas os fecham.
-- A documentação de Atendimento prevê pré-cadastro com e sem entrega, mas os
-  botões exibidos após busca sem resultado atualmente apenas mostram mensagens.
-- A documentação anterior usa “dados reais” para dados dos stores locais. Eles
-  são reais apenas dentro da sessão/localStorage do protótipo, não em banco.
-- Perfis aprovados aparecem como `admin`, `atendente`, `estoque`, `pendente`,
-  misturando papel e estado. A fundação nova separa papéis
-  `administrador/atendente/estoque` de status `pendente/ativo/inativo`.
-- `docs/11_FUNDACAO_SUPABASE.md` comprova que há fundação técnica, mas também
-  declara corretamente que autenticação, tabelas, RLS e módulos não foram
-  integrados.
+- **Fonte de verdade dupla (dual-source).** `familias.index.tsx` usa Supabase
+  quando há linhas e cai para o store local caso contrário; `familias.$id.tsx`
+  resolve o detalhe por UUID (Supabase) ou por id numérico (store local). É
+  intencional durante a migração, mas o store local só deve ser removido após
+  homologação explícita.
+- **Regras críticas ainda client-side.** Atendimento e estoque rodam sobre
+  `localStorage`; o bloqueio dos 25 dias e o de falta de estoque são burláveis e
+  não auditáveis enquanto não houver tabela/RPC no banco. É o maior gap de
+  negócio remanescente.
+- **Escopo pendente em famílias.** Reuso/transferência de pessoa existente
+  (as RPCs recusam documento duplicado), vínculo de observação a pessoa/assistido
+  específico e exibição do nome do autor (hoje UUID do perfil).
+- **Documentos antigos.** `HOMOLOGACAO_SEAC_SOCIAL.md` e afins descrevem como
+  “homologado” comportamentos que eram apenas locais; tratar este arquivo como a
+  fonte de status corrente.
+- **Papéis vs. status.** Perfis usam papéis `administrador/atendente/estoque`
+  separados dos status `pendente/ativo/inativo` (não confundir as duas colunas).
