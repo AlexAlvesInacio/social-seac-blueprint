@@ -58,6 +58,7 @@ import {
   AdicionarMembroDialog,
   RegistrarObservacaoDialog,
 } from "@/components/familia-detail-dialogs";
+import { AdicionarAssistidoSupabaseDialog } from "@/components/adicionar-assistido-supabase-dialog";
 
 export const Route = createFileRoute("/familias/$id")({
   head: () => ({ meta: [{ title: "Detalhe da família — SEAC Social" }] }),
@@ -692,6 +693,7 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
   const endereco = [familia.endereco, familia.numero, familia.complemento]
     .filter(Boolean)
     .join(", ");
+  const [assistidoOpen, setAssistidoOpen] = useState(false);
 
   return (
     <AppShell
@@ -707,22 +709,35 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
         </div>
       }
       actions={
-        <Button asChild size="sm" variant="ghost" className="gap-2">
-          <Link to="/familias" search={{ foco: undefined }}>
-            <ArrowLeft className="h-4 w-4" /> Voltar
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="gap-2" onClick={() => setAssistidoOpen(true)}>
+            <Plus className="h-4 w-4" /> Adicionar assistido
+          </Button>
+          <Button asChild size="sm" variant="ghost" className="gap-2">
+            <Link to="/familias" search={{ foco: undefined }}>
+              <ArrowLeft className="h-4 w-4" /> Voltar
+            </Link>
+          </Button>
+        </div>
       }
     >
+      <AdicionarAssistidoSupabaseDialog
+        open={assistidoOpen}
+        onOpenChange={setAssistidoOpen}
+        familiaId={familia.id}
+        familiaNome={familia.nome || "família"}
+      />
       <div className="space-y-6">
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex items-start gap-3 p-4">
             <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <div>
-              <p className="text-sm font-medium">Dados do Supabase em modo somente leitura</p>
+              <p className="text-sm font-medium">
+                Dados do Supabase em modo leitura + inclusão de assistidos
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Edição, atendimento, novas observações e inclusão de membros ou assistidos ainda não
-                estão disponíveis para famílias remotas.
+                Já é possível adicionar assistidos a esta família. Edição, atendimento, novas
+                observações e inclusão de membros ainda não estão disponíveis para famílias remotas.
               </p>
             </div>
           </CardContent>

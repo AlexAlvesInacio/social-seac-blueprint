@@ -13,11 +13,16 @@ import {
 } from "@/components/ui/select";
 import { useFamilias, type FamiliaStatus, type TipoCadastro } from "@/lib/familias-store";
 import { registrarAuditoria } from "@/lib/auditoria-store";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { useCriarFamiliaSupabase } from "@/lib/familias/use-familias-supabase";
+import type { PessoaTipoDocumentoSupabase } from "@/lib/familias/familias-supabase-types";
 
 type Props = { open: boolean; onOpenChange: (o: boolean) => void };
 
 const empty = {
-  nome: "", responsavel: "", documento: "", telefone: "", bairro: "",
+  nome: "", responsavel: "", documento: "",
+  tipoDocumento: "cpf" as PessoaTipoDocumentoSupabase,
+  telefone: "", bairro: "",
   endereco: "", numero: "", complemento: "", cidade: "", uf: "", cep: "",
   tipoCadastro: "extra" as TipoCadastro,
   status: "liberado" as FamiliaStatus,
@@ -31,25 +36,61 @@ export function NovaFamiliaDialog({ open, onOpenChange }: Props) {
   const add = useFamilias((s) => s.add);
   const existsDocumento = useFamilias((s) => s.existsDocumento);
   const navigate = useNavigate();
+  const criarFamiliaSupabase = useCriarFamiliaSupabase();
 
   const set = <K extends keyof typeof empty>(k: K, v: (typeof empty)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const reset = () => { setForm(empty); setErros({}); };
 
-  const validar = () => {
+  // No Supabase a duplicidade é verificada pela RPC (errcode 23505); no fallback
+  // local reaproveitamos a checagem do store.
+  const validar = (checarDuplicadoLocal: boolean) => {
     const e: Record<string, string> = {};
     if (!form.nome.trim()) e.nome = "Informe o nome da família.";
     if (!form.responsavel.trim()) e.responsavel = "Informe o responsável.";
     if (!form.documento.trim()) e.documento = "Informe o CPF ou RG.";
-    else if (existsDocumento(form.documento))
+    else if (checarDuplicadoLocal && existsDocumento(form.documento))
       e.documento = "Já existe uma família cadastrada com este documento.";
     setErros(e);
     return Object.keys(e).length === 0;
   };
 
-  const salvar = (irParaDetalhe: boolean) => {
-    if (!validar()) return;
+  const salvar = async (irParaDetalhe: boolean) => {
+    if (isSupabaseConfigured) { await salvarNoSupabase(irParaDetalhe); return; }
+    salvarLocal(irParaDetalhe);
+  };
+
+  const salvarNoSupabase = async (irParaDetalhe: boolean) => {
+    if (!validar(false)) return;
+    try {
+      const data = await criarFamiliaSupabase.mutateAsync({
+        nomeReferencia: form.nome,
+        responsavelNome: form.responsavel,
+        responsavelTipoDocumento: form.tipoDocumento,
+        responsavelDocumento: form.documento,
+        responsavelTelefone: form.telefone,
+        endereco: form.endereco, numero: form.numero, complemento: form.complemento,
+        bairro: form.bairro, cidade: form.cidade, uf: form.uf, cep: form.cep,
+      });
+      toast.success("Família cadastrada com sucesso.");
+      reset();
+      onOpenChange(false);
+      if (irParaDetalhe && data) {
+        navigate({ to: "/familias/$id", params: { id: data.familia_id } });
+      }
+    } catch (err) {
+      setErros(
+        err instanceof Error && "code" in err && (err as { code?: string }).code === "23505"
+          ? { documento: "Já existe um cadastro com este documento." }
+          : {},
+      );
+      toast.error(err instanceof Error ? err.message : "Não foi possível cadastrar a família.");
+    }
+  };
+
+  const salvarLocal = (irParaDetalhe: boolean) => {
+    if (!validar(true)) return;
     const nova = add({
       nome: form.nome.trim(),
       responsavel: form.responsavel.trim(),
@@ -106,6 +147,16 @@ export function NovaFamiliaDialog({ open, onOpenChange }: Props) {
             <F label="Responsável *" erro={erros.responsavel}>
               <Input value={form.responsavel} onChange={(e) => set("responsavel", e.target.value)} placeholder="Nome do responsável" />
             </F>
+            <F label="Tipo de documento">
+              <Select value={form.tipoDocumento} onValueChange={(v) => set("tipoDocumento", v as PessoaTipoDocumentoSupabase)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cpf">CPF</SelectItem>
+                  <SelectItem value="rg">RG</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </F>
             <F label="CPF / RG *" erro={erros.documento}>
               <Input value={form.documento} onChange={(e) => set("documento", e.target.value)} placeholder="000.000.000-00" />
             </F>
@@ -126,45 +177,56 @@ export function NovaFamiliaDialog({ open, onOpenChange }: Props) {
             <F label="CEP"><Input value={form.cep} onChange={(e) => set("cep", e.target.value)} /></F>
           </section>
 
-          <section className="grid gap-3 md:grid-cols-2">
-            <F label="Tipo de cadastro">
-              <Select value={form.tipoCadastro} onValueChange={(v) => set("tipoCadastro", v as TipoCadastro)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="extra">Avaliação</SelectItem>
-                  <SelectItem value="definitivo">Definitivo</SelectItem>
-                </SelectContent>
-              </Select>
-            </F>
-            <F label="Status inicial">
-              <Select value={form.status} onValueChange={(v) => set("status", v as FamiliaStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="liberado">Ativo</SelectItem>
-                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
-            </F>
-          </section>
+          {isSupabaseConfigured ? (
+            <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+              São gravados a família e o responsável principal. Tipo de cadastro, status, contadores
+              e observações são definidos depois, no detalhe da família.
+            </p>
+          ) : (
+            <>
+              <section className="grid gap-3 md:grid-cols-2">
+                <F label="Tipo de cadastro">
+                  <Select value={form.tipoCadastro} onValueChange={(v) => set("tipoCadastro", v as TipoCadastro)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="extra">Avaliação</SelectItem>
+                      <SelectItem value="definitivo">Definitivo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </F>
+                <F label="Status inicial">
+                  <Select value={form.status} onValueChange={(v) => set("status", v as FamiliaStatus)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="liberado">Ativo</SelectItem>
+                      <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                      <SelectItem value="inativo">Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </F>
+              </section>
 
-          <section className="grid gap-3 md:grid-cols-5">
-            <F label="Moradores"><Input type="number" min={0} value={form.moradores} onChange={(e) => set("moradores", e.target.value)} /></F>
-            <F label="Crianças"><Input type="number" min={0} value={form.criancas} onChange={(e) => set("criancas", e.target.value)} /></F>
-            <F label="Idosos"><Input type="number" min={0} value={form.idosos} onChange={(e) => set("idosos", e.target.value)} /></F>
-            <F label="Gestantes"><Input type="number" min={0} value={form.gestantes} onChange={(e) => set("gestantes", e.target.value)} /></F>
-            <F label="PCD"><Input type="number" min={0} value={form.pcd} onChange={(e) => set("pcd", e.target.value)} /></F>
-          </section>
+              <section className="grid gap-3 md:grid-cols-5">
+                <F label="Moradores"><Input type="number" min={0} value={form.moradores} onChange={(e) => set("moradores", e.target.value)} /></F>
+                <F label="Crianças"><Input type="number" min={0} value={form.criancas} onChange={(e) => set("criancas", e.target.value)} /></F>
+                <F label="Idosos"><Input type="number" min={0} value={form.idosos} onChange={(e) => set("idosos", e.target.value)} /></F>
+                <F label="Gestantes"><Input type="number" min={0} value={form.gestantes} onChange={(e) => set("gestantes", e.target.value)} /></F>
+                <F label="PCD"><Input type="number" min={0} value={form.pcd} onChange={(e) => set("pcd", e.target.value)} /></F>
+              </section>
 
-          <F label="Observações sociais">
-            <Textarea rows={3} value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} />
-          </F>
+              <F label="Observações sociais">
+                <Textarea rows={3} value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} />
+              </F>
+            </>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>Cancelar</Button>
-          <Button variant="outline" onClick={() => salvar(true)}>Salvar e abrir detalhes</Button>
-          <Button onClick={() => salvar(false)}>Salvar família</Button>
+          <Button variant="outline" disabled={criarFamiliaSupabase.isPending} onClick={() => void salvar(true)}>Salvar e abrir detalhes</Button>
+          <Button disabled={criarFamiliaSupabase.isPending} onClick={() => void salvar(false)}>
+            {criarFamiliaSupabase.isPending ? "Salvando..." : "Salvar família"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
