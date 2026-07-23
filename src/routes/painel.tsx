@@ -399,7 +399,7 @@ function PainelPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Últimas movimentações</CardTitle>
-            <Link to="/estoque" search={{ tab: "mov" }} className="text-xs text-primary hover:underline">Ver estoque</Link>
+            <Link to="/estoque" search={{ tab: "mov", foco: undefined }} className="text-xs text-primary hover:underline">Ver estoque</Link>
           </CardHeader>
           <CardContent>
             {dados.ultimasMovimentacoes.length === 0 ? <EmptyList text="Nenhuma movimentação ainda." /> : (

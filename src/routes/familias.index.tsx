@@ -322,7 +322,7 @@ function FamiliasPage() {
                   </Button>
                 ) : (
                   <Button size="sm" className="gap-1" asChild>
-                    <Link to="/atendimento">
+                    <Link to="/atendimento" search={{ assistido: undefined }}>
                       <ArrowRight className="h-3.5 w-3.5" /> Ir para atendimento
                     </Link>
                   </Button>
