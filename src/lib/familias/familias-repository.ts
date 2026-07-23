@@ -8,7 +8,9 @@ import type {
   CriarAssistidoResult,
   CriarFamiliaResult,
   CriarMembroResult,
+  CriarObservacaoResult,
   FamiliaStatusSupabase,
+  ObservacaoSocialTipoSupabase,
   FamiliaSupabaseId,
   FamiliaSupabaseReadModel,
   FamiliaSupabaseRow,
@@ -290,6 +292,12 @@ export interface AtualizarFamiliaInput {
   status?: FamiliaStatusSupabase;
 }
 
+export interface CriarObservacaoInput {
+  familiaId: string;
+  tipo: ObservacaoSocialTipoSupabase;
+  texto: string;
+}
+
 function firstRow<T>(data: unknown): T | null {
   if (Array.isArray(data)) return (data[0] as T) ?? null;
   return (data as T) ?? null;
@@ -483,6 +491,56 @@ export async function atualizarFamiliaNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseWriteError("atualizar_familia", error),
+    };
+  }
+}
+
+// Observação social é um INSERT de tabela única, gravado direto pela camada de
+// serviço: a policy "Equipe ativa insere observações sociais" já restringe a
+// escrita e o trigger observacoes_sociais_definir_autoria define criado_por.
+async function criarObservacao(
+  input: CriarObservacaoInput,
+): Promise<FamiliasSupabaseWriteResult<CriarObservacaoResult>> {
+  const { data, error } = await getSupabaseClient()
+    .from("observacoes_sociais")
+    .insert({
+      familia_id: input.familiaId,
+      tipo: input.tipo,
+      texto: input.texto.trim(),
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("criar_observacao", error) };
+  }
+
+  const row = firstRow<CriarObservacaoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "criar_observacao",
+        code: "EMPTY_RESULT",
+        message: "O registro da observação não retornou identificador.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function criarObservacaoSocialNoSupabase(
+  input: CriarObservacaoInput,
+): Promise<FamiliasSupabaseWriteResult<CriarObservacaoResult>> {
+  try {
+    return await criarObservacao(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("criar_observacao", error),
     };
   }
 }

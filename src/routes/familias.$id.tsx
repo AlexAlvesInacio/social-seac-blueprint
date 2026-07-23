@@ -61,6 +61,7 @@ import {
 import { AdicionarAssistidoSupabaseDialog } from "@/components/adicionar-assistido-supabase-dialog";
 import { AdicionarMembroSupabaseDialog } from "@/components/adicionar-membro-supabase-dialog";
 import { EditarFamiliaSupabaseDialog } from "@/components/editar-familia-supabase-dialog";
+import { RegistrarObservacaoSupabaseDialog } from "@/components/registrar-observacao-supabase-dialog";
 
 export const Route = createFileRoute("/familias/$id")({
   head: () => ({ meta: [{ title: "Detalhe da família — SEAC Social" }] }),
@@ -698,6 +699,7 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
   const [assistidoOpen, setAssistidoOpen] = useState(false);
   const [membroOpen, setMembroOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
+  const [obsOpen, setObsOpen] = useState(false);
 
   return (
     <AppShell
@@ -748,17 +750,23 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
         onOpenChange={setEditarOpen}
         familia={familia}
       />
+      <RegistrarObservacaoSupabaseDialog
+        open={obsOpen}
+        onOpenChange={setObsOpen}
+        familiaId={familia.id}
+        familiaNome={familia.nome || "família"}
+      />
       <div className="space-y-6">
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex items-start gap-3 p-4">
             <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <div>
               <p className="text-sm font-medium">
-                Dados do Supabase — edição de família e inclusão de assistidos e membros
+                Dados do Supabase — edição de família, assistidos, membros e observações
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Já é possível editar a família e adicionar assistidos e membros. Edição do
-                responsável, atendimento e novas observações ainda não estão disponíveis para
+                Já é possível editar a família, adicionar assistidos e membros e registrar
+                observações. Edição do responsável e atendimento ainda não estão disponíveis para
                 famílias remotas.
               </p>
             </div>
@@ -934,9 +942,14 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Observações sociais</CardTitle>
-                <Badge variant="outline" className="gap-1">
-                  <LockKeyhole className="h-3 w-3" /> Somente leitura
-                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setObsOpen(true)}
+                >
+                  <Plus className="h-4 w-4" /> Registrar observação
+                </Button>
               </CardHeader>
               {familia.observacoes.length === 0 ? (
                 <CardContent className="p-8 text-center text-sm text-muted-foreground">

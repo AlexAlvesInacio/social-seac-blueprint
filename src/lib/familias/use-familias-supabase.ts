@@ -5,12 +5,14 @@ import {
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
+  criarObservacaoSocialNoSupabase,
   getFamiliaFromSupabaseById,
   listFamiliasFromSupabase,
   type AtualizarFamiliaInput,
   type CriarAssistidoInput,
   type CriarFamiliaInput,
   type CriarMembroInput,
+  type CriarObservacaoInput,
 } from "@/lib/familias/familias-repository";
 import {
   FamiliasSupabaseQueryError,
@@ -115,6 +117,23 @@ export function useAtualizarFamiliaSupabase() {
     },
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
+      });
+    },
+  });
+}
+
+export function useCriarObservacaoSupabase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CriarObservacaoInput) => {
+      const result = await criarObservacaoSocialNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
       });

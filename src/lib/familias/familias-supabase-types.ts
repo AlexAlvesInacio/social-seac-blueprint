@@ -313,7 +313,8 @@ export type FamiliasSupabaseWriteOperation =
   | "criar_familia"
   | "criar_assistido"
   | "criar_membro"
-  | "atualizar_familia";
+  | "atualizar_familia"
+  | "criar_observacao";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -352,6 +353,11 @@ export interface CriarMembroResult {
 /** Retorno de `public.atualizar_familia`. */
 export interface AtualizarFamiliaResult {
   familia_id: FamiliaSupabaseId;
+}
+
+/** Retorno do insert em `observacoes_sociais`. */
+export interface CriarObservacaoResult {
+  id: ObservacaoSocialSupabaseId;
 }
 
 // Mensagens amigáveis para os errcode que as RPCs lançam explicitamente.
