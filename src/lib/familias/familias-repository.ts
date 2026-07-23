@@ -4,9 +4,11 @@ import { mapFamiliaFromSupabase, mapFamiliasFromSupabase } from "@/lib/familias/
 import type {
   AssistidoSupabaseRow,
   AssistidoTipoCadastroSupabase,
+  AtualizarFamiliaResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
   CriarMembroResult,
+  FamiliaStatusSupabase,
   FamiliaSupabaseId,
   FamiliaSupabaseReadModel,
   FamiliaSupabaseRow,
@@ -275,6 +277,19 @@ export interface CriarMembroInput {
   gestante?: boolean;
 }
 
+export interface AtualizarFamiliaInput {
+  familiaId: string;
+  nomeReferencia: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+  status?: FamiliaStatusSupabase;
+}
+
 function firstRow<T>(data: unknown): T | null {
   if (Array.isArray(data)) return (data[0] as T) ?? null;
   return (data as T) ?? null;
@@ -419,5 +434,55 @@ export async function criarMembroEmFamiliaNoSupabase(
     return await criarMembro(input);
   } catch (error) {
     return { data: null, error: toUnexpectedFamiliasSupabaseWriteError("criar_membro", error) };
+  }
+}
+
+async function atualizarFamilia(
+  input: AtualizarFamiliaInput,
+): Promise<FamiliasSupabaseWriteResult<AtualizarFamiliaResult>> {
+  const { data, error } = await getSupabaseClient().rpc("atualizar_familia", {
+    p_familia_id: input.familiaId,
+    p_nome_referencia: input.nomeReferencia.trim(),
+    p_endereco: nullableParam(input.endereco),
+    p_numero: nullableParam(input.numero),
+    p_complemento: nullableParam(input.complemento),
+    p_bairro: nullableParam(input.bairro),
+    p_cidade: nullableParam(input.cidade),
+    p_uf: nullableParam(input.uf),
+    p_cep: nullableParam(input.cep),
+    p_status: input.status ?? null,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("atualizar_familia", error) };
+  }
+
+  const row = firstRow<AtualizarFamiliaResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "atualizar_familia",
+        code: "EMPTY_RESULT",
+        message: "A atualização da família não retornou identificador.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function atualizarFamiliaNoSupabase(
+  input: AtualizarFamiliaInput,
+): Promise<FamiliasSupabaseWriteResult<AtualizarFamiliaResult>> {
+  try {
+    return await atualizarFamilia(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("atualizar_familia", error),
+    };
   }
 }

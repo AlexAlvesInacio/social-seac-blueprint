@@ -60,6 +60,7 @@ import {
 } from "@/components/familia-detail-dialogs";
 import { AdicionarAssistidoSupabaseDialog } from "@/components/adicionar-assistido-supabase-dialog";
 import { AdicionarMembroSupabaseDialog } from "@/components/adicionar-membro-supabase-dialog";
+import { EditarFamiliaSupabaseDialog } from "@/components/editar-familia-supabase-dialog";
 
 export const Route = createFileRoute("/familias/$id")({
   head: () => ({ meta: [{ title: "Detalhe da família — SEAC Social" }] }),
@@ -696,6 +697,7 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
     .join(", ");
   const [assistidoOpen, setAssistidoOpen] = useState(false);
   const [membroOpen, setMembroOpen] = useState(false);
+  const [editarOpen, setEditarOpen] = useState(false);
 
   return (
     <AppShell
@@ -712,6 +714,9 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
       }
       actions={
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditarOpen(true)}>
+            <Pencil className="h-4 w-4" /> Editar família
+          </Button>
           <Button size="sm" className="gap-2" onClick={() => setAssistidoOpen(true)}>
             <Plus className="h-4 w-4" /> Adicionar assistido
           </Button>
@@ -738,17 +743,23 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
         familiaId={familia.id}
         familiaNome={familia.nome || "família"}
       />
+      <EditarFamiliaSupabaseDialog
+        open={editarOpen}
+        onOpenChange={setEditarOpen}
+        familia={familia}
+      />
       <div className="space-y-6">
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex items-start gap-3 p-4">
             <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <div>
               <p className="text-sm font-medium">
-                Dados do Supabase em modo leitura + inclusão de assistidos e membros
+                Dados do Supabase — edição de família e inclusão de assistidos e membros
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Já é possível adicionar assistidos e membros a esta família. Edição, atendimento e
-                novas observações ainda não estão disponíveis para famílias remotas.
+                Já é possível editar a família e adicionar assistidos e membros. Edição do
+                responsável, atendimento e novas observações ainda não estão disponíveis para
+                famílias remotas.
               </p>
             </div>
           </CardContent>
