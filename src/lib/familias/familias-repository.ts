@@ -6,6 +6,7 @@ import type {
   AssistidoTipoCadastroSupabase,
   CriarAssistidoResult,
   CriarFamiliaResult,
+  CriarMembroResult,
   FamiliaSupabaseId,
   FamiliaSupabaseReadModel,
   FamiliaSupabaseRow,
@@ -262,6 +263,18 @@ export interface CriarAssistidoInput {
   gestante?: boolean;
 }
 
+export interface CriarMembroInput {
+  familiaId: string;
+  nome: string;
+  tipoDocumento: PessoaTipoDocumentoSupabase;
+  documento: string;
+  parentesco?: string;
+  telefone?: string;
+  nascimento?: string;
+  pcd?: boolean;
+  gestante?: boolean;
+}
+
 function firstRow<T>(data: unknown): T | null {
   if (Array.isArray(data)) return (data[0] as T) ?? null;
   return (data as T) ?? null;
@@ -360,5 +373,51 @@ export async function criarAssistidoEmFamiliaNoSupabase(
     return await criarAssistido(input);
   } catch (error) {
     return { data: null, error: toUnexpectedFamiliasSupabaseWriteError("criar_assistido", error) };
+  }
+}
+
+async function criarMembro(
+  input: CriarMembroInput,
+): Promise<FamiliasSupabaseWriteResult<CriarMembroResult>> {
+  const { data, error } = await getSupabaseClient().rpc("criar_membro_em_familia", {
+    p_familia_id: input.familiaId,
+    p_nome: input.nome.trim(),
+    p_tipo_documento: input.tipoDocumento,
+    p_documento: input.documento.trim(),
+    p_parentesco: nullableParam(input.parentesco),
+    p_telefone: nullableParam(input.telefone),
+    p_nascimento: nullableParam(input.nascimento),
+    p_pcd: input.pcd ?? false,
+    p_gestante: input.gestante ?? false,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("criar_membro", error) };
+  }
+
+  const row = firstRow<CriarMembroResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "criar_membro",
+        code: "EMPTY_RESULT",
+        message: "A criação do membro não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function criarMembroEmFamiliaNoSupabase(
+  input: CriarMembroInput,
+): Promise<FamiliasSupabaseWriteResult<CriarMembroResult>> {
+  try {
+    return await criarMembro(input);
+  } catch (error) {
+    return { data: null, error: toUnexpectedFamiliasSupabaseWriteError("criar_membro", error) };
   }
 }
