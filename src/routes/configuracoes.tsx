@@ -74,7 +74,7 @@ import {
   type Parametros,
   type Status,
 } from "@/lib/config-store";
-import { registrarAuditoria } from "@/lib/auditoria-store";
+import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações — SEAC Social" }] }),

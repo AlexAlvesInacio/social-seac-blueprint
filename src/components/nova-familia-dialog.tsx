@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { registrarAuditoria } from "@/lib/auditoria-store";
+import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 import { useFamilias, type FamiliaStatus, type TipoCadastro } from "@/lib/familias-store";
 import {
   FamiliasSupabaseWriteQueryError,

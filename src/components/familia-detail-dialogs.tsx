@@ -28,7 +28,7 @@ import {
 } from "@/lib/familias-store";
 import { calcularIdade, calcularFaixaEtaria, rotuloFaixaEtaria } from "@/lib/familias-store";
 import { Badge } from "@/components/ui/badge";
-import { registrarAuditoria } from "@/lib/auditoria-store";
+import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 
 function F({ label, erro, children }: { label: string; erro?: string; children: React.ReactNode }) {
   return (

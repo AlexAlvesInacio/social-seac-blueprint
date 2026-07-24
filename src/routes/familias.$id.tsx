@@ -48,7 +48,7 @@ import {
   calcularFaixaEtaria,
   rotuloFaixaEtaria,
 } from "@/lib/familias-store";
-import { registrarAuditoria } from "@/lib/auditoria-store";
+import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 import { useAtendimentoStore } from "@/lib/atendimento-store";
 import type {
   AssistidoSupabaseReadModel,
