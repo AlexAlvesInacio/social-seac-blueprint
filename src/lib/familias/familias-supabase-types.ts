@@ -234,6 +234,7 @@ export type FamiliasSupabaseReadOperation =
   | "listar_observacoes"
   | "listar_pessoas"
   | "resumo_atendimento"
+  | "buscar_assistidos"
   | "mapear_dados";
 
 export interface FamiliasSupabaseReadError {
@@ -392,6 +393,32 @@ export interface ResumoAtendimentoAssistido {
   retiradasExtras: number;
   saldoPadrao: number;
   saldoExtra: number;
+}
+
+/**
+ * Campos mínimos que o fluxo de entrega precisa de um assistido. Compatível
+ * estruturalmente com `AssistidoSupabaseReadModel` (detalhe da família) e usado
+ * também pela tela de atendimento (que mapeia o resultado da busca).
+ */
+export interface AssistidoParaEntrega {
+  id: AssistidoSupabaseId;
+  familiaId: FamiliaSupabaseId;
+  nome: string;
+  documento: string;
+  telefone?: string;
+  tipoCadastro: AssistidoTipoCadastroSupabase;
+}
+
+/** Resultado da busca de assistidos ativos para atendimento. */
+export interface AssistidoBuscaResultado {
+  assistidoId: AssistidoSupabaseId;
+  familiaId: FamiliaSupabaseId;
+  pessoaId: PessoaSupabaseId;
+  nome: string;
+  documento: string;
+  telefone?: string;
+  tipoCadastro: AssistidoTipoCadastroSupabase;
+  familiaNome: string;
 }
 
 // Mensagens amigáveis para os errcode que as RPCs lançam explicitamente.

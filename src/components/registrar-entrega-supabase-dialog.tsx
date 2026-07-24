@@ -19,7 +19,7 @@ import {
   type Elegibilidade,
 } from "@/lib/atendimento-regras";
 import { getCurrentProfile } from "@/lib/auth/auth-service";
-import type { AssistidoSupabaseReadModel } from "@/lib/familias/familias-supabase-types";
+import type { AssistidoParaEntrega } from "@/lib/familias/familias-supabase-types";
 import {
   useRegistrarEntregaSupabase,
   useRegistrarTentativaSupabase,
@@ -29,7 +29,7 @@ import {
 type Props = {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  assistido: AssistidoSupabaseReadModel | null;
+  assistido: AssistidoParaEntrega | null;
   familiaNome: string;
 };
 
