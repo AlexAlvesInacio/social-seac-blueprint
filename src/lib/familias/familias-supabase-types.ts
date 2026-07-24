@@ -240,6 +240,8 @@ export type FamiliasSupabaseReadOperation =
   | "listar_entregas_painel"
   | "listar_recebimentos"
   | "listar_tentativas"
+  | "listar_itens_estoque"
+  | "listar_composicao"
   | "mapear_dados";
 
 export interface FamiliasSupabaseReadError {
@@ -327,7 +329,10 @@ export type FamiliasSupabaseWriteOperation =
   | "registrar_entrega"
   | "registrar_tentativa"
   | "registrar_movimentacao"
-  | "criar_recebimento";
+  | "criar_recebimento"
+  | "registrar_movimentacao_item"
+  | "definir_composicao"
+  | "montar_cesta";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -494,6 +499,50 @@ export interface RegistrarMovimentacaoResult {
   saldo_resultante: number;
 }
 
+/** Item do catálogo de estoque (alimento/higiene) com saldo próprio. */
+export interface ItemEstoque {
+  id: string;
+  nome: string;
+  categoria?: string;
+  unidade: string;
+  saldo: number;
+  minimo: number;
+  valor: number;
+  ativo: boolean;
+}
+
+/** Item dentro da composição de um benefício (nome/unidade/valor resolvidos). */
+export interface ComposicaoItem {
+  itemId: string;
+  itemNome: string;
+  unidade: string;
+  quantidade: number;
+  valor: number;
+}
+
+/** Composição de um benefício: conjunto de itens x quantidade por unidade. */
+export interface ComposicaoBeneficio {
+  beneficioId: string;
+  itens: ComposicaoItem[];
+}
+
+/** Retorno de `public.registrar_movimentacao_item`. */
+export interface RegistrarMovimentacaoItemResult {
+  movimentacao_id: string;
+  saldo_resultante: number;
+}
+
+/** Retorno de `public.definir_composicao_beneficio`. */
+export interface DefinirComposicaoResult {
+  total_itens: number;
+}
+
+/** Retorno de `public.montar_cesta`. */
+export interface MontarCestaResult {
+  beneficio_saldo: number;
+  itens_consumidos: number;
+}
+
 /** Resultado da busca de assistidos ativos para atendimento. */
 export interface AssistidoBuscaResultado {
   assistidoId: AssistidoSupabaseId;
@@ -517,6 +566,7 @@ const mensagemPorCodigoDeEscrita: Record<string, string> = {
   SEAC2: "Entrega bloqueada: intervalo mínimo de 25 dias não cumprido.",
   SEAC3: "Entrega bloqueada por falta de estoque.",
   SEAE1: "Saldo insuficiente para a saída.",
+  SEAI1: "Saldo de item insuficiente para montar a quantidade de cestas informada.",
 };
 
 export function toFamiliasSupabaseWriteError(

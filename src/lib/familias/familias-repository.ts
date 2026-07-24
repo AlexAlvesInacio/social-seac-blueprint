@@ -7,9 +7,15 @@ import type {
   AssistidoTipoCadastroSupabase,
   AtualizarFamiliaResult,
   BeneficioEstoque,
+  ComposicaoBeneficio,
+  ComposicaoItem,
   CriarRecebimentoResult,
+  DefinirComposicaoResult,
   EntregaPainel,
+  ItemEstoque,
+  MontarCestaResult,
   MovimentacaoEstoque,
+  RegistrarMovimentacaoItemResult,
   Recebimento,
   RecebimentoOrigem,
   RegistrarMovimentacaoResult,
@@ -1493,6 +1499,278 @@ export async function listarRecebimentosNoSupabase(): Promise<
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseReadError("listar_recebimentos", error),
+    };
+  }
+}
+
+/* ============ Itens de estoque, composição e montagem ============ */
+
+type ItemEstoqueRow = {
+  id: string;
+  nome: string;
+  categoria: string | null;
+  unidade: string;
+  saldo: number;
+  minimo: number;
+  valor: number;
+  ativo: boolean;
+};
+
+async function listarItensEstoque(): Promise<FamiliasSupabaseReadResult<ItemEstoque[]>> {
+  const { data, error } = await getSupabaseClient()
+    .from("itens_estoque")
+    .select("id, nome, categoria, unidade, saldo, minimo, valor, ativo")
+    .order("nome");
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseReadError("listar_itens_estoque", error) };
+  }
+
+  const rows = (data ?? []) as ItemEstoqueRow[];
+  return {
+    data: rows.map((r) => ({
+      id: r.id,
+      nome: r.nome,
+      categoria: r.categoria ?? undefined,
+      unidade: r.unidade,
+      saldo: r.saldo,
+      minimo: r.minimo,
+      valor: r.valor,
+      ativo: r.ativo,
+    })),
+    error: null,
+  };
+}
+
+export async function listarItensEstoqueNoSupabase(): Promise<
+  FamiliasSupabaseReadResult<ItemEstoque[]>
+> {
+  try {
+    return await listarItensEstoque();
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseReadError("listar_itens_estoque", error),
+    };
+  }
+}
+
+type ComposicaoRow = {
+  beneficio_id: string;
+  item_id: string;
+  quantidade: number;
+};
+
+// Lê toda a composição e resolve os itens em passo separado (mesmo padrão
+// anti-embedding do restante do repositório), agrupando por benefício.
+async function listarComposicoes(): Promise<FamiliasSupabaseReadResult<ComposicaoBeneficio[]>> {
+  const client = getSupabaseClient();
+
+  const { data, error } = await client
+    .from("composicao_beneficio")
+    .select("beneficio_id, item_id, quantidade");
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseReadError("listar_composicao", error) };
+  }
+
+  const rows = (data ?? []) as ComposicaoRow[];
+  const itemIds = uniqueIds(rows.map((r) => r.item_id));
+
+  const itemInfo = new Map<string, { nome: string; unidade: string; valor: number }>();
+  if (itemIds.length > 0) {
+    const itensResult = await client
+      .from("itens_estoque")
+      .select("id, nome, unidade, valor")
+      .in("id", itemIds);
+
+    if (itensResult.error) {
+      return {
+        data: null,
+        error: toFamiliasSupabaseReadError("listar_composicao", itensResult.error),
+      };
+    }
+
+    for (const it of (itensResult.data ?? []) as {
+      id: string;
+      nome: string;
+      unidade: string;
+      valor: number;
+    }[]) {
+      itemInfo.set(it.id, { nome: it.nome, unidade: it.unidade, valor: it.valor });
+    }
+  }
+
+  const porBeneficio = new Map<string, ComposicaoItem[]>();
+  for (const r of rows) {
+    const info = itemInfo.get(r.item_id);
+    const lista = porBeneficio.get(r.beneficio_id) ?? [];
+    lista.push({
+      itemId: r.item_id,
+      itemNome: info?.nome ?? "—",
+      unidade: info?.unidade ?? "",
+      quantidade: r.quantidade,
+      valor: info?.valor ?? 0,
+    });
+    porBeneficio.set(r.beneficio_id, lista);
+  }
+
+  const composicoes: ComposicaoBeneficio[] = [...porBeneficio.entries()].map(
+    ([beneficioId, itens]) => ({
+      beneficioId,
+      itens: itens.sort((a, b) => a.itemNome.localeCompare(b.itemNome)),
+    }),
+  );
+
+  return { data: composicoes, error: null };
+}
+
+export async function listarComposicoesNoSupabase(): Promise<
+  FamiliasSupabaseReadResult<ComposicaoBeneficio[]>
+> {
+  try {
+    return await listarComposicoes();
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseReadError("listar_composicao", error),
+    };
+  }
+}
+
+export interface RegistrarMovimentacaoItemInput {
+  itemId: string;
+  tipo: "entrada" | "saida" | "ajuste";
+  quantidade: number;
+  motivo?: string;
+  observacao?: string;
+}
+
+async function registrarMovimentacaoItem(
+  input: RegistrarMovimentacaoItemInput,
+): Promise<FamiliasSupabaseWriteResult<RegistrarMovimentacaoItemResult>> {
+  const { data, error } = await getSupabaseClient().rpc("registrar_movimentacao_item", {
+    p_item_id: input.itemId,
+    p_tipo: input.tipo,
+    p_quantidade: input.quantidade,
+    p_motivo: nullableParam(input.motivo),
+    p_observacao: nullableParam(input.observacao),
+  });
+
+  if (error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseWriteError("registrar_movimentacao_item", error),
+    };
+  }
+
+  const row = firstRow<RegistrarMovimentacaoItemResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "registrar_movimentacao_item",
+        code: "EMPTY_RESULT",
+        message: "A movimentação não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function registrarMovimentacaoItemNoSupabase(
+  input: RegistrarMovimentacaoItemInput,
+): Promise<FamiliasSupabaseWriteResult<RegistrarMovimentacaoItemResult>> {
+  try {
+    return await registrarMovimentacaoItem(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("registrar_movimentacao_item", error),
+    };
+  }
+}
+
+export interface DefinirComposicaoInput {
+  beneficioId: string;
+  itens: { itemId: string; quantidade: number }[];
+}
+
+async function definirComposicaoBeneficio(
+  input: DefinirComposicaoInput,
+): Promise<FamiliasSupabaseWriteResult<DefinirComposicaoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("definir_composicao_beneficio", {
+    p_beneficio_id: input.beneficioId,
+    p_itens: input.itens.map((i) => ({ item_id: i.itemId, quantidade: i.quantidade })),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("definir_composicao", error) };
+  }
+
+  const row = firstRow<DefinirComposicaoResult>(data);
+  return { data: row ?? { total_itens: input.itens.length }, error: null };
+}
+
+export async function definirComposicaoBeneficioNoSupabase(
+  input: DefinirComposicaoInput,
+): Promise<FamiliasSupabaseWriteResult<DefinirComposicaoResult>> {
+  try {
+    return await definirComposicaoBeneficio(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("definir_composicao", error),
+    };
+  }
+}
+
+export interface MontarCestaInput {
+  beneficioId: string;
+  quantidade: number;
+}
+
+async function montarCesta(
+  input: MontarCestaInput,
+): Promise<FamiliasSupabaseWriteResult<MontarCestaResult>> {
+  const { data, error } = await getSupabaseClient().rpc("montar_cesta", {
+    p_beneficio_id: input.beneficioId,
+    p_quantidade: input.quantidade,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("montar_cesta", error) };
+  }
+
+  const row = firstRow<MontarCestaResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "montar_cesta",
+        code: "EMPTY_RESULT",
+        message: "A montagem não retornou o saldo resultante.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function montarCestaNoSupabase(
+  input: MontarCestaInput,
+): Promise<FamiliasSupabaseWriteResult<MontarCestaResult>> {
+  try {
+    return await montarCesta(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("montar_cesta", error),
     };
   }
 }
