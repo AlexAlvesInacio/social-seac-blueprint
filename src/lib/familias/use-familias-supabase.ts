@@ -4,6 +4,10 @@ import {
   atualizarFamiliaNoSupabase,
   atualizarResponsavelFamiliaNoSupabase,
   buscarAssistidosAtivosNoSupabase,
+  listarBeneficiosNoSupabase,
+  listarMovimentacoesEstoqueNoSupabase,
+  registrarMovimentacaoEstoqueNoSupabase,
+  type RegistrarMovimentacaoInput,
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
@@ -33,6 +37,8 @@ export const familiasSupabaseQueryKeys = {
   resumoAtendimento: (assistidoId: string) =>
     ["familias", "supabase", "resumo-atendimento", assistidoId] as const,
   buscaAssistidos: (termo: string) => ["familias", "supabase", "busca-assistidos", termo] as const,
+  beneficiosEstoque: ["familias", "supabase", "beneficios-estoque"] as const,
+  movimentacoesEstoque: ["familias", "supabase", "movimentacoes-estoque"] as const,
 };
 
 export function useFamiliasSupabase() {
@@ -237,6 +243,46 @@ export function useRegistrarTentativaSupabase() {
     },
     onSuccess: (_data, variables) => {
       invalidarAtendimento(queryClient, variables.familiaId, variables.assistidoId);
+    },
+  });
+}
+
+export function useBeneficiosEstoque() {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.beneficiosEstoque,
+    queryFn: async () => {
+      const result = await listarBeneficiosNoSupabase();
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+  });
+}
+
+export function useMovimentacoesEstoque() {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
+    queryFn: async () => {
+      const result = await listarMovimentacoesEstoqueNoSupabase();
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+  });
+}
+
+export function useRegistrarMovimentacaoEstoque() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: RegistrarMovimentacaoInput) => {
+      const result = await registrarMovimentacaoEstoqueNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.beneficiosEstoque });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
+      });
     },
   });
 }

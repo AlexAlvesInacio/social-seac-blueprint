@@ -235,6 +235,8 @@ export type FamiliasSupabaseReadOperation =
   | "listar_pessoas"
   | "resumo_atendimento"
   | "buscar_assistidos"
+  | "listar_beneficios"
+  | "listar_movimentacoes"
   | "mapear_dados";
 
 export interface FamiliasSupabaseReadError {
@@ -320,7 +322,8 @@ export type FamiliasSupabaseWriteOperation =
   | "criar_observacao"
   | "atualizar_responsavel"
   | "registrar_entrega"
-  | "registrar_tentativa";
+  | "registrar_tentativa"
+  | "registrar_movimentacao";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -409,6 +412,36 @@ export interface AssistidoParaEntrega {
   tipoCadastro: AssistidoTipoCadastroSupabase;
 }
 
+/** Benefício com saldo de estoque. */
+export interface BeneficioEstoque {
+  id: string;
+  nome: string;
+  saldo: number;
+  minimo: number;
+  controlaEstoque: boolean;
+  ativo: boolean;
+}
+
+export type MovimentacaoEstoqueTipo = "entrada" | "saida" | "ajuste" | "baixa";
+
+/** Linha unificada da visão de movimentações (manuais + baixas de entregas). */
+export interface MovimentacaoEstoque {
+  id: string;
+  beneficioNome: string;
+  tipo: MovimentacaoEstoqueTipo;
+  quantidade: number;
+  saldoResultante: number | null;
+  motivo?: string;
+  criadoEm: string;
+  origem: "manual" | "entrega";
+}
+
+/** Retorno de `public.registrar_movimentacao_estoque`. */
+export interface RegistrarMovimentacaoResult {
+  movimentacao_id: string;
+  saldo_resultante: number;
+}
+
 /** Resultado da busca de assistidos ativos para atendimento. */
 export interface AssistidoBuscaResultado {
   assistidoId: AssistidoSupabaseId;
@@ -431,6 +464,7 @@ const mensagemPorCodigoDeEscrita: Record<string, string> = {
   SEAC1: "Cadastro extra já completou o limite de retiradas; aguardar avaliação.",
   SEAC2: "Entrega bloqueada: intervalo mínimo de 25 dias não cumprido.",
   SEAC3: "Entrega bloqueada por falta de estoque.",
+  SEAE1: "Saldo insuficiente para a saída.",
 };
 
 export function toFamiliasSupabaseWriteError(
