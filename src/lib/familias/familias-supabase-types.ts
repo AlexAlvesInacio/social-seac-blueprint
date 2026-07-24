@@ -237,6 +237,7 @@ export type FamiliasSupabaseReadOperation =
   | "buscar_assistidos"
   | "listar_beneficios"
   | "listar_movimentacoes"
+  | "listar_entregas_painel"
   | "mapear_dados";
 
 export interface FamiliasSupabaseReadError {
@@ -434,6 +435,17 @@ export interface MovimentacaoEstoque {
   motivo?: string;
   criadoEm: string;
   origem: "manual" | "entrega";
+}
+
+/** Entrega recente para agregações do painel (com nomes resolvidos). */
+export interface EntregaPainel {
+  id: string;
+  criadoEm: string;
+  familiaId: string;
+  familiaNome: string;
+  assistidoNome: string;
+  beneficioNome: string;
+  excepcional: boolean;
 }
 
 /** Retorno de `public.registrar_movimentacao_estoque`. */

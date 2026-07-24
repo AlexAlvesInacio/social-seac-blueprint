@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Users,
   UserRound,
@@ -29,21 +29,23 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useFamilias, calcularFaixaEtaria } from "@/lib/familias-store";
-import { useAtendimentoStore } from "@/lib/atendimento-store";
-import { useParametros } from "@/lib/config-store";
-import { ESTOQUE_BASE } from "@/lib/relatorios-store";
+import {
+  useBeneficiosEstoque,
+  useEntregasPainel,
+  useFamiliasSupabase,
+  useMovimentacoesEstoque,
+} from "@/lib/familias/use-familias-supabase";
+import type {
+  BeneficioEstoque,
+  EntregaPainel,
+  FamiliaSupabaseReadModel,
+  MovimentacaoEstoque,
+} from "@/lib/familias/familias-supabase-types";
 
 export const Route = createFileRoute("/painel")({
   head: () => ({ meta: [{ title: "Painel — SEAC Social" }] }),
   component: PainelPage,
 });
-
-const BENEFICIOS_ENTREGAVEIS = ["Cesta Padrão", "Cesta Extra", "Kit Gestante"];
-
-function normDoc(s?: string): string {
-  return (s ?? "").replace(/\D/g, "");
-}
 
 function startOfDay(d: Date): Date {
   const c = new Date(d);
@@ -57,254 +59,192 @@ function daysAgo(n: number): Date {
   return d;
 }
 
-function parseBR(s?: string): Date | null {
-  if (!s || s === "—") return null;
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (!m) return null;
-  return new Date(`${m[3]}-${m[2]}-${m[1]}T00:00:00`);
+type StatusEstoque = "Em estoque" | "Atenção" | "Estoque baixo" | "Sem estoque";
+function statusEstoque(saldo: number, minimo: number): StatusEstoque {
+  if (saldo <= 0) return "Sem estoque";
+  if (minimo > 0 && saldo < minimo * 0.5) return "Estoque baixo";
+  if (minimo > 0 && saldo < minimo) return "Atenção";
+  return "Em estoque";
 }
 
-function trend(
-  current: number,
-  previous: number,
-): { delta: number; label: string; dir: "up" | "down" | "flat" } {
-  if (previous === 0 && current === 0) return { delta: 0, label: "sem histórico", dir: "flat" };
-  if (previous === 0) return { delta: 100, label: "novo período", dir: "up" };
+function trend(current: number, previous: number): { label: string; dir: "up" | "down" | "flat" } {
+  if (previous === 0 && current === 0) return { label: "sem histórico", dir: "flat" };
+  if (previous === 0) return { label: "novo período", dir: "up" };
   const pct = Math.round(((current - previous) / previous) * 100);
   return {
-    delta: pct,
     label: `${pct >= 0 ? "+" : ""}${pct}% vs período anterior`,
     dir: pct > 0 ? "up" : pct < 0 ? "down" : "flat",
   };
 }
 
-function PainelPage() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const familias = useFamilias((s) => s.familias);
-  const assistidos = useFamilias((s) => s.assistidos);
-  const membros = useFamilias((s) => s.membros);
-  const entregas = useAtendimentoStore((s) => s.entregas);
-  const saldoStore = useAtendimentoStore((s) => s.saldo);
-  const params = useParametros((s) => s.params);
+function computarDados(
+  familias: FamiliaSupabaseReadModel[],
+  beneficios: BeneficioEstoque[],
+  entregas: EntregaPainel[],
+  movimentacoes: MovimentacaoEstoque[],
+) {
+  const hoje = startOfDay(new Date());
+  const iniMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const ini30 = daysAgo(30);
+  const ini60 = daysAgo(60);
+  const parse = (iso: string) => new Date(iso);
 
-  const dados = useMemo(() => {
-    const hoje = startOfDay(new Date());
-    const iniMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const ini30 = daysAgo(30);
-    const ini60 = daysAgo(60);
+  const entregasHoje = entregas.filter(
+    (e) => startOfDay(parse(e.criadoEm)).getTime() === hoje.getTime(),
+  );
+  const entregasMes = entregas.filter((e) => parse(e.criadoEm) >= iniMes);
+  const entregas30 = entregas.filter((e) => parse(e.criadoEm) >= ini30);
+  const entregas30Prev = entregas.filter((e) => {
+    const d = parse(e.criadoEm);
+    return d >= ini60 && d < ini30;
+  });
 
-    const parseEntrega = (dISO: string) => new Date(dISO);
+  const famAtend30 = new Set(entregas30.map((e) => e.familiaId));
+  const famAtend30Prev = new Set(entregas30Prev.map((e) => e.familiaId));
 
-    const entregasHoje = entregas.filter(
-      (e) => startOfDay(parseEntrega(e.dataISO)).getTime() === hoje.getTime(),
-    );
-    const entregasMes = entregas.filter((e) => parseEntrega(e.dataISO) >= iniMes);
-    const entregas30 = entregas.filter((e) => parseEntrega(e.dataISO) >= ini30);
-    const entregas30Prev = entregas.filter((e) => {
-      const d = parseEntrega(e.dataISO);
-      return d >= ini60 && d < ini30;
+  const cestasEstoque = beneficios.reduce((acc, b) => acc + b.saldo, 0);
+  const assistidosAtivos = familias.reduce(
+    (acc, f) => acc + f.assistidos.filter((a) => a.status === "ativo").length,
+    0,
+  );
+  const aguardandoAvaliacao = familias.filter((f) => f.status === "avaliar");
+
+  // Última entrega por família (dentro da janela) para o card de contato.
+  const ultimaEntregaPorFamilia = new Map<string, Date>();
+  for (const e of entregas) {
+    const d = parse(e.criadoEm);
+    const atual = ultimaEntregaPorFamilia.get(e.familiaId);
+    if (!atual || d > atual) ultimaEntregaPorFamilia.set(e.familiaId, d);
+  }
+  const contatoNecessario = familias
+    .filter((f) => f.acompanhamento === "sem_retirada_90")
+    .map((f) => {
+      const ult = ultimaEntregaPorFamilia.get(f.id) ?? null;
+      const dias = ult ? Math.floor((hoje.getTime() - ult.getTime()) / 86400000) : null;
+      return { f, dias };
     });
 
-    // Famílias atendidas por período (unique por familiaId ou documento)
-    const familiaKey = (e: (typeof entregas)[number]): string => {
-      if (e.familiaId) return `id:${e.familiaId}`;
-      const doc = normDoc(e.documento);
-      const a = assistidos.find((x) => normDoc(x.documento) === doc);
-      return a ? `id:${a.familiaId}` : `doc:${doc || e.familia}`;
-    };
-    const famAtend30 = new Set(entregas30.map(familiaKey));
-    const famAtend30Prev = new Set(entregas30Prev.map(familiaKey));
-
-    const cestasEstoque = BENEFICIOS_ENTREGAVEIS.reduce((acc, b) => {
-      const base = ESTOQUE_BASE.find((s) => s.item === b)?.saldo ?? 0;
-      return acc + (saldoStore[b] ?? base);
-    }, 0);
-
-    // Aguardando avaliação — alinhado ao card de /familias
-    const aguardandoAvaliacao = familias.filter((f) => f.status === "avaliar");
-
-    // Contato necessário 90+ — alinhado ao card de /familias (acompanhamento sem_retirada_90)
-    const contatoNecessario = familias
-      .filter((f) => f.acompanhamento === "sem_retirada_90")
-      .map((f) => {
-        const docs = new Set(
-          assistidos.filter((a) => a.familiaId === f.id).map((a) => normDoc(a.documento)),
-        );
-        docs.add(normDoc(f.documento));
-        let ult: Date | null = null;
-        for (const e of entregas) {
-          if (e.familiaId === f.id || docs.has(normDoc(e.documento))) {
-            const d = parseEntrega(e.dataISO);
-            if (!ult || d > ult) ult = d;
-          }
-        }
-        if (!ult) ult = parseBR(f.ultimaRetirada);
-        const dias = ult
-          ? Math.floor((hoje.getTime() - ult.getTime()) / 86400000)
-          : params.inatividadeContatoDias;
-        return { f, ult, dias };
-      });
-
-    // Assistidos ativos — só assistidos cadastrados com status ativo
-    const assistidosAtivos = assistidos.filter((a) => a.status === "ativo").length;
-
-    // Perfil do público
-    const publico = {
-      criancas: 0,
-      adolescentes: 0,
-      adultos: 0,
-      idosos: 0,
-      gestantes: 0,
-      pcd: 0,
-      mulheres: 0,
-      homens: 0,
-      naoInformado: 0,
-      total: 0,
-    };
-    for (const f of familias) {
-      const listaAssist = assistidos.filter((a) => a.familiaId === f.id);
-      const listaMemb = membros.filter((m) => m.familiaId === f.id);
-      const docsVistos = new Set<string>();
-      const respDoc = normDoc(f.documento);
-      if (respDoc) docsVistos.add(respDoc);
-      // responsável conta como 1 adulto sem gênero informado
-      publico.total++;
-      publico.adultos++;
+  // Perfil do público: conta sobre os membros de cada família (inclui o responsável).
+  const publico = {
+    criancas: 0,
+    adolescentes: 0,
+    adultos: 0,
+    idosos: 0,
+    gestantes: 0,
+    pcd: 0,
+    naoInformado: 0,
+  };
+  for (const f of familias) {
+    for (const m of f.membros) {
+      if (m.crianca) publico.criancas++;
+      else if (m.adolescente) publico.adolescentes++;
+      else if (m.idoso) publico.idosos++;
+      else publico.adultos++;
+      if (m.gestante) publico.gestantes++;
+      if (m.pcd) publico.pcd++;
       publico.naoInformado++;
-      for (const a of listaAssist) {
-        const d = normDoc(a.documento);
-        if (d && docsVistos.has(d)) continue;
-        if (d) docsVistos.add(d);
-        publico.total++;
-        const faixa = calcularFaixaEtaria(a.nascimento);
-        if (faixa === "crianca") publico.criancas++;
-        else if (faixa === "adolescente") publico.adolescentes++;
-        else if (faixa === "idoso") publico.idosos++;
-        else publico.adultos++;
-        if (a.pcd) publico.pcd++;
-        publico.naoInformado++;
-      }
-      for (const m of listaMemb) {
-        const d = normDoc(m.documento);
-        if (d && docsVistos.has(d)) continue;
-        if (d) docsVistos.add(d);
-        publico.total++;
-        if (m.crianca) publico.criancas++;
-        else if (m.adolescente) publico.adolescentes++;
-        else if (m.idoso) publico.idosos++;
-        else publico.adultos++;
-        if (m.gestante) publico.gestantes++;
-        if (m.pcd) publico.pcd++;
-        publico.naoInformado++;
-      }
-      // fallback: se família tem contadores agregados e não há membros/assistidos detalhados
-      const detalhados = listaAssist.length + listaMemb.length;
-      if (detalhados === 0) {
-        const cri = f.criancas ?? 0;
-        const ido = f.idosos ?? 0;
-        const ges = f.gestantes ?? 0;
-        const pcd = f.pcd ?? 0;
-        const extras = Math.max(0, (f.moradores ?? 0) - 1);
-        publico.total += extras;
-        publico.criancas += cri;
-        publico.idosos += ido;
-        publico.gestantes += ges;
-        publico.pcd += pcd;
-        publico.adultos += Math.max(0, extras - cri - ido);
-        publico.naoInformado += extras;
-      }
     }
+  }
 
-    // Atendimentos por dia (30 dias) — apenas dias com atendimento real
-    const entregasPorDia: { dia: string; qtd: number }[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = daysAgo(i);
-      const qtd = entregas.filter(
-        (e) => startOfDay(parseEntrega(e.dataISO)).getTime() === d.getTime(),
-      ).length;
-      if (qtd === 0) continue;
-      const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-      entregasPorDia.push({ dia: label, qtd });
-    }
+  const entregasPorDia: { dia: string; qtd: number }[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = daysAgo(i);
+    const qtd = entregas.filter(
+      (e) => startOfDay(parse(e.criadoEm)).getTime() === d.getTime(),
+    ).length;
+    if (qtd === 0) continue;
+    const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+    entregasPorDia.push({ dia: label, qtd });
+  }
 
-    // Entregas por benefício (mês) — oculta benefícios sem entrega no período
-    const entregasPorBeneficio = BENEFICIOS_ENTREGAVEIS.map((b) => ({
-      name: b,
-      value: entregasMes.filter((e) => e.beneficio === b).length,
-    })).filter((b) => b.value > 0);
+  const beneficiosNomes = beneficios.map((b) => b.nome);
+  const entregasPorBeneficio = beneficiosNomes
+    .map((nome) => ({
+      name: nome,
+      value: entregasMes.filter((e) => e.beneficioNome === nome).length,
+    }))
+    .filter((b) => b.value > 0);
 
-    const statusFamilias = [
-      {
-        status: "Liberado",
-        qtd: familias.filter((f) => f.status === "liberado").length,
-        fill: "hsl(152 55% 42%)",
-      },
-      {
-        status: "Bloqueado",
-        qtd: familias.filter((f) => f.status === "bloqueado").length,
-        fill: "hsl(0 72% 51%)",
-      },
-      {
-        status: "Avaliar",
-        qtd: familias.filter((f) => f.status === "avaliar").length,
-        fill: "#E8712A",
-      },
-      {
-        status: "Inativo",
-        qtd: familias.filter((f) => f.status === "inativo").length,
-        fill: "hsl(220 9% 55%)",
-      },
-    ];
+  const statusFamilias = [
+    { status: "Liberado", chave: "liberado", fill: "hsl(152 55% 42%)" },
+    { status: "Bloqueado", chave: "bloqueado", fill: "hsl(0 72% 51%)" },
+    { status: "Avaliar", chave: "avaliar", fill: "#E8712A" },
+    { status: "Inativo", chave: "inativo", fill: "hsl(220 9% 55%)" },
+  ].map((s) => ({
+    status: s.status,
+    fill: s.fill,
+    qtd: familias.filter((f) => f.status === s.chave).length,
+  }));
 
-    // Alertas estoque
-    const alertasEstoque = ESTOQUE_BASE.map((s) => {
-      const saldo = saldoStore[s.item] ?? s.saldo;
-      return {
-        item: s.item,
-        saldo,
-        minimo: s.minimo,
-        status:
-          saldo <= 0
-            ? "Sem estoque"
-            : saldo < s.minimo * 0.5
-              ? "Estoque baixo"
-              : saldo < s.minimo
-                ? "Atenção"
-                : "OK",
-      };
-    }).filter((x) => x.status !== "OK");
+  const alertasEstoque = beneficios
+    .map((b) => ({
+      item: b.nome,
+      saldo: b.saldo,
+      minimo: b.minimo,
+      status: statusEstoque(b.saldo, b.minimo),
+    }))
+    .filter((x) => x.status !== "Em estoque");
 
-    return {
-      contadores: {
-        familiasCadastradas: familias.length,
-        familiasAtendidas30: famAtend30.size,
-        familiasAtendidas30Prev: famAtend30Prev.size,
-        assistidosAtivos,
-        entregasHoje: entregasHoje.length,
-        entregasMes: entregasMes.length,
-        cestasEstoque,
-        aguardandoAvaliacao: aguardandoAvaliacao.length,
-        contatoNecessario: contatoNecessario.length,
-        entregas30: entregas30.length,
-        entregas30Prev: entregas30Prev.length,
-      },
-      publico,
-      entregasPorDia,
-      entregasPorBeneficio,
-      statusFamilias,
-      alertasEstoque,
-      ultimasEntregas: entregas.slice(0, 5),
-      ultimasMovimentacoes: entregas.slice(0, 5),
-      aguardandoAvaliacao: aguardandoAvaliacao.slice(0, 6),
-      contatoNecessario: contatoNecessario.slice(0, 6),
-    };
-  }, [familias, assistidos, membros, entregas, saldoStore, params]);
+  return {
+    contadores: {
+      familiasCadastradas: familias.length,
+      familiasAtendidas30: famAtend30.size,
+      familiasAtendidas30Prev: famAtend30Prev.size,
+      assistidosAtivos,
+      entregasHoje: entregasHoje.length,
+      entregasMes: entregasMes.length,
+      cestasEstoque,
+      aguardandoAvaliacao: aguardandoAvaliacao.length,
+      contatoNecessario: contatoNecessario.length,
+      entregas30: entregas30.length,
+      entregas30Prev: entregas30Prev.length,
+    },
+    publico,
+    entregasPorDia,
+    entregasPorBeneficio,
+    statusFamilias,
+    alertasEstoque,
+    ultimasEntregas: entregas.slice(0, 5),
+    ultimasMovimentacoes: movimentacoes.slice(0, 5),
+    aguardandoAvaliacao: aguardandoAvaliacao.slice(0, 6),
+    contatoNecessario: contatoNecessario.slice(0, 6),
+  };
+}
 
-  if (!mounted) {
+function PainelPage() {
+  const familias = useFamiliasSupabase();
+  const beneficios = useBeneficiosEstoque();
+  const movimentacoes = useMovimentacoesEstoque();
+  const entregas = useEntregasPainel();
+
+  const carregando =
+    familias.isPending || beneficios.isPending || movimentacoes.isPending || entregas.isPending;
+  const erro = familias.isError || beneficios.isError || movimentacoes.isError || entregas.isError;
+
+  const dados = useMemo(
+    () =>
+      computarDados(
+        familias.data ?? [],
+        beneficios.data ?? [],
+        entregas.data ?? [],
+        movimentacoes.data ?? [],
+      ),
+    [familias.data, beneficios.data, entregas.data, movimentacoes.data],
+  );
+
+  if (carregando) {
     return (
       <AppShell title="Painel">
         <div className="p-8 text-sm text-muted-foreground">Carregando indicadores…</div>
+      </AppShell>
+    );
+  }
+  if (erro) {
+    return (
+      <AppShell title="Painel">
+        <div className="p-8 text-sm text-destructive">
+          Não foi possível carregar os indicadores. Verifique a conexão e tente novamente.
+        </div>
       </AppShell>
     );
   }
@@ -390,7 +330,6 @@ function PainelPage() {
 
   return (
     <AppShell title="Painel">
-      {/* KPIs principais */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => {
           const Icon = k.icon;
@@ -424,13 +363,12 @@ function PainelPage() {
         })}
       </div>
 
-      {/* Perfil do público */}
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-base">Perfil do público atendido</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
+          <div className="grid grid-cols-3 gap-3 md:grid-cols-5 lg:grid-cols-9">
             {perfil.map((p) => (
               <div key={p.label} className="rounded-lg border p-3 text-center">
                 <p className="text-2xl font-semibold">{p.value}</p>
@@ -442,14 +380,12 @@ function PainelPage() {
             ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Moradores únicos por família (responsável + assistidos + membros, sem duplicidade por
-            documento). Sexo/gênero ainda não é obrigatório no cadastro — enquanto isso, o total
-            aparece em "Não informado".
+            Membros das famílias cadastradas no Supabase (responsável + demais membros). Sexo/gênero
+            ainda não é obrigatório no cadastro — enquanto isso, o total aparece em "Não informado".
           </p>
         </CardContent>
       </Card>
 
-      {/* Gráficos */}
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -542,7 +478,6 @@ function PainelPage() {
         </CardContent>
       </Card>
 
-      {/* Operacional */}
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -563,18 +498,13 @@ function PainelPage() {
                 {dados.ultimasEntregas.map((e) => (
                   <li key={e.id} className="flex items-center justify-between py-2 text-sm">
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{e.nome}</p>
+                      <p className="truncate font-medium">{e.assistidoNome}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {e.familia} • {e.beneficio}
+                        {e.familiaNome} • {e.beneficioNome}
                       </p>
                     </div>
                     <span className="shrink-0 text-xs text-muted-foreground">
-                      {new Date(e.dataISO).toLocaleString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatarDataHora(e.criadoEm)}
                     </span>
                   </li>
                 ))}
@@ -599,15 +529,23 @@ function PainelPage() {
               <EmptyList text="Nenhuma movimentação ainda." />
             ) : (
               <ul className="divide-y">
-                {dados.ultimasMovimentacoes.map((e) => (
-                  <li key={e.id} className="flex items-center justify-between py-2 text-sm">
+                {dados.ultimasMovimentacoes.map((m) => (
+                  <li
+                    key={`${m.origem}-${m.id}`}
+                    className="flex items-center justify-between py-2 text-sm"
+                  >
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{e.beneficio}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        Baixa automática • {e.usuario}
+                      <p className="truncate font-medium">{m.beneficioNome}</p>
+                      <p className="truncate text-xs capitalize text-muted-foreground">
+                        {m.tipo === "baixa" ? "Baixa automática" : m.tipo}
+                        {m.motivo ? ` • ${m.motivo}` : ""}
                       </p>
                     </div>
-                    <span className="shrink-0 text-xs text-red-700">-1</span>
+                    <span
+                      className={`shrink-0 text-xs ${m.quantidade < 0 ? "text-red-700" : "text-emerald-700"}`}
+                    >
+                      {m.quantidade > 0 ? `+${m.quantidade}` : m.quantidade}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -617,7 +555,7 @@ function PainelPage() {
 
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <AlertTriangle className="h-4 w-4 text-amber-600" /> Alertas de estoque
             </CardTitle>
             <Link
@@ -683,7 +621,7 @@ function PainelPage() {
                     <div>
                       <Link
                         to="/familias/$id"
-                        params={{ id: String(f.id) }}
+                        params={{ id: f.id }}
                         className="font-medium hover:underline"
                       >
                         {f.nome}
@@ -696,7 +634,7 @@ function PainelPage() {
                       variant="outline"
                       className="border-violet-200 bg-violet-100 text-violet-700"
                     >
-                      {f.progressoExtra ?? "avaliar"}
+                      avaliar
                     </Badge>
                   </li>
                 ))}
@@ -726,7 +664,7 @@ function PainelPage() {
                     <div>
                       <Link
                         to="/familias/$id"
-                        params={{ id: String(f.id) }}
+                        params={{ id: f.id }}
                         className="font-medium hover:underline"
                       >
                         {f.nome}
@@ -736,7 +674,7 @@ function PainelPage() {
                       </p>
                     </div>
                     <Badge variant="outline" className="border-red-200 bg-red-100 text-red-700">
-                      {dias} dias
+                      {dias !== null ? `${dias} dias` : "90+ dias"}
                     </Badge>
                   </li>
                 ))}
@@ -747,6 +685,17 @@ function PainelPage() {
       </div>
     </AppShell>
   );
+}
+
+function formatarDataHora(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function EmptyList({ text }: { text: string }) {
