@@ -958,6 +958,7 @@ type MovimentacaoRow = {
   saldo_resultante: number;
   motivo: string | null;
   criado_em: string;
+  entrega_id: string | null;
 };
 type EntregaMovRow = { id: string; beneficio_id: string; criado_em: string; excepcional: boolean };
 
@@ -971,7 +972,7 @@ async function listarMovimentacoesEstoque(): Promise<
   const [movResult, entregasResult, beneficiosResult] = await Promise.all([
     client
       .from("movimentacoes_estoque")
-      .select("id, beneficio_id, tipo, quantidade, saldo_resultante, motivo, criado_em")
+      .select("id, beneficio_id, tipo, quantidade, saldo_resultante, motivo, criado_em, entrega_id")
       .order("criado_em", { ascending: false })
       .limit(LIMITE_MOVIMENTACOES),
     client
@@ -1005,19 +1006,34 @@ async function listarMovimentacoesEstoque(): Promise<
     ((beneficiosResult.data ?? []) as { id: string; nome: string }[]).map((b) => [b.id, b.nome]),
   );
 
-  const manuais: MovimentacaoEstoque[] = ((movResult.data ?? []) as MovimentacaoRow[]).map((m) => ({
-    id: m.id,
-    beneficioNome: nomePorId.get(m.beneficio_id) ?? "—",
-    tipo: m.tipo,
-    quantidade: m.quantidade,
-    saldoResultante: m.saldo_resultante,
-    motivo: m.motivo ?? undefined,
-    criadoEm: m.criado_em,
-    origem: "manual",
-  }));
+  const movRows = (movResult.data ?? []) as MovimentacaoRow[];
 
-  const baixas: MovimentacaoEstoque[] = ((entregasResult.data ?? []) as EntregaMovRow[]).map(
-    (e) => ({
+  // Linhas do ledger. A baixa automática da entrega grava entrega_id (desde a
+  // migration 20260724220332); exibimos essas como "baixa"/"entrega" — agora com
+  // saldo_resultante real —, e as demais como movimentação manual.
+  const doLedger: MovimentacaoEstoque[] = movRows.map((m) => {
+    const ehBaixaEntrega = m.entrega_id !== null;
+    return {
+      id: m.id,
+      beneficioNome: nomePorId.get(m.beneficio_id) ?? "—",
+      tipo: ehBaixaEntrega ? "baixa" : m.tipo,
+      quantidade: m.quantidade,
+      saldoResultante: m.saldo_resultante,
+      motivo: m.motivo ?? undefined,
+      criadoEm: m.criado_em,
+      origem: ehBaixaEntrega ? "entrega" : "manual",
+    };
+  });
+
+  // Entregas anteriores a essa migration não têm linha no ledger; sintetizamos a
+  // baixa a partir de `entregas` apenas para elas (evita duplicar as que já têm
+  // linha no ledger).
+  const entregasComLedger = new Set(
+    movRows.map((m) => m.entrega_id).filter((id): id is string => id !== null),
+  );
+  const baixas: MovimentacaoEstoque[] = ((entregasResult.data ?? []) as EntregaMovRow[])
+    .filter((e) => !entregasComLedger.has(e.id))
+    .map((e) => ({
       id: e.id,
       beneficioNome: nomePorId.get(e.beneficio_id) ?? "—",
       tipo: "baixa",
@@ -1026,10 +1042,9 @@ async function listarMovimentacoesEstoque(): Promise<
       motivo: e.excepcional ? "Entrega excepcional" : "Entrega realizada",
       criadoEm: e.criado_em,
       origem: "entrega",
-    }),
-  );
+    }));
 
-  const combinado = [...manuais, ...baixas]
+  const combinado = [...doLedger, ...baixas]
     .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
     .slice(0, LIMITE_MOVIMENTACOES);
 

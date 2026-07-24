@@ -256,6 +256,11 @@ export function useRegistrarEntregaSupabase() {
     },
     onSuccess: (_data, variables) => {
       invalidarAtendimento(queryClient, variables.familiaId, variables.assistidoId);
+      // A entrega baixa o saldo e grava a baixa automática no ledger de estoque.
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.beneficiosEstoque });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
+      });
     },
   });
 }
