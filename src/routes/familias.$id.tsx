@@ -54,7 +54,11 @@ import type {
   AssistidoSupabaseReadModel,
   FamiliaSupabaseReadModel,
 } from "@/lib/familias/familias-supabase-types";
-import { useFamiliaSupabase } from "@/lib/familias/use-familias-supabase";
+import {
+  useEntregasFamilia,
+  useFamiliaSupabase,
+  useTentativasFamilia,
+} from "@/lib/familias/use-familias-supabase";
 import {
   EditarFamiliaDialog,
   AdicionarAssistidoDialog,
@@ -778,8 +782,9 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
                 Dados do Supabase — edição de família, assistidos, membros e observações
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Já é possível editar a família, adicionar assistidos e membros e registrar
-                observações. Edição do responsável e atendimento ainda não estão disponíveis para
+                Já é possível editar a família, adicionar assistidos e membros, registrar
+                observações, atender (registrar entrega) e consultar o histórico de entregas e
+                tentativas bloqueadas. A edição do responsável ainda não está disponível para
                 famílias remotas.
               </p>
             </div>
@@ -956,11 +961,11 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
           </TabsContent>
 
           <TabsContent value="entregas">
-            <RemoteHistoryUnavailable message="Histórico de entregas ainda não integrado ao Supabase nesta etapa." />
+            <EntregasFamiliaTab familiaId={familia.id} />
           </TabsContent>
 
           <TabsContent value="bloqueios">
-            <RemoteHistoryUnavailable message="Tentativas bloqueadas ainda não integradas ao Supabase nesta etapa." />
+            <TentativasFamiliaTab familiaId={familia.id} />
           </TabsContent>
 
           <TabsContent value="observacoes">
@@ -1057,12 +1062,153 @@ function FamiliaDetailState({
   );
 }
 
-function RemoteHistoryUnavailable({ message }: { message: string }) {
+function EntregasFamiliaTab({ familiaId }: { familiaId: string }) {
+  const { data, isPending, isError, isFetching, refetch } = useEntregasFamilia(familiaId);
+
+  if (isPending) return <HistoricoEstado loading message="Carregando histórico de entregas..." />;
+  if (isError) {
+    return (
+      <HistoricoEstado
+        message="Não foi possível carregar o histórico de entregas."
+        onRetry={() => void refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
+
+  const entregas = data ?? [];
+  if (entregas.length === 0) return <HistoricoEstado message="Nenhuma entrega registrada." />;
+
   return (
     <Card>
-      <CardContent className="p-8 text-center">
-        <p className="text-sm font-medium">Ainda não integrado</p>
-        <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Data / hora</TableHead>
+              <TableHead>Assistido</TableHead>
+              <TableHead>Documento</TableHead>
+              <TableHead>Benefício</TableHead>
+              <TableHead>Tipo de entrega</TableHead>
+              <TableHead>Observação</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {entregas.map((e) => (
+              <TableRow key={e.id}>
+                <TableCell className="text-sm">{formatarDataHora(e.criadoEm)}</TableCell>
+                <TableCell className="text-sm">{e.assistidoNome}</TableCell>
+                <TableCell className="text-sm">{e.documento ?? "—"}</TableCell>
+                <TableCell className="text-sm">{e.beneficioNome}</TableCell>
+                <TableCell className="text-sm">
+                  {e.excepcional ? "Excepcional" : "Padrão"}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {e.observacao || "—"}
+                </TableCell>
+                <TableCell className="text-sm">
+                  <Badge variant="outline" className="text-[10px]">
+                    Entregue
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TentativasFamiliaTab({ familiaId }: { familiaId: string }) {
+  const { data, isPending, isError, isFetching, refetch } = useTentativasFamilia(familiaId);
+
+  if (isPending) return <HistoricoEstado loading message="Carregando tentativas bloqueadas..." />;
+  if (isError) {
+    return (
+      <HistoricoEstado
+        message="Não foi possível carregar as tentativas bloqueadas."
+        onRetry={() => void refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
+
+  const tentativas = data ?? [];
+  if (tentativas.length === 0) return <HistoricoEstado message="Nenhuma tentativa bloqueada." />;
+
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Data / hora</TableHead>
+              <TableHead>Assistido</TableHead>
+              <TableHead>Documento</TableHead>
+              <TableHead>Benefício</TableHead>
+              <TableHead>Motivo</TableHead>
+              <TableHead>Observação</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tentativas.map((t) => (
+              <TableRow key={t.id}>
+                <TableCell className="text-sm">{formatarDataHora(t.criadoEm)}</TableCell>
+                <TableCell className="text-sm">{t.assistidoNome}</TableCell>
+                <TableCell className="text-sm">{t.documento ?? "—"}</TableCell>
+                <TableCell className="text-sm">{t.beneficioNome}</TableCell>
+                <TableCell className="text-sm">
+                  <Badge variant="outline" className="text-[10px]">
+                    {t.motivo === "prazo" ? "Prazo (25 dias)" : "Estoque"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {t.observacao || "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function HistoricoEstado({
+  loading = false,
+  message,
+  onRetry,
+  retrying = false,
+}: {
+  loading?: boolean;
+  message: string;
+  onRetry?: () => void;
+  retrying?: boolean;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+        {loading ? (
+          <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
+        ) : onRetry ? (
+          <AlertTriangle className="h-5 w-5 text-warning" />
+        ) : null}
+        <p className="text-sm text-muted-foreground">{message}</p>
+        {onRetry ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            disabled={retrying}
+            onClick={onRetry}
+          >
+            <RefreshCw className={`h-4 w-4 ${retrying ? "animate-spin" : ""}`} />
+            {retrying ? "Tentando novamente..." : "Tentar novamente"}
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );

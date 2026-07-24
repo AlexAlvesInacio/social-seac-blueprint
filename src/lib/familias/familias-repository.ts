@@ -1114,19 +1114,25 @@ type EntregaPainelRow = {
   observacao: string | null;
 };
 
-async function listarEntregasRecentes(
-  diasJanela: number,
-  limite: number,
+// Filtro comum às consultas de entregas: por janela de tempo (painel) ou por
+// família (histórico do detalhe da família), sempre limitado.
+type EntregasFiltro = { familiaId?: string; desde?: string; limite: number };
+
+async function consultarEntregas(
+  filtro: EntregasFiltro,
 ): Promise<FamiliasSupabaseReadResult<EntregaPainel[]>> {
   const client = getSupabaseClient();
-  const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
 
-  const entregasResult = await client
+  let query = client
     .from("entregas")
     .select("id, criado_em, familia_id, beneficio_id, assistido_id, excepcional, observacao")
-    .gte("criado_em", desde)
     .order("criado_em", { ascending: false })
-    .limit(limite);
+    .limit(filtro.limite);
+
+  if (filtro.familiaId) query = query.eq("familia_id", filtro.familiaId);
+  if (filtro.desde) query = query.gte("criado_em", filtro.desde);
+
+  const entregasResult = await query;
 
   if (entregasResult.error) {
     return {
@@ -1231,7 +1237,23 @@ export async function listarEntregasRecentesNoSupabase(
   limite = 500,
 ): Promise<FamiliasSupabaseReadResult<EntregaPainel[]>> {
   try {
-    return await listarEntregasRecentes(diasJanela, limite);
+    const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
+    return await consultarEntregas({ desde, limite });
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseReadError("listar_entregas_painel", error),
+    };
+  }
+}
+
+/** Histórico completo de entregas de uma família (todas as datas). */
+export async function listarEntregasFamiliaNoSupabase(
+  familiaId: string,
+  limite = 500,
+): Promise<FamiliasSupabaseReadResult<EntregaPainel[]>> {
+  try {
+    return await consultarEntregas({ familiaId, limite });
   } catch (error) {
     return {
       data: null,
@@ -1250,19 +1272,23 @@ type TentativaRow = {
   observacao: string | null;
 };
 
-async function listarTentativas(
-  diasJanela: number,
-  limite: number,
+type TentativasFiltro = { familiaId?: string; desde?: string; limite: number };
+
+async function consultarTentativas(
+  filtro: TentativasFiltro,
 ): Promise<FamiliasSupabaseReadResult<TentativaBloqueadaPainel[]>> {
   const client = getSupabaseClient();
-  const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
 
-  const tentativasResult = await client
+  let query = client
     .from("tentativas_bloqueadas")
     .select("id, criado_em, familia_id, pessoa_id, beneficio_id, motivo, observacao")
-    .gte("criado_em", desde)
     .order("criado_em", { ascending: false })
-    .limit(limite);
+    .limit(filtro.limite);
+
+  if (filtro.familiaId) query = query.eq("familia_id", filtro.familiaId);
+  if (filtro.desde) query = query.gte("criado_em", filtro.desde);
+
+  const tentativasResult = await query;
 
   if (tentativasResult.error) {
     return {
@@ -1343,7 +1369,20 @@ export async function listarTentativasBloqueadasNoSupabase(
   limite = 500,
 ): Promise<FamiliasSupabaseReadResult<TentativaBloqueadaPainel[]>> {
   try {
-    return await listarTentativas(diasJanela, limite);
+    const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
+    return await consultarTentativas({ desde, limite });
+  } catch (error) {
+    return { data: null, error: toUnexpectedFamiliasSupabaseReadError("listar_tentativas", error) };
+  }
+}
+
+/** Histórico completo de tentativas bloqueadas de uma família (todas as datas). */
+export async function listarTentativasFamiliaNoSupabase(
+  familiaId: string,
+  limite = 500,
+): Promise<FamiliasSupabaseReadResult<TentativaBloqueadaPainel[]>> {
+  try {
+    return await consultarTentativas({ familiaId, limite });
   } catch (error) {
     return { data: null, error: toUnexpectedFamiliasSupabaseReadError("listar_tentativas", error) };
   }
