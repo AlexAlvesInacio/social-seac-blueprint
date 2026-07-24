@@ -25,6 +25,7 @@ import type {
   CriarFamiliaResult,
   CriarMembroResult,
   CriarObservacaoResult,
+  CriarPreCadastroResult,
   FamiliaStatusSupabase,
   ObservacaoSocialTipoSupabase,
   FamiliaSupabaseId,
@@ -630,7 +631,7 @@ export interface RegistrarEntregaInput {
 export interface RegistrarTentativaInput {
   assistidoId: string;
   familiaId: string;
-  motivo: "prazo" | "estoque";
+  motivo: "prazo" | "estoque" | "extra";
   observacao?: string;
 }
 
@@ -716,6 +717,66 @@ export async function registrarTentativaBloqueadaNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseWriteError("registrar_tentativa", error),
+    };
+  }
+}
+
+export interface CriarPreCadastroInput {
+  nome: string;
+  tipoDocumento: PessoaTipoDocumentoSupabase;
+  documento: string;
+  telefone?: string;
+  nascimento?: string;
+  pcd?: boolean;
+  /** true = já entregar Cesta Extra no pré-cadastro. */
+  entregar: boolean;
+  observacao?: string;
+}
+
+async function criarPreCadastro(
+  input: CriarPreCadastroInput,
+): Promise<FamiliasSupabaseWriteResult<CriarPreCadastroResult>> {
+  const { data, error } = await getSupabaseClient().rpc("criar_pre_cadastro", {
+    p_nome: input.nome.trim(),
+    p_tipo_documento: input.tipoDocumento,
+    p_documento: input.documento.trim(),
+    p_telefone: nullableParam(input.telefone),
+    p_nascimento: input.nascimento ? input.nascimento : null,
+    p_pcd: input.pcd ?? false,
+    p_entregar: input.entregar,
+    p_observacao: nullableParam(input.observacao),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("criar_pre_cadastro", error) };
+  }
+
+  const row = firstRow<CriarPreCadastroResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "criar_pre_cadastro",
+        code: "EMPTY_RESULT",
+        message: "O pré-cadastro não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function criarPreCadastroNoSupabase(
+  input: CriarPreCadastroInput,
+): Promise<FamiliasSupabaseWriteResult<CriarPreCadastroResult>> {
+  try {
+    return await criarPreCadastro(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("criar_pre_cadastro", error),
     };
   }
 }
@@ -958,6 +1019,7 @@ type MovimentacaoRow = {
   saldo_resultante: number;
   motivo: string | null;
   criado_em: string;
+  entrega_id: string | null;
 };
 type EntregaMovRow = { id: string; beneficio_id: string; criado_em: string; excepcional: boolean };
 
@@ -971,7 +1033,7 @@ async function listarMovimentacoesEstoque(): Promise<
   const [movResult, entregasResult, beneficiosResult] = await Promise.all([
     client
       .from("movimentacoes_estoque")
-      .select("id, beneficio_id, tipo, quantidade, saldo_resultante, motivo, criado_em")
+      .select("id, beneficio_id, tipo, quantidade, saldo_resultante, motivo, criado_em, entrega_id")
       .order("criado_em", { ascending: false })
       .limit(LIMITE_MOVIMENTACOES),
     client
@@ -1005,19 +1067,34 @@ async function listarMovimentacoesEstoque(): Promise<
     ((beneficiosResult.data ?? []) as { id: string; nome: string }[]).map((b) => [b.id, b.nome]),
   );
 
-  const manuais: MovimentacaoEstoque[] = ((movResult.data ?? []) as MovimentacaoRow[]).map((m) => ({
-    id: m.id,
-    beneficioNome: nomePorId.get(m.beneficio_id) ?? "—",
-    tipo: m.tipo,
-    quantidade: m.quantidade,
-    saldoResultante: m.saldo_resultante,
-    motivo: m.motivo ?? undefined,
-    criadoEm: m.criado_em,
-    origem: "manual",
-  }));
+  const movRows = (movResult.data ?? []) as MovimentacaoRow[];
 
-  const baixas: MovimentacaoEstoque[] = ((entregasResult.data ?? []) as EntregaMovRow[]).map(
-    (e) => ({
+  // Linhas do ledger. A baixa automática da entrega grava entrega_id (desde a
+  // migration 20260724220332); exibimos essas como "baixa"/"entrega" — agora com
+  // saldo_resultante real —, e as demais como movimentação manual.
+  const doLedger: MovimentacaoEstoque[] = movRows.map((m) => {
+    const ehBaixaEntrega = m.entrega_id !== null;
+    return {
+      id: m.id,
+      beneficioNome: nomePorId.get(m.beneficio_id) ?? "—",
+      tipo: ehBaixaEntrega ? "baixa" : m.tipo,
+      quantidade: m.quantidade,
+      saldoResultante: m.saldo_resultante,
+      motivo: m.motivo ?? undefined,
+      criadoEm: m.criado_em,
+      origem: ehBaixaEntrega ? "entrega" : "manual",
+    };
+  });
+
+  // Entregas anteriores a essa migration não têm linha no ledger; sintetizamos a
+  // baixa a partir de `entregas` apenas para elas (evita duplicar as que já têm
+  // linha no ledger).
+  const entregasComLedger = new Set(
+    movRows.map((m) => m.entrega_id).filter((id): id is string => id !== null),
+  );
+  const baixas: MovimentacaoEstoque[] = ((entregasResult.data ?? []) as EntregaMovRow[])
+    .filter((e) => !entregasComLedger.has(e.id))
+    .map((e) => ({
       id: e.id,
       beneficioNome: nomePorId.get(e.beneficio_id) ?? "—",
       tipo: "baixa",
@@ -1026,10 +1103,9 @@ async function listarMovimentacoesEstoque(): Promise<
       motivo: e.excepcional ? "Entrega excepcional" : "Entrega realizada",
       criadoEm: e.criado_em,
       origem: "entrega",
-    }),
-  );
+    }));
 
-  const combinado = [...manuais, ...baixas]
+  const combinado = [...doLedger, ...baixas]
     .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
     .slice(0, LIMITE_MOVIMENTACOES);
 
@@ -1114,19 +1190,25 @@ type EntregaPainelRow = {
   observacao: string | null;
 };
 
-async function listarEntregasRecentes(
-  diasJanela: number,
-  limite: number,
+// Filtro comum às consultas de entregas: por janela de tempo (painel) ou por
+// família (histórico do detalhe da família), sempre limitado.
+type EntregasFiltro = { familiaId?: string; desde?: string; limite: number };
+
+async function consultarEntregas(
+  filtro: EntregasFiltro,
 ): Promise<FamiliasSupabaseReadResult<EntregaPainel[]>> {
   const client = getSupabaseClient();
-  const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
 
-  const entregasResult = await client
+  let query = client
     .from("entregas")
     .select("id, criado_em, familia_id, beneficio_id, assistido_id, excepcional, observacao")
-    .gte("criado_em", desde)
     .order("criado_em", { ascending: false })
-    .limit(limite);
+    .limit(filtro.limite);
+
+  if (filtro.familiaId) query = query.eq("familia_id", filtro.familiaId);
+  if (filtro.desde) query = query.gte("criado_em", filtro.desde);
+
+  const entregasResult = await query;
 
   if (entregasResult.error) {
     return {
@@ -1231,7 +1313,23 @@ export async function listarEntregasRecentesNoSupabase(
   limite = 500,
 ): Promise<FamiliasSupabaseReadResult<EntregaPainel[]>> {
   try {
-    return await listarEntregasRecentes(diasJanela, limite);
+    const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
+    return await consultarEntregas({ desde, limite });
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseReadError("listar_entregas_painel", error),
+    };
+  }
+}
+
+/** Histórico completo de entregas de uma família (todas as datas). */
+export async function listarEntregasFamiliaNoSupabase(
+  familiaId: string,
+  limite = 500,
+): Promise<FamiliasSupabaseReadResult<EntregaPainel[]>> {
+  try {
+    return await consultarEntregas({ familiaId, limite });
   } catch (error) {
     return {
       data: null,
@@ -1246,23 +1344,27 @@ type TentativaRow = {
   familia_id: string;
   pessoa_id: string;
   beneficio_id: string | null;
-  motivo: "prazo" | "estoque";
+  motivo: "prazo" | "estoque" | "extra";
   observacao: string | null;
 };
 
-async function listarTentativas(
-  diasJanela: number,
-  limite: number,
+type TentativasFiltro = { familiaId?: string; desde?: string; limite: number };
+
+async function consultarTentativas(
+  filtro: TentativasFiltro,
 ): Promise<FamiliasSupabaseReadResult<TentativaBloqueadaPainel[]>> {
   const client = getSupabaseClient();
-  const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
 
-  const tentativasResult = await client
+  let query = client
     .from("tentativas_bloqueadas")
     .select("id, criado_em, familia_id, pessoa_id, beneficio_id, motivo, observacao")
-    .gte("criado_em", desde)
     .order("criado_em", { ascending: false })
-    .limit(limite);
+    .limit(filtro.limite);
+
+  if (filtro.familiaId) query = query.eq("familia_id", filtro.familiaId);
+  if (filtro.desde) query = query.gte("criado_em", filtro.desde);
+
+  const tentativasResult = await query;
 
   if (tentativasResult.error) {
     return {
@@ -1343,7 +1445,20 @@ export async function listarTentativasBloqueadasNoSupabase(
   limite = 500,
 ): Promise<FamiliasSupabaseReadResult<TentativaBloqueadaPainel[]>> {
   try {
-    return await listarTentativas(diasJanela, limite);
+    const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
+    return await consultarTentativas({ desde, limite });
+  } catch (error) {
+    return { data: null, error: toUnexpectedFamiliasSupabaseReadError("listar_tentativas", error) };
+  }
+}
+
+/** Histórico completo de tentativas bloqueadas de uma família (todas as datas). */
+export async function listarTentativasFamiliaNoSupabase(
+  familiaId: string,
+  limite = 500,
+): Promise<FamiliasSupabaseReadResult<TentativaBloqueadaPainel[]>> {
+  try {
+    return await consultarTentativas({ familiaId, limite });
   } catch (error) {
     return { data: null, error: toUnexpectedFamiliasSupabaseReadError("listar_tentativas", error) };
   }

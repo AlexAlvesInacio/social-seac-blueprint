@@ -20,7 +20,7 @@ anteriores pode significar experiência visual ou funcionamento local, não prod
 | Assistidos | Migrado ao Supabase (criação + leitura) | Criação via `criar_assistido_em_familia` no detalhe remoto; leitura no agregado da família. |
 | Membros | Migrado ao Supabase (criação + leitura) | Criação via `criar_membro_em_familia`; leitura no agregado. Faixa etária calculada em leitura. |
 | Observações sociais | Migrado ao Supabase | Registro por INSERT (policy de equipe ativa) e leitura no detalhe remoto. |
-| Atendimento | Implementação parcial local | Busca, elegibilidade (`verificarElegibilidadeAtendimento`), entregas e bloqueios funcionam em stores locais. **Sem tabela/RPC no banco: as regras dos 25 dias e de estoque não têm enforcement server-side nem auditoria persistente.** |
+| Atendimento | Migrado ao Supabase | Tabelas `entregas` e `tentativas_bloqueadas` + RPCs `registrar_entrega_atendimento`/`registrar_tentativa_bloqueada` (migration `20260723233626`). Enforcement server-side dos 25 dias (SEAC2), 3 extras (SEAC1) e estoque (SEAC3); liberação excepcional só admin+motivo. A tela `/atendimento` e o histórico da família (entregas + tentativas) leem do Supabase. `atendimento-regras.ts` (client) é só exibição. A entrega gera baixa automática no ledger `movimentacoes_estoque` (motivo "Baixa automática", vínculo `entrega_id`; migration `20260724220332`). `registrar_entrega_atendimento` retorna status estruturado e grava a tentativa bloqueada (prazo/estoque/extra) atomicamente no mesmo passo (migrations `20260724221321`/`20260724221323`). Pré-cadastro persiste via `criar_pre_cadastro` (família implícita + assistido extra, com variante que entrega Cesta Extra origem `pre_cadastro`; migration `20260724223628`). |
 | Estoque | Implementação parcial local | Entrega confirmada reduz o saldo local; bases complementares estáticas; diálogos de entrada/saída/ajuste não persistem. Sem tabela no Supabase. |
 | Recebimentos | Protótipo visual | KPIs, formulário e histórico estáticos; salvar não persiste nem movimenta estoque. |
 | Auditoria | Funcional apenas localmente | Módulo de auditoria em Zustand/localStorage, mutável pela interface. As tabelas de famílias no banco têm autoria por trigger, mas não há trilha imutável do módulo de Auditoria. |
@@ -37,10 +37,13 @@ anteriores pode significar experiência visual ou funcionamento local, não prod
   resolve o detalhe por UUID (Supabase) ou por id numérico (store local). É
   intencional durante a migração, mas o store local só deve ser removido após
   homologação explícita.
-- **Regras críticas ainda client-side.** Atendimento e estoque rodam sobre
-  `localStorage`; o bloqueio dos 25 dias e o de falta de estoque são burláveis e
-  não auditáveis enquanto não houver tabela/RPC no banco. É o maior gap de
-  negócio remanescente.
+- **Regras críticas já têm enforcement server-side.** O bloqueio dos 25 dias, o
+  limite de extras e o de falta de estoque são aplicados nas RPCs de atendimento
+  (`registrar_entrega_atendimento`), não mais burláveis pelo cliente. O
+  `atendimento-regras.ts` (client) é só exibição. Resíduo legado: o store
+  `atendimento-store.ts` (localStorage) não recebe mais escritas, mas ainda é lido
+  pelo caminho local de detalhe de família (`FamiliaLocalDetail`, id numérico) —
+  sua remoção fica adiada para quando o `familias-store` local for aposentado.
 - **Escopo pendente em famílias.** Reuso/transferência de pessoa existente
   (as RPCs recusam documento duplicado), vínculo de observação a pessoa/assistido
   específico e exibição do nome do autor (hoje UUID do perfil).

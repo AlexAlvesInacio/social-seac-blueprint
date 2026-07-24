@@ -93,16 +93,22 @@ export function RegistrarEntregaSupabaseDialog({
         excepcional,
         observacao: excepcional ? motivo : undefined,
       });
-      toast.success(
-        `Entrega registrada (${data.beneficio}). Saldo restante: ${data.saldo_resultante}.`,
-      );
+      if (data.status === "entregue") {
+        toast.success(
+          `Entrega registrada (${data.beneficio}). Saldo restante: ${data.saldo_resultante}.`,
+        );
+      } else {
+        // O servidor reaplicou as regras e bloqueou (ex.: saldo/prazo mudou desde a
+        // verificação). A tentativa já foi registrada pela própria RPC.
+        toast.warning(mensagemBloqueioServidor(data.status));
+      }
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível registrar a entrega.");
     }
   };
 
-  const registrarBloqueio = async (motivoTipo: "prazo" | "estoque") => {
+  const registrarBloqueio = async (motivoTipo: "prazo" | "estoque" | "extra") => {
     if (!assistido) return;
     try {
       await registrarTentativa.mutateAsync({
@@ -202,9 +208,12 @@ export function RegistrarEntregaSupabaseDialog({
             )}
 
             {elegibilidade.cenario === "extra_completou" && (
-              <DialogFooter>
+              <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
                   Fechar
+                </Button>
+                <Button disabled={salvando} onClick={() => void registrarBloqueio("extra")}>
+                  Registrar tentativa
                 </Button>
               </DialogFooter>
             )}
@@ -213,6 +222,19 @@ export function RegistrarEntregaSupabaseDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function mensagemBloqueioServidor(
+  status: "bloqueado_prazo" | "bloqueado_estoque" | "bloqueado_extra",
+): string {
+  switch (status) {
+    case "bloqueado_prazo":
+      return "Entrega bloqueada pelo servidor: intervalo mínimo de 25 dias não cumprido. Tentativa registrada.";
+    case "bloqueado_estoque":
+      return "Entrega bloqueada pelo servidor: sem saldo em estoque. Tentativa registrada.";
+    case "bloqueado_extra":
+      return "Entrega bloqueada pelo servidor: cadastro extra já completou o limite de retiradas. Tentativa registrada.";
+  }
 }
 
 function CenarioResumo({ elegibilidade }: { elegibilidade: Elegibilidade }) {

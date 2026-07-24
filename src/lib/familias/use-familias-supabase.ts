@@ -8,10 +8,12 @@ import {
   definirComposicaoBeneficioNoSupabase,
   listarBeneficiosNoSupabase,
   listarComposicoesNoSupabase,
+  listarEntregasFamiliaNoSupabase,
   listarEntregasRecentesNoSupabase,
   listarItensEstoqueNoSupabase,
   listarMovimentacoesEstoqueNoSupabase,
   listarRecebimentosNoSupabase,
+  listarTentativasFamiliaNoSupabase,
   montarCestaNoSupabase,
   registrarMovimentacaoEstoqueNoSupabase,
   registrarMovimentacaoItemNoSupabase,
@@ -24,6 +26,7 @@ import {
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
   criarObservacaoSocialNoSupabase,
+  criarPreCadastroNoSupabase,
   getFamiliaFromSupabaseById,
   getResumoAtendimentoAssistido,
   listFamiliasFromSupabase,
@@ -35,6 +38,7 @@ import {
   type CriarFamiliaInput,
   type CriarMembroInput,
   type CriarObservacaoInput,
+  type CriarPreCadastroInput,
   type RegistrarEntregaInput,
   type RegistrarTentativaInput,
 } from "@/lib/familias/familias-repository";
@@ -52,6 +56,10 @@ export const familiasSupabaseQueryKeys = {
   beneficiosEstoque: ["familias", "supabase", "beneficios-estoque"] as const,
   movimentacoesEstoque: ["familias", "supabase", "movimentacoes-estoque"] as const,
   entregasPainel: ["familias", "supabase", "entregas-painel"] as const,
+  entregasFamilia: (familiaId: string) =>
+    ["familias", "supabase", "entregas-familia", familiaId] as const,
+  tentativasFamilia: (familiaId: string) =>
+    ["familias", "supabase", "tentativas-familia", familiaId] as const,
   recebimentos: ["familias", "supabase", "recebimentos"] as const,
   itensEstoque: ["familias", "supabase", "itens-estoque"] as const,
   composicoes: ["familias", "supabase", "composicoes"] as const,
@@ -231,6 +239,12 @@ function invalidarAtendimento(
   void queryClient.invalidateQueries({
     queryKey: familiasSupabaseQueryKeys.resumoAtendimento(assistidoId),
   });
+  void queryClient.invalidateQueries({
+    queryKey: familiasSupabaseQueryKeys.entregasFamilia(familiaId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: familiasSupabaseQueryKeys.tentativasFamilia(familiaId),
+  });
 }
 
 export function useRegistrarEntregaSupabase() {
@@ -244,6 +258,32 @@ export function useRegistrarEntregaSupabase() {
     },
     onSuccess: (_data, variables) => {
       invalidarAtendimento(queryClient, variables.familiaId, variables.assistidoId);
+      // A entrega baixa o saldo e grava a baixa automática no ledger de estoque.
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.beneficiosEstoque });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
+      });
+    },
+  });
+}
+
+export function useCriarPreCadastro() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CriarPreCadastroInput) => {
+      const result = await criarPreCadastroNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      // Cria família + assistido (e, na variante, entrega + baixa). Invalida amplo:
+      // busca de atendimento, listas de família e estoque.
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.beneficiosEstoque });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
+      });
     },
   });
 }
@@ -293,6 +333,30 @@ export function useEntregasPainel() {
       if (result.error) throw new FamiliasSupabaseQueryError(result.error);
       return result.data;
     },
+  });
+}
+
+export function useEntregasFamilia(familiaId: string) {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.entregasFamilia(familiaId),
+    queryFn: async () => {
+      const result = await listarEntregasFamiliaNoSupabase(familiaId);
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+    enabled: familiaId.length > 0,
+  });
+}
+
+export function useTentativasFamilia(familiaId: string) {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.tentativasFamilia(familiaId),
+    queryFn: async () => {
+      const result = await listarTentativasFamiliaNoSupabase(familiaId);
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+    enabled: familiaId.length > 0,
   });
 }
 
