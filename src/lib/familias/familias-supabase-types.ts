@@ -239,6 +239,7 @@ export type FamiliasSupabaseReadOperation =
   | "listar_movimentacoes"
   | "listar_entregas_painel"
   | "listar_recebimentos"
+  | "listar_tentativas"
   | "mapear_dados";
 
 export interface FamiliasSupabaseReadError {
@@ -460,15 +461,31 @@ export interface CriarRecebimentoResult {
   recebimento_id: string;
 }
 
-/** Entrega recente para agregações do painel (com nomes resolvidos). */
+/** Entrega recente para agregações do painel e relatórios (nomes resolvidos). */
 export interface EntregaPainel {
   id: string;
   criadoEm: string;
   familiaId: string;
   familiaNome: string;
+  familiaBairro: string;
+  assistidoId: string;
   assistidoNome: string;
+  documento?: string;
   beneficioNome: string;
   excepcional: boolean;
+  observacao?: string;
+}
+
+/** Tentativa bloqueada para relatórios (nomes resolvidos). */
+export interface TentativaBloqueadaPainel {
+  id: string;
+  criadoEm: string;
+  familiaNome: string;
+  assistidoNome: string;
+  documento?: string;
+  beneficioNome: string;
+  motivo: "prazo" | "estoque";
+  observacao?: string;
 }
 
 /** Retorno de `public.registrar_movimentacao_estoque`. */

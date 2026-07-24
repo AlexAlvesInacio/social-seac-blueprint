@@ -12,6 +12,7 @@ import {
   PackageX,
   AlertTriangle,
   PhoneCall,
+  LoaderCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
@@ -35,14 +36,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  gerarRelatorio,
   downloadCSV,
   type TipoRelatorio,
   type ResultadoRelatorio,
   type FiltrosRelatorio,
 } from "@/lib/relatorios-store";
-import { useFamilias } from "@/lib/familias-store";
-import { useAtendimentoStore } from "@/lib/atendimento-store";
+import { gerarRelatorioSupabase } from "@/lib/relatorios/relatorios-supabase";
+import { useBeneficiosEstoque, useFamiliasSupabase } from "@/lib/familias/use-familias-supabase";
 import { registrarAuditoria } from "@/lib/auditoria-store";
 
 export const Route = createFileRoute("/relatorios")({
@@ -93,7 +93,7 @@ const CARDS: CardConfig[] = [
     title: "Famílias com contato necessário 90 dias+",
     desc: "Inatividade prolongada.",
   },
-  { tipo: "estoque", icon: Package, title: "Estoque", desc: "Entradas, saídas e saldo." },
+  { tipo: "estoque", icon: Package, title: "Estoque", desc: "Saldo dos benefícios." },
   {
     tipo: "recebimentos",
     icon: HeartHandshake,
@@ -113,16 +113,29 @@ function filtrosLabel(f: FiltrosRelatorio): string {
   if (f.de) parts.push(`de ${f.de}`);
   if (f.ate) parts.push(`até ${f.ate}`);
   if (f.bairro) parts.push(`bairro=${f.bairro}`);
-  if (f.beneficio && f.beneficio !== "all") parts.push(`benefício=${f.beneficio}`);
-  if (f.item && f.item !== "all") parts.push(`item=${f.item}`);
-  if (f.usuario && f.usuario !== "all") parts.push(`usuário=${f.usuario}`);
-  if (f.status && f.status !== "all") parts.push(`status=${f.status}`);
+  if (f.beneficio) parts.push(`benefício=${f.beneficio}`);
+  if (f.status) parts.push(`status=${f.status}`);
   return parts.join(", ") || "sem filtros";
 }
 
+const STATUS_OPCOES = [
+  { value: "ativo", label: "Ativo" },
+  { value: "inativo", label: "Inativo" },
+  { value: "liberado", label: "Liberado" },
+  { value: "bloqueado", label: "Bloqueado" },
+  { value: "avaliar", label: "Avaliar" },
+  { value: "Registrado", label: "Registrado" },
+  { value: "Pendente conferência", label: "Pendente conferência" },
+  { value: "Cancelado", label: "Cancelado" },
+  { value: "Em estoque", label: "Em estoque" },
+  { value: "Atenção", label: "Atenção" },
+  { value: "Estoque baixo", label: "Estoque baixo" },
+  { value: "Sem estoque", label: "Sem estoque" },
+];
+
 function RelatoriosPage() {
-  const familias = useFamilias((s) => s.familias);
-  const entregas = useAtendimentoStore((s) => s.entregas);
+  const familias = useFamiliasSupabase();
+  const beneficiosQuery = useBeneficiosEstoque();
   const { tipo: tipoParam } = Route.useSearch();
   const [tipo, setTipo] = useState<TipoRelatorio | null>(tipoParam ?? null);
   useEffect(() => {
@@ -132,63 +145,48 @@ function RelatoriosPage() {
   const [ate, setAte] = useState("");
   const [bairro, setBairro] = useState("all");
   const [beneficio, setBeneficio] = useState("all");
-  const [item, setItem] = useState("all");
-  const [usuario, setUsuario] = useState("all");
   const [status, setStatus] = useState("all");
   const [resultado, setResultado] = useState<ResultadoRelatorio | null>(null);
+  const [gerando, setGerando] = useState(false);
 
   const bairros = useMemo(
-    () => Array.from(new Set(familias.map((f) => f.bairro).filter(Boolean))),
-    [familias],
+    () => Array.from(new Set((familias.data ?? []).map((f) => f.bairro).filter(Boolean))).sort(),
+    [familias.data],
   );
   const beneficios = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          "Cesta Padrão",
-          "Cesta Extra",
-          "Kit Gestante",
-          ...entregas.map((e) => e.beneficio),
-        ]),
-      ),
-    [entregas],
+    () => (beneficiosQuery.data ?? []).map((b) => b.nome),
+    [beneficiosQuery.data],
   );
-  const itens = [
-    "Cesta Padrão",
-    "Cesta Extra",
-    "Arroz 5kg",
-    "Feijão 1kg",
-    "Óleo 900ml",
-    "Macarrão",
-    "Marmita",
-    "Kit Gestante",
-  ];
-  const usuarios = useMemo(() => Array.from(new Set(entregas.map((e) => e.usuario))), [entregas]);
 
   const filtros: FiltrosRelatorio = {
     de: de || undefined,
     ate: ate || undefined,
     bairro: bairro !== "all" ? bairro : undefined,
-    beneficio,
-    item,
-    usuario,
-    status,
+    beneficio: beneficio !== "all" ? beneficio : undefined,
+    status: status !== "all" ? status : undefined,
   };
 
-  function handleGerar() {
+  async function handleGerar() {
     if (!tipo) {
       toast.warning("Selecione um tipo de relatório antes de gerar.");
       return;
     }
-    const res = gerarRelatorio(tipo, filtros);
-    setResultado(res);
-    registrarAuditoria({
-      usuario: res.usuarioGerador,
-      acao: "Relatório gerado",
-      modulo: "Relatórios",
-      registro: res.tituloRelatorio,
-      observacao: `${res.totalRegistros} registro(s); filtros: ${filtrosLabel(filtros)}`,
-    });
+    setGerando(true);
+    try {
+      const res = await gerarRelatorioSupabase(tipo, filtros);
+      setResultado(res);
+      registrarAuditoria({
+        usuario: res.usuarioGerador,
+        acao: "Relatório gerado",
+        modulo: "Relatórios",
+        registro: res.tituloRelatorio,
+        observacao: `${res.totalRegistros} registro(s); filtros: ${filtrosLabel(filtros)}`,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível gerar o relatório.");
+    } finally {
+      setGerando(false);
+    }
   }
 
   function handleCSV() {
@@ -202,7 +200,7 @@ function RelatoriosPage() {
       acao: "Relatório exportado CSV",
       modulo: "Relatórios",
       registro: resultado.tituloRelatorio,
-      observacao: `${resultado.totalRegistros} registro(s); filtros: ${filtrosLabel(filtros)}`,
+      observacao: `${resultado.totalRegistros} registro(s); filtros: ${filtrosLabel(resultado.filtrosAplicados)}`,
     });
     toast.success("CSV baixado.");
   }
@@ -212,8 +210,6 @@ function RelatoriosPage() {
     setAte("");
     setBairro("all");
     setBeneficio("all");
-    setItem("all");
-    setUsuario("all");
     setStatus("all");
   }
 
@@ -245,7 +241,7 @@ function RelatoriosPage() {
       </div>
 
       <Card className="mt-4">
-        <CardContent className="grid gap-3 p-4 md:grid-cols-6">
+        <CardContent className="grid gap-3 p-4 md:grid-cols-5">
           <F label="Período de">
             <Input type="date" value={de} onChange={(e) => setDe(e.target.value)} />
           </F>
@@ -282,36 +278,6 @@ function RelatoriosPage() {
               </SelectContent>
             </Select>
           </F>
-          <F label="Item">
-            <Select value={item} onValueChange={setItem}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {itens.map((i) => (
-                  <SelectItem key={i} value={i}>
-                    {i}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </F>
-          <F label="Usuário">
-            <Select value={usuario} onValueChange={setUsuario}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {usuarios.map((u) => (
-                  <SelectItem key={u} value={u}>
-                    {u}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </F>
           <F label="Status">
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger>
@@ -319,31 +285,29 @@ function RelatoriosPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="inativo">Inativo</SelectItem>
-                <SelectItem value="liberado">Liberado</SelectItem>
-                <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                <SelectItem value="avaliar">Avaliar</SelectItem>
-                <SelectItem value="Registrado">Registrado</SelectItem>
-                <SelectItem value="Pendente conferência">Pendente conferência</SelectItem>
-                <SelectItem value="Cancelado">Cancelado</SelectItem>
-                <SelectItem value="Em estoque">Em estoque</SelectItem>
-                <SelectItem value="Atenção">Atenção</SelectItem>
-                <SelectItem value="Estoque baixo">Estoque baixo</SelectItem>
-                <SelectItem value="Sem estoque">Sem estoque</SelectItem>
+                {STATUS_OPCOES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </F>
-          <div className="md:col-span-6 flex flex-wrap justify-between gap-2 pt-2">
+          <div className="flex flex-wrap justify-between gap-2 pt-2 md:col-span-5">
             <Button variant="outline" onClick={limparFiltros}>
               Limpar filtros
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCSV}>
+              <Button variant="outline" onClick={handleCSV} disabled={!resultado}>
                 CSV
               </Button>
-              <Button className="gap-2" onClick={handleGerar}>
-                <Download className="h-4 w-4" /> Gerar relatório
+              <Button className="gap-2" onClick={() => void handleGerar()} disabled={gerando}>
+                {gerando ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {gerando ? "Gerando…" : "Gerar relatório"}
               </Button>
             </div>
           </div>
