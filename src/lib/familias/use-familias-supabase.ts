@@ -5,6 +5,7 @@ import {
   atualizarResponsavelFamiliaNoSupabase,
   buscarAssistidosAtivosNoSupabase,
   listarBeneficiosNoSupabase,
+  listarEntregasRecentesNoSupabase,
   listarMovimentacoesEstoqueNoSupabase,
   registrarMovimentacaoEstoqueNoSupabase,
   type RegistrarMovimentacaoInput,
@@ -39,6 +40,7 @@ export const familiasSupabaseQueryKeys = {
   buscaAssistidos: (termo: string) => ["familias", "supabase", "busca-assistidos", termo] as const,
   beneficiosEstoque: ["familias", "supabase", "beneficios-estoque"] as const,
   movimentacoesEstoque: ["familias", "supabase", "movimentacoes-estoque"] as const,
+  entregasPainel: ["familias", "supabase", "entregas-painel"] as const,
 };
 
 export function useFamiliasSupabase() {
@@ -263,6 +265,17 @@ export function useMovimentacoesEstoque() {
     queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
     queryFn: async () => {
       const result = await listarMovimentacoesEstoqueNoSupabase();
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+  });
+}
+
+export function useEntregasPainel() {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.entregasPainel,
+    queryFn: async () => {
+      const result = await listarEntregasRecentesNoSupabase();
       if (result.error) throw new FamiliasSupabaseQueryError(result.error);
       return result.data;
     },
