@@ -233,6 +233,7 @@ export type FamiliasSupabaseReadOperation =
   | "listar_assistidos"
   | "listar_observacoes"
   | "listar_pessoas"
+  | "resumo_atendimento"
   | "mapear_dados";
 
 export interface FamiliasSupabaseReadError {
@@ -316,7 +317,9 @@ export type FamiliasSupabaseWriteOperation =
   | "criar_membro"
   | "atualizar_familia"
   | "criar_observacao"
-  | "atualizar_responsavel";
+  | "atualizar_responsavel"
+  | "registrar_entrega"
+  | "registrar_tentativa";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -368,12 +371,39 @@ export interface AtualizarResponsavelResult {
   pessoa_id: PessoaSupabaseId;
 }
 
+/** Retorno de `public.registrar_entrega_atendimento`. */
+export interface RegistrarEntregaResult {
+  entrega_id: string;
+  beneficio: string;
+  saldo_resultante: number;
+}
+
+/** Retorno de `public.registrar_tentativa_bloqueada`. */
+export interface RegistrarTentativaResult {
+  tentativa_id: string;
+}
+
+/**
+ * Insumos de leitura para calcular a elegibilidade no cliente (exibição) com
+ * `verificarElegibilidadeAtendimento`. O enforcement real é da RPC.
+ */
+export interface ResumoAtendimentoAssistido {
+  ultimaRetiradaISO: string | null;
+  retiradasExtras: number;
+  saldoPadrao: number;
+  saldoExtra: number;
+}
+
 // Mensagens amigáveis para os errcode que as RPCs lançam explicitamente.
 const mensagemPorCodigoDeEscrita: Record<string, string> = {
   "42501":
     "Você não tem permissão para esta ação. É necessário um perfil de administrador ou atendente ativo.",
   "22023": "Preencha todos os campos obrigatórios.",
   "23505": "Já existe um cadastro com este documento.",
+  // Bloqueios de elegibilidade lançados pela RPC de entrega.
+  SEAC1: "Cadastro extra já completou o limite de retiradas; aguardar avaliação.",
+  SEAC2: "Entrega bloqueada: intervalo mínimo de 25 dias não cumprido.",
+  SEAC3: "Entrega bloqueada por falta de estoque.",
 };
 
 export function toFamiliasSupabaseWriteError(
