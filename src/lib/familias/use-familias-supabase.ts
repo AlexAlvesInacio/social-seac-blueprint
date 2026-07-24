@@ -5,13 +5,21 @@ import {
   atualizarResponsavelFamiliaNoSupabase,
   buscarAssistidosAtivosNoSupabase,
   criarRecebimentoNoSupabase,
+  definirComposicaoBeneficioNoSupabase,
   listarBeneficiosNoSupabase,
+  listarComposicoesNoSupabase,
   listarEntregasRecentesNoSupabase,
+  listarItensEstoqueNoSupabase,
   listarMovimentacoesEstoqueNoSupabase,
   listarRecebimentosNoSupabase,
+  montarCestaNoSupabase,
   registrarMovimentacaoEstoqueNoSupabase,
+  registrarMovimentacaoItemNoSupabase,
   type CriarRecebimentoInput,
+  type DefinirComposicaoInput,
+  type MontarCestaInput,
   type RegistrarMovimentacaoInput,
+  type RegistrarMovimentacaoItemInput,
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
@@ -45,6 +53,8 @@ export const familiasSupabaseQueryKeys = {
   movimentacoesEstoque: ["familias", "supabase", "movimentacoes-estoque"] as const,
   entregasPainel: ["familias", "supabase", "entregas-painel"] as const,
   recebimentos: ["familias", "supabase", "recebimentos"] as const,
+  itensEstoque: ["familias", "supabase", "itens-estoque"] as const,
+  composicoes: ["familias", "supabase", "composicoes"] as const,
 };
 
 export function useFamiliasSupabase() {
@@ -322,6 +332,78 @@ export function useRegistrarMovimentacaoEstoque() {
       return result.data;
     },
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.beneficiosEstoque });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
+      });
+    },
+  });
+}
+
+export function useItensEstoque() {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.itensEstoque,
+    queryFn: async () => {
+      const result = await listarItensEstoqueNoSupabase();
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+  });
+}
+
+export function useComposicoes() {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.composicoes,
+    queryFn: async () => {
+      const result = await listarComposicoesNoSupabase();
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+  });
+}
+
+export function useRegistrarMovimentacaoItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: RegistrarMovimentacaoItemInput) => {
+      const result = await registrarMovimentacaoItemNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.itensEstoque });
+    },
+  });
+}
+
+export function useDefinirComposicaoBeneficio() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: DefinirComposicaoInput) => {
+      const result = await definirComposicaoBeneficioNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.composicoes });
+    },
+  });
+}
+
+export function useMontarCesta() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: MontarCestaInput) => {
+      const result = await montarCestaNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      // A montagem mexe em itens, saldo do benefício e nos dois ledgers.
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.itensEstoque });
       void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.beneficiosEstoque });
       void queryClient.invalidateQueries({
         queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
