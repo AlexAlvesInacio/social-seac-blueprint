@@ -2,7 +2,7 @@
 // linhas) sob demanda, lendo do repositório. O download de CSV é feito pelo util
 // agnóstico em relatorios-store.ts.
 
-import { useParametros } from "@/lib/config-store";
+import { getConfiguracoes } from "@/lib/configuracoes/configuracoes-supabase";
 import {
   listFamiliasFromSupabase,
   listarBeneficiosNoSupabase,
@@ -181,7 +181,7 @@ async function assistidosBloco(f: FiltrosRelatorio): Promise<Bloco> {
     listFamiliasFromSupabase().then(unwrap),
     listarEntregasRecentesNoSupabase(JANELA_DIAS, LIMITE).then(unwrap),
   ]);
-  const params = useParametros.getState().params;
+  const params = await getConfiguracoes();
   const idx = indexarEntregas(entregas);
   const colunas = [
     "Nome",

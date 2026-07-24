@@ -64,16 +64,20 @@ import {
   useBeneficios,
   useDoadores,
   useFornecedores,
-  useParametros,
   type Item,
   type Unidade,
   type Categoria,
   type Beneficio,
   type Doador,
   type Fornecedor,
-  type Parametros,
   type Status,
 } from "@/lib/config-store";
+import {
+  CONFIGURACOES_PADRAO,
+  useAtualizarConfiguracoes,
+  useConfiguracoes,
+  type Configuracoes,
+} from "@/lib/configuracoes/configuracoes-supabase";
 import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 
 export const Route = createFileRoute("/configuracoes")({
@@ -1606,26 +1610,30 @@ function FornecedoresTab() {
 /* ---------- PARÂMETROS ---------- */
 
 function ParametrosTab() {
-  const saved = useParametros((s) => s.params);
-  const setParams = useParametros((s) => s.setParams);
-  const [form, setForm] = useState<Parametros>(saved);
+  const { data } = useConfiguracoes();
+  const saved = data ?? CONFIGURACOES_PADRAO;
+  const atualizar = useAtualizarConfiguracoes();
+  const [form, setForm] = useState<Configuracoes>(saved);
   useEffect(() => setForm(saved), [saved]);
 
-  function salvar() {
-    // diff para auditoria por parâmetro
-    (Object.keys(form) as (keyof Parametros)[]).forEach((k) => {
-      if (form[k] !== saved[k]) {
-        registrarAuditoria({
-          usuario: USUARIO_ATUAL,
-          acao: "Parâmetro alterado",
-          modulo: "Configurações › Parâmetros",
-          registro: String(k),
-          observacao: `De "${String(saved[k])}" para "${String(form[k])}"`,
-        });
-      }
-    });
-    setParams(form);
-    toast.success("Parâmetros salvos com sucesso");
+  async function salvar() {
+    try {
+      await atualizar.mutateAsync(form);
+      // diff para auditoria por parâmetro (após persistir com sucesso)
+      (Object.keys(form) as (keyof Configuracoes)[]).forEach((k) => {
+        if (form[k] !== saved[k]) {
+          registrarAuditoria({
+            acao: "Parâmetro alterado",
+            modulo: "Configurações › Parâmetros",
+            registro: String(k),
+            observacao: `De "${String(saved[k])}" para "${String(form[k])}"`,
+          });
+        }
+      });
+      toast.success("Parâmetros salvos com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível salvar os parâmetros.");
+    }
   }
 
   return (
@@ -1711,7 +1719,9 @@ function ParametrosTab() {
           />
         </div>
         <div className="mt-4 flex justify-end">
-          <Button onClick={salvar}>Salvar parâmetros</Button>
+          <Button disabled={atualizar.isPending} onClick={() => void salvar()}>
+            {atualizar.isPending ? "Salvando..." : "Salvar parâmetros"}
+          </Button>
         </div>
       </CardContent>
     </Card>
