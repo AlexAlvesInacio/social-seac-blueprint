@@ -6,6 +6,9 @@ import type {
   AssistidoSupabaseRow,
   AssistidoTipoCadastroSupabase,
   AtualizarFamiliaResult,
+  BeneficioEstoque,
+  MovimentacaoEstoque,
+  RegistrarMovimentacaoResult,
   AtualizarResponsavelResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
@@ -890,5 +893,200 @@ export async function buscarAssistidosAtivosNoSupabase(
     return await buscarAssistidos(termo);
   } catch (error) {
     return { data: null, error: toUnexpectedFamiliasSupabaseReadError("buscar_assistidos", error) };
+  }
+}
+
+/* ============ Estoque de benefícios ============ */
+
+type BeneficioEstoqueRow = {
+  id: string;
+  nome: string;
+  saldo: number;
+  minimo: number;
+  controla_estoque: boolean;
+  ativo: boolean;
+};
+
+async function listarBeneficios(): Promise<FamiliasSupabaseReadResult<BeneficioEstoque[]>> {
+  const { data, error } = await getSupabaseClient()
+    .from("beneficios")
+    .select("id, nome, saldo, minimo, controla_estoque, ativo")
+    .order("nome");
+
+  if (error) return { data: null, error: toFamiliasSupabaseReadError("listar_beneficios", error) };
+
+  const rows = (data ?? []) as BeneficioEstoqueRow[];
+  return {
+    data: rows.map((r) => ({
+      id: r.id,
+      nome: r.nome,
+      saldo: r.saldo,
+      minimo: r.minimo,
+      controlaEstoque: r.controla_estoque,
+      ativo: r.ativo,
+    })),
+    error: null,
+  };
+}
+
+export async function listarBeneficiosNoSupabase(): Promise<
+  FamiliasSupabaseReadResult<BeneficioEstoque[]>
+> {
+  try {
+    return await listarBeneficios();
+  } catch (error) {
+    return { data: null, error: toUnexpectedFamiliasSupabaseReadError("listar_beneficios", error) };
+  }
+}
+
+type MovimentacaoRow = {
+  id: string;
+  beneficio_id: string;
+  tipo: "entrada" | "saida" | "ajuste";
+  quantidade: number;
+  saldo_resultante: number;
+  motivo: string | null;
+  criado_em: string;
+};
+type EntregaMovRow = { id: string; beneficio_id: string; criado_em: string; excepcional: boolean };
+
+const LIMITE_MOVIMENTACOES = 100;
+
+async function listarMovimentacoesEstoque(): Promise<
+  FamiliasSupabaseReadResult<MovimentacaoEstoque[]>
+> {
+  const client = getSupabaseClient();
+
+  const [movResult, entregasResult, beneficiosResult] = await Promise.all([
+    client
+      .from("movimentacoes_estoque")
+      .select("id, beneficio_id, tipo, quantidade, saldo_resultante, motivo, criado_em")
+      .order("criado_em", { ascending: false })
+      .limit(LIMITE_MOVIMENTACOES),
+    client
+      .from("entregas")
+      .select("id, beneficio_id, criado_em, excepcional")
+      .order("criado_em", { ascending: false })
+      .limit(LIMITE_MOVIMENTACOES),
+    client.from("beneficios").select("id, nome"),
+  ]);
+
+  if (movResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_movimentacoes", movResult.error),
+    };
+  }
+  if (entregasResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_movimentacoes", entregasResult.error),
+    };
+  }
+  if (beneficiosResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_movimentacoes", beneficiosResult.error),
+    };
+  }
+
+  const nomePorId = new Map(
+    ((beneficiosResult.data ?? []) as { id: string; nome: string }[]).map((b) => [b.id, b.nome]),
+  );
+
+  const manuais: MovimentacaoEstoque[] = ((movResult.data ?? []) as MovimentacaoRow[]).map((m) => ({
+    id: m.id,
+    beneficioNome: nomePorId.get(m.beneficio_id) ?? "—",
+    tipo: m.tipo,
+    quantidade: m.quantidade,
+    saldoResultante: m.saldo_resultante,
+    motivo: m.motivo ?? undefined,
+    criadoEm: m.criado_em,
+    origem: "manual",
+  }));
+
+  const baixas: MovimentacaoEstoque[] = ((entregasResult.data ?? []) as EntregaMovRow[]).map(
+    (e) => ({
+      id: e.id,
+      beneficioNome: nomePorId.get(e.beneficio_id) ?? "—",
+      tipo: "baixa",
+      quantidade: -1,
+      saldoResultante: null,
+      motivo: e.excepcional ? "Entrega excepcional" : "Entrega realizada",
+      criadoEm: e.criado_em,
+      origem: "entrega",
+    }),
+  );
+
+  const combinado = [...manuais, ...baixas]
+    .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
+    .slice(0, LIMITE_MOVIMENTACOES);
+
+  return { data: combinado, error: null };
+}
+
+export async function listarMovimentacoesEstoqueNoSupabase(): Promise<
+  FamiliasSupabaseReadResult<MovimentacaoEstoque[]>
+> {
+  try {
+    return await listarMovimentacoesEstoque();
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseReadError("listar_movimentacoes", error),
+    };
+  }
+}
+
+export interface RegistrarMovimentacaoInput {
+  beneficioId: string;
+  tipo: "entrada" | "saida" | "ajuste";
+  quantidade: number;
+  motivo?: string;
+  observacao?: string;
+}
+
+async function registrarMovimentacao(
+  input: RegistrarMovimentacaoInput,
+): Promise<FamiliasSupabaseWriteResult<RegistrarMovimentacaoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("registrar_movimentacao_estoque", {
+    p_beneficio_id: input.beneficioId,
+    p_tipo: input.tipo,
+    p_quantidade: input.quantidade,
+    p_motivo: nullableParam(input.motivo),
+    p_observacao: nullableParam(input.observacao),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("registrar_movimentacao", error) };
+  }
+
+  const row = firstRow<RegistrarMovimentacaoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "registrar_movimentacao",
+        code: "EMPTY_RESULT",
+        message: "A movimentação não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function registrarMovimentacaoEstoqueNoSupabase(
+  input: RegistrarMovimentacaoInput,
+): Promise<FamiliasSupabaseWriteResult<RegistrarMovimentacaoResult>> {
+  try {
+    return await registrarMovimentacao(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("registrar_movimentacao", error),
+    };
   }
 }
