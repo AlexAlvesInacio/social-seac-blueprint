@@ -33,7 +33,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useParametros } from "@/lib/config-store";
+import {
+  CONFIGURACOES_PADRAO,
+  useConfiguracoes,
+  type Configuracoes,
+} from "@/lib/configuracoes/configuracoes-supabase";
 import type { Familia, TipoCadastro } from "@/lib/familias-store";
 import { useFamilias } from "@/lib/familias-store";
 import type { FamiliaSupabaseReadModel } from "@/lib/familias/familias-supabase-types";
@@ -153,7 +157,8 @@ function FamiliasPage() {
       (familia): familia is FamiliaListaLocal =>
         familia.origem === "local" && familia.id === selectedId,
     ) ?? null;
-  const params = useParametros((s) => s.params);
+  const { data: configData } = useConfiguracoes();
+  const params = configData ?? CONFIGURACOES_PADRAO;
   const toggleSelect = (id: number) => setSelectedId((cur) => (cur === id ? null : id));
 
   const total = todasFamilias.length;
@@ -571,13 +576,7 @@ function SummaryCard({
   );
 }
 
-function AcompanhamentoBadge({
-  status,
-  params,
-}: {
-  status: string;
-  params: ReturnType<typeof useParametros.getState>["params"];
-}) {
+function AcompanhamentoBadge({ status, params }: { status: string; params: Configuracoes }) {
   if (status === "em_dia") return <Badge>Em dia</Badge>;
   if (status === "atencao_60" || status === "atencao_45")
     return <Badge variant="warning">Atenção {params.alertaLiberadoSemRetiradaDias} dias</Badge>;
