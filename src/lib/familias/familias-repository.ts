@@ -25,6 +25,7 @@ import type {
   CriarFamiliaResult,
   CriarMembroResult,
   CriarObservacaoResult,
+  CriarPreCadastroResult,
   FamiliaStatusSupabase,
   ObservacaoSocialTipoSupabase,
   FamiliaSupabaseId,
@@ -716,6 +717,66 @@ export async function registrarTentativaBloqueadaNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseWriteError("registrar_tentativa", error),
+    };
+  }
+}
+
+export interface CriarPreCadastroInput {
+  nome: string;
+  tipoDocumento: PessoaTipoDocumentoSupabase;
+  documento: string;
+  telefone?: string;
+  nascimento?: string;
+  pcd?: boolean;
+  /** true = já entregar Cesta Extra no pré-cadastro. */
+  entregar: boolean;
+  observacao?: string;
+}
+
+async function criarPreCadastro(
+  input: CriarPreCadastroInput,
+): Promise<FamiliasSupabaseWriteResult<CriarPreCadastroResult>> {
+  const { data, error } = await getSupabaseClient().rpc("criar_pre_cadastro", {
+    p_nome: input.nome.trim(),
+    p_tipo_documento: input.tipoDocumento,
+    p_documento: input.documento.trim(),
+    p_telefone: nullableParam(input.telefone),
+    p_nascimento: input.nascimento ? input.nascimento : null,
+    p_pcd: input.pcd ?? false,
+    p_entregar: input.entregar,
+    p_observacao: nullableParam(input.observacao),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("criar_pre_cadastro", error) };
+  }
+
+  const row = firstRow<CriarPreCadastroResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "criar_pre_cadastro",
+        code: "EMPTY_RESULT",
+        message: "O pré-cadastro não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function criarPreCadastroNoSupabase(
+  input: CriarPreCadastroInput,
+): Promise<FamiliasSupabaseWriteResult<CriarPreCadastroResult>> {
+  try {
+    return await criarPreCadastro(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("criar_pre_cadastro", error),
     };
   }
 }

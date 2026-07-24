@@ -332,7 +332,8 @@ export type FamiliasSupabaseWriteOperation =
   | "criar_recebimento"
   | "registrar_movimentacao_item"
   | "definir_composicao"
-  | "montar_cesta";
+  | "montar_cesta"
+  | "criar_pre_cadastro";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -354,6 +355,21 @@ export interface CriarFamiliaResult {
 }
 
 /** Retorno de `public.criar_assistido_em_familia`. */
+/** Desfecho retornado por `public.criar_pre_cadastro`. */
+export type CriarPreCadastroStatus = "criado" | "criado_e_entregue" | "criado_sem_estoque";
+
+export interface CriarPreCadastroResult {
+  status: CriarPreCadastroStatus;
+  familia_id: string;
+  assistido_id: string;
+  /** Preenchidos quando `status === "criado_e_entregue"`. */
+  entrega_id: string | null;
+  beneficio: string | null;
+  saldo_resultante: number | null;
+  /** Preenchido quando `status === "criado_sem_estoque"`. */
+  tentativa_id: string | null;
+}
+
 export interface CriarAssistidoResult {
   familia_id: FamiliaSupabaseId;
   pessoa_id: PessoaSupabaseId;

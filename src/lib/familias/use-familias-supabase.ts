@@ -26,6 +26,7 @@ import {
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
   criarObservacaoSocialNoSupabase,
+  criarPreCadastroNoSupabase,
   getFamiliaFromSupabaseById,
   getResumoAtendimentoAssistido,
   listFamiliasFromSupabase,
@@ -37,6 +38,7 @@ import {
   type CriarFamiliaInput,
   type CriarMembroInput,
   type CriarObservacaoInput,
+  type CriarPreCadastroInput,
   type RegistrarEntregaInput,
   type RegistrarTentativaInput,
 } from "@/lib/familias/familias-repository";
@@ -257,6 +259,27 @@ export function useRegistrarEntregaSupabase() {
     onSuccess: (_data, variables) => {
       invalidarAtendimento(queryClient, variables.familiaId, variables.assistidoId);
       // A entrega baixa o saldo e grava a baixa automática no ledger de estoque.
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.beneficiosEstoque });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
+      });
+    },
+  });
+}
+
+export function useCriarPreCadastro() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CriarPreCadastroInput) => {
+      const result = await criarPreCadastroNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      // Cria família + assistido (e, na variante, entrega + baixa). Invalida amplo:
+      // busca de atendimento, listas de família e estoque.
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.beneficiosEstoque });
       void queryClient.invalidateQueries({
         queryKey: familiasSupabaseQueryKeys.movimentacoesEstoque,
