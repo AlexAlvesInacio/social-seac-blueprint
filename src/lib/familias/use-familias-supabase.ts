@@ -4,10 +4,13 @@ import {
   atualizarFamiliaNoSupabase,
   atualizarResponsavelFamiliaNoSupabase,
   buscarAssistidosAtivosNoSupabase,
+  criarRecebimentoNoSupabase,
   listarBeneficiosNoSupabase,
   listarEntregasRecentesNoSupabase,
   listarMovimentacoesEstoqueNoSupabase,
+  listarRecebimentosNoSupabase,
   registrarMovimentacaoEstoqueNoSupabase,
+  type CriarRecebimentoInput,
   type RegistrarMovimentacaoInput,
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
@@ -41,6 +44,7 @@ export const familiasSupabaseQueryKeys = {
   beneficiosEstoque: ["familias", "supabase", "beneficios-estoque"] as const,
   movimentacoesEstoque: ["familias", "supabase", "movimentacoes-estoque"] as const,
   entregasPainel: ["familias", "supabase", "entregas-painel"] as const,
+  recebimentos: ["familias", "supabase", "recebimentos"] as const,
 };
 
 export function useFamiliasSupabase() {
@@ -278,6 +282,32 @@ export function useEntregasPainel() {
       const result = await listarEntregasRecentesNoSupabase();
       if (result.error) throw new FamiliasSupabaseQueryError(result.error);
       return result.data;
+    },
+  });
+}
+
+export function useRecebimentos() {
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.recebimentos,
+    queryFn: async () => {
+      const result = await listarRecebimentosNoSupabase();
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+  });
+}
+
+export function useCriarRecebimento() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CriarRecebimentoInput) => {
+      const result = await criarRecebimentoNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.recebimentos });
     },
   });
 }
