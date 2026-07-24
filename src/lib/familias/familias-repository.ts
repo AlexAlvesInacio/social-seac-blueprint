@@ -13,6 +13,7 @@ import type {
   Recebimento,
   RecebimentoOrigem,
   RegistrarMovimentacaoResult,
+  TentativaBloqueadaPainel,
   AtualizarResponsavelResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
@@ -1104,6 +1105,7 @@ type EntregaPainelRow = {
   beneficio_id: string;
   assistido_id: string;
   excepcional: boolean;
+  observacao: string | null;
 };
 
 async function listarEntregasRecentes(
@@ -1115,7 +1117,7 @@ async function listarEntregasRecentes(
 
   const entregasResult = await client
     .from("entregas")
-    .select("id, criado_em, familia_id, beneficio_id, assistido_id, excepcional")
+    .select("id, criado_em, familia_id, beneficio_id, assistido_id, excepcional, observacao")
     .gte("criado_em", desde)
     .order("criado_em", { ascending: false })
     .limit(limite);
@@ -1137,7 +1139,7 @@ async function listarEntregasRecentes(
   const [beneficiosResult, assistidosResult, familiasResult] = await Promise.all([
     client.from("beneficios").select("id, nome").in("id", beneficioIds),
     client.from("assistidos").select("id, pessoa_id").in("id", assistidoIds),
-    client.from("familias").select("id, nome_referencia").in("id", familiaIds),
+    client.from("familias").select("id, nome_referencia, bairro").in("id", familiaIds),
   ]);
 
   if (beneficiosResult.error) {
@@ -1163,40 +1165,55 @@ async function listarEntregasRecentes(
   const pessoaPorAssistido = new Map(assistidos.map((a) => [a.id, a.pessoa_id]));
   const pessoaIds = uniqueIds(assistidos.map((a) => a.pessoa_id));
 
-  let nomePorPessoa = new Map<string, string>();
+  let pessoaInfo = new Map<string, { nome: string; documento: string }>();
   if (pessoaIds.length > 0) {
-    const pessoasResult = await client.from("pessoas").select("id, nome").in("id", pessoaIds);
+    const pessoasResult = await client
+      .from("pessoas")
+      .select("id, nome, documento")
+      .in("id", pessoaIds);
     if (pessoasResult.error) {
       return {
         data: null,
         error: toFamiliasSupabaseReadError("listar_entregas_painel", pessoasResult.error),
       };
     }
-    nomePorPessoa = new Map(
-      ((pessoasResult.data ?? []) as { id: string; nome: string }[]).map((p) => [p.id, p.nome]),
+    pessoaInfo = new Map(
+      ((pessoasResult.data ?? []) as { id: string; nome: string; documento: string }[]).map((p) => [
+        p.id,
+        { nome: p.nome, documento: p.documento },
+      ]),
     );
   }
 
   const nomeBeneficio = new Map(
     ((beneficiosResult.data ?? []) as { id: string; nome: string }[]).map((b) => [b.id, b.nome]),
   );
-  const nomeFamilia = new Map(
-    ((familiasResult.data ?? []) as { id: string; nome_referencia: string | null }[]).map((f) => [
-      f.id,
-      f.nome_referencia ?? "",
-    ]),
+  const familiaInfo = new Map(
+    (
+      (familiasResult.data ?? []) as {
+        id: string;
+        nome_referencia: string | null;
+        bairro: string | null;
+      }[]
+    ).map((f) => [f.id, { nome: f.nome_referencia ?? "", bairro: f.bairro ?? "" }]),
   );
 
   const data: EntregaPainel[] = entregas.map((e) => {
     const pessoaId = pessoaPorAssistido.get(e.assistido_id);
+    const pessoa = pessoaId ? pessoaInfo.get(pessoaId) : undefined;
+    const familia = familiaInfo.get(e.familia_id);
     return {
       id: e.id,
       criadoEm: e.criado_em,
       familiaId: e.familia_id,
-      familiaNome: nomeFamilia.get(e.familia_id) ?? "—",
-      assistidoNome: (pessoaId && nomePorPessoa.get(pessoaId)) || "Assistido",
+      familiaNome: familia?.nome || "—",
+      familiaBairro: familia?.bairro ?? "",
+      assistidoId: e.assistido_id,
+      assistidoNome: pessoa?.nome || "Assistido",
+      documento: pessoa?.documento,
       beneficioNome: nomeBeneficio.get(e.beneficio_id) ?? "—",
       excepcional: e.excepcional,
+      observacao: e.observacao ?? undefined,
     };
   });
 
@@ -1214,6 +1231,115 @@ export async function listarEntregasRecentesNoSupabase(
       data: null,
       error: toUnexpectedFamiliasSupabaseReadError("listar_entregas_painel", error),
     };
+  }
+}
+
+type TentativaRow = {
+  id: string;
+  criado_em: string;
+  familia_id: string;
+  pessoa_id: string;
+  beneficio_id: string | null;
+  motivo: "prazo" | "estoque";
+  observacao: string | null;
+};
+
+async function listarTentativas(
+  diasJanela: number,
+  limite: number,
+): Promise<FamiliasSupabaseReadResult<TentativaBloqueadaPainel[]>> {
+  const client = getSupabaseClient();
+  const desde = new Date(Date.now() - diasJanela * 86400000).toISOString();
+
+  const tentativasResult = await client
+    .from("tentativas_bloqueadas")
+    .select("id, criado_em, familia_id, pessoa_id, beneficio_id, motivo, observacao")
+    .gte("criado_em", desde)
+    .order("criado_em", { ascending: false })
+    .limit(limite);
+
+  if (tentativasResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_tentativas", tentativasResult.error),
+    };
+  }
+
+  const tentativas = (tentativasResult.data ?? []) as TentativaRow[];
+  if (tentativas.length === 0) return { data: [], error: null };
+
+  const pessoaIds = uniqueIds(tentativas.map((t) => t.pessoa_id));
+  const familiaIds = uniqueIds(tentativas.map((t) => t.familia_id));
+  const beneficioIds = uniqueIds(tentativas.map((t) => t.beneficio_id));
+
+  const [pessoasResult, familiasResult, beneficiosResult] = await Promise.all([
+    client.from("pessoas").select("id, nome, documento").in("id", pessoaIds),
+    client.from("familias").select("id, nome_referencia").in("id", familiaIds),
+    beneficioIds.length > 0
+      ? client.from("beneficios").select("id, nome").in("id", beneficioIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (pessoasResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_tentativas", pessoasResult.error),
+    };
+  }
+  if (familiasResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_tentativas", familiasResult.error),
+    };
+  }
+  if (beneficiosResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_tentativas", beneficiosResult.error),
+    };
+  }
+
+  const pessoaInfo = new Map(
+    ((pessoasResult.data ?? []) as { id: string; nome: string; documento: string }[]).map((p) => [
+      p.id,
+      { nome: p.nome, documento: p.documento },
+    ]),
+  );
+  const nomeFamilia = new Map(
+    ((familiasResult.data ?? []) as { id: string; nome_referencia: string | null }[]).map((f) => [
+      f.id,
+      f.nome_referencia ?? "",
+    ]),
+  );
+  const nomeBeneficio = new Map(
+    ((beneficiosResult.data ?? []) as { id: string; nome: string }[]).map((b) => [b.id, b.nome]),
+  );
+
+  const data: TentativaBloqueadaPainel[] = tentativas.map((t) => {
+    const pessoa = pessoaInfo.get(t.pessoa_id);
+    return {
+      id: t.id,
+      criadoEm: t.criado_em,
+      familiaNome: nomeFamilia.get(t.familia_id) ?? "—",
+      assistidoNome: pessoa?.nome || "Assistido",
+      documento: pessoa?.documento,
+      beneficioNome: (t.beneficio_id && nomeBeneficio.get(t.beneficio_id)) || "—",
+      motivo: t.motivo,
+      observacao: t.observacao ?? undefined,
+    };
+  });
+
+  return { data, error: null };
+}
+
+export async function listarTentativasBloqueadasNoSupabase(
+  diasJanela = 3650,
+  limite = 500,
+): Promise<FamiliasSupabaseReadResult<TentativaBloqueadaPainel[]>> {
+  try {
+    return await listarTentativas(diasJanela, limite);
+  } catch (error) {
+    return { data: null, error: toUnexpectedFamiliasSupabaseReadError("listar_tentativas", error) };
   }
 }
 
