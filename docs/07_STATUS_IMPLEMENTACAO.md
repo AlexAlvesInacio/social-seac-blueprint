@@ -4,6 +4,14 @@ Avaliação baseada no código atual (atualizado em 2026-07-23, após a migraç�
 domínio de famílias para o Supabase — PRs #10 a #17). “Homologado” em documentos
 anteriores pode significar experiência visual ou funcionamento local, não produção.
 
+> **Nota (2026-07-24):** a tabela abaixo ainda descreve estoque, recebimentos,
+> relatórios e painel como “local/protótipo”, mas as PRs #23–#27 já migraram
+> essas fatias para o Supabase (estoque de benefícios + ledger, recebimentos,
+> relatórios lendo do banco, painel repintado e, na #27, itens de estoque,
+> composição de cesta e montagem). A reconciliação da tabela está pendente; os
+> achados de revisão da #27 registrados na seção de riscos referem-se a essas
+> fatias novas.
+
 | Área | Classificação | Evidência e limite atual |
 | --- | --- | --- |
 | Login | Implementado (Supabase Auth) | `/auth` chama `signIn` real, valida sessão e status (`pendente`/`inativo`), e protege rotas via `RequireActiveProfile`. |
@@ -41,3 +49,36 @@ anteriores pode significar experiência visual ou funcionamento local, não prod
   fonte de status corrente.
 - **Papéis vs. status.** Perfis usam papéis `administrador/atendente/estoque`
   separados dos status `pendente/ativo/inativo` (não confundir as duas colunas).
+
+## Achados da revisão da PR #27 (itens/composição/montagem) — 2026-07-24
+
+Registrados aqui como dívida para fatias futuras (nenhum bloqueou o merge da #27;
+a lógica de negócio crítica roda no servidor, transacional, com backstop `SEAI1`).
+
+- **[Corrigido na #27] Deadlock em montagens concorrentes.** `public.montar_cesta`
+  adquiria os locks (`FOR UPDATE`) dos itens em ordem não determinística. Resolvido
+  pela migration `20260724213726_montar_cesta_order_by_deadlock.sql`
+  (`order by c.item_id` no loop). Sem pendência.
+
+- **[A decidir] Papel `estoque` não acessa o estoque de itens.** As tabelas
+  `itens_estoque`, `movimentacoes_itens` e `composicao_beneficio` e suas RPCs
+  (`registrar_movimentacao_item`, `definir_composicao_beneficio`, `montar_cesta`)
+  usam o predicado `private.usuario_atual_pode_gerir_familias()`, que só admite
+  `administrador` e `atendente` — o papel `estoque` é recusado. É consistente com
+  as fatias #23–#26, mas semanticamente estranho (o papel chamado `estoque` não
+  movimenta estoque). Se o acesso do papel `estoque` for desejado, criar um
+  predicado dedicado (ex.: `private.usuario_atual_pode_gerir_estoque()`).
+
+- **[Dívida sistêmica] Ledger de itens burlável por `UPDATE` direto no `saldo`.**
+  `grant update on public.itens_estoque to authenticated` + a policy de update
+  permitem alterar `saldo` diretamente, sem gravar em `movimentacoes_itens` —
+  furando a integridade do ledger insert-only. Não é regressão da #27: o mesmo
+  padrão já existe em `public.beneficios` (homologado). Mitigável com grant por
+  coluna (excluir `saldo`) ou revogando `UPDATE` e forçando toda escrita de saldo
+  via RPC. Vale um passo transversal cobrindo os dois estoques.
+
+- **[Convenção] `src/lib/familias/familias-repository.ts` virou catch-all
+  (~1776 linhas).** Além de famílias, hospeda estoque, benefícios, recebimentos e
+  agora itens/composição/montagem. O padrão-alvo é uma pasta por domínio
+  (`src/lib/relatorios/` já existe). Introduzido nas fatias #23–#26, não na #27;
+  candidato a extração de `src/lib/estoque/` numa fatia futura.
