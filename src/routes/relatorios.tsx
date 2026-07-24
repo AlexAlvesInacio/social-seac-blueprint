@@ -43,7 +43,7 @@ import {
 } from "@/lib/relatorios-store";
 import { gerarRelatorioSupabase } from "@/lib/relatorios/relatorios-supabase";
 import { useBeneficiosEstoque, useFamiliasSupabase } from "@/lib/familias/use-familias-supabase";
-import { registrarAuditoria } from "@/lib/auditoria-store";
+import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 
 export const Route = createFileRoute("/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — SEAC Social" }] }),
