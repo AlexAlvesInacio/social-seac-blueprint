@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { HeartHandshake, LoaderCircle, Search, Users } from "lucide-react";
+import { HeartHandshake, LoaderCircle, Search, UserPlus, Users } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { RegistrarEntregaSupabaseDialog } from "@/components/registrar-entrega-supabase-dialog";
+import { PreCadastroDialog } from "@/components/pre-cadastro-dialog";
 import { useBuscarAssistidosAtendimento } from "@/lib/familias/use-familias-supabase";
 import type { AssistidoBuscaResultado } from "@/lib/familias/familias-supabase-types";
 
@@ -33,6 +34,8 @@ function AtendimentoPage() {
   const [termoBuscado, setTermoBuscado] = useState(assistidoParam ?? "");
   const [erroBusca, setErroBusca] = useState<string | null>(null);
   const [selecionado, setSelecionado] = useState<AssistidoBuscaResultado | null>(null);
+  // null = fechado; boolean = aberto, indicando a variante "com entrega".
+  const [preCadEntregar, setPreCadEntregar] = useState<boolean | null>(null);
 
   const busca = useBuscarAssistidosAtendimento(termoBuscado);
 
@@ -85,7 +88,7 @@ function AtendimentoPage() {
               Não foi possível buscar. Verifique a conexão e tente novamente.
             </p>
           ) : resultados.length === 0 ? (
-            <EstadoVazio texto="Nenhum assistido encontrado para os dados informados." />
+            <NenhumEncontrado onPreCadastro={(entregar) => setPreCadEntregar(entregar)} />
           ) : (
             <div className="space-y-3">
               {resultados.map((assistido) => (
@@ -136,7 +139,36 @@ function AtendimentoPage() {
         }
         familiaNome={selecionado?.familiaNome || "família"}
       />
+
+      <PreCadastroDialog
+        open={preCadEntregar !== null}
+        entregar={preCadEntregar ?? false}
+        termoInicial={termoBuscado}
+        onOpenChange={(o) => {
+          if (!o) setPreCadEntregar(null);
+        }}
+      />
     </AppShell>
+  );
+}
+
+function NenhumEncontrado({ onPreCadastro }: { onPreCadastro: (entregar: boolean) => void }) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+        <p className="text-sm text-muted-foreground">
+          Nenhum assistido encontrado para os dados informados.
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => onPreCadastro(false)}>
+            <UserPlus className="h-4 w-4" /> Criar pré-cadastro
+          </Button>
+          <Button className="gap-2" onClick={() => onPreCadastro(true)}>
+            <HeartHandshake className="h-4 w-4" /> Criar pré-cadastro e entregar Cesta Extra
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
