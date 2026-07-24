@@ -385,10 +385,21 @@ export interface AtualizarResponsavelResult {
 }
 
 /** Retorno de `public.registrar_entrega_atendimento`. */
+/** Desfecho retornado por `public.registrar_entrega_atendimento`. */
+export type RegistrarEntregaStatus =
+  | "entregue"
+  | "bloqueado_prazo"
+  | "bloqueado_estoque"
+  | "bloqueado_extra";
+
 export interface RegistrarEntregaResult {
-  entrega_id: string;
+  status: RegistrarEntregaStatus;
+  /** Preenchidos quando `status === "entregue"`. */
+  entrega_id: string | null;
   beneficio: string;
-  saldo_resultante: number;
+  saldo_resultante: number | null;
+  /** Preenchido quando o desfecho é um bloqueio (tentativa registrada). */
+  tentativa_id: string | null;
 }
 
 /** Retorno de `public.registrar_tentativa_bloqueada`. */
@@ -489,7 +500,7 @@ export interface TentativaBloqueadaPainel {
   assistidoNome: string;
   documento?: string;
   beneficioNome: string;
-  motivo: "prazo" | "estoque";
+  motivo: "prazo" | "estoque" | "extra";
   observacao?: string;
 }
 

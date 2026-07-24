@@ -1161,7 +1161,11 @@ function TentativasFamiliaTab({ familiaId }: { familiaId: string }) {
                 <TableCell className="text-sm">{t.beneficioNome}</TableCell>
                 <TableCell className="text-sm">
                   <Badge variant="outline" className="text-[10px]">
-                    {t.motivo === "prazo" ? "Prazo (25 dias)" : "Estoque"}
+                    {t.motivo === "prazo"
+                      ? "Prazo (25 dias)"
+                      : t.motivo === "estoque"
+                        ? "Estoque"
+                        : "Extra completou"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">

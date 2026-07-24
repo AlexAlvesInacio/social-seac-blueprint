@@ -630,7 +630,7 @@ export interface RegistrarEntregaInput {
 export interface RegistrarTentativaInput {
   assistidoId: string;
   familiaId: string;
-  motivo: "prazo" | "estoque";
+  motivo: "prazo" | "estoque" | "extra";
   observacao?: string;
 }
 
@@ -1283,7 +1283,7 @@ type TentativaRow = {
   familia_id: string;
   pessoa_id: string;
   beneficio_id: string | null;
-  motivo: "prazo" | "estoque";
+  motivo: "prazo" | "estoque" | "extra";
   observacao: string | null;
 };
 
