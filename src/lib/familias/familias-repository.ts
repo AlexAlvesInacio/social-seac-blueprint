@@ -2,6 +2,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 
 import { mapFamiliaFromSupabase, mapFamiliasFromSupabase } from "@/lib/familias/familias-mapper";
 import type {
+  AssistidoBuscaResultado,
   AssistidoSupabaseRow,
   AssistidoTipoCadastroSupabase,
   AtualizarFamiliaResult,
@@ -773,5 +774,121 @@ export async function getResumoAtendimentoAssistido(
       data: null,
       error: toUnexpectedFamiliasSupabaseReadError("resumo_atendimento", error),
     };
+  }
+}
+
+// Normalização oficial do documento (igual ao trigger private.normalizar_documento_pessoa):
+// remove tudo que não é alfanumérico e converte para maiúsculas.
+function normalizarDocumento(termo: string): string {
+  return termo.replace(/[^0-9a-z]/gi, "").toUpperCase();
+}
+
+type PessoaBuscaRow = { id: string; nome: string; documento: string; telefone: string | null };
+type AssistidoBuscaRow = {
+  id: string;
+  familia_id: string;
+  pessoa_id: string;
+  tipo_cadastro: AssistidoTipoCadastroSupabase;
+};
+
+async function buscarAssistidos(
+  termo: string,
+): Promise<FamiliasSupabaseReadResult<AssistidoBuscaResultado[]>> {
+  const client = getSupabaseClient();
+  const t = termo.trim();
+  // Sanitiza para o filtro .or do PostgREST (vírgula/parênteses quebram a sintaxe).
+  const seguro = t.replace(/[(),*]/g, " ").trim();
+  const docNorm = normalizarDocumento(t);
+  const digitos = t.replace(/\D/g, "");
+
+  const orParts: string[] = [];
+  if (docNorm) orParts.push(`documento_normalizado.eq.${docNorm}`);
+  if (seguro) orParts.push(`nome.ilike.%${seguro}%`);
+  if (digitos) orParts.push(`telefone.ilike.%${digitos}%`);
+
+  const pessoasResult = await client
+    .from("pessoas")
+    .select("id, nome, documento, telefone")
+    .or(orParts.join(","))
+    .limit(20);
+
+  if (pessoasResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("buscar_assistidos", pessoasResult.error),
+    };
+  }
+
+  const pessoas = (pessoasResult.data ?? []) as PessoaBuscaRow[];
+  if (pessoas.length === 0) return { data: [], error: null };
+
+  const pessoaById = new Map(pessoas.map((p) => [p.id, p]));
+  const assistidosResult = await client
+    .from("assistidos")
+    .select("id, familia_id, pessoa_id, tipo_cadastro")
+    .eq("status", "ativo")
+    .in(
+      "pessoa_id",
+      pessoas.map((p) => p.id),
+    );
+
+  if (assistidosResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("buscar_assistidos", assistidosResult.error),
+    };
+  }
+
+  const assistidos = (assistidosResult.data ?? []) as AssistidoBuscaRow[];
+  if (assistidos.length === 0) return { data: [], error: null };
+
+  const familiaIds = [...new Set(assistidos.map((a) => a.familia_id))];
+  const familiasResult = await client
+    .from("familias")
+    .select("id, nome_referencia")
+    .in("id", familiaIds);
+
+  if (familiasResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("buscar_assistidos", familiasResult.error),
+    };
+  }
+
+  const familiaNomeById = new Map(
+    ((familiasResult.data ?? []) as { id: string; nome_referencia: string | null }[]).map((f) => [
+      f.id,
+      f.nome_referencia ?? "",
+    ]),
+  );
+
+  const data: AssistidoBuscaResultado[] = assistidos.flatMap((a) => {
+    const pessoa = pessoaById.get(a.pessoa_id);
+    if (!pessoa) return [];
+    return [
+      {
+        assistidoId: a.id,
+        familiaId: a.familia_id,
+        pessoaId: a.pessoa_id,
+        nome: pessoa.nome,
+        documento: pessoa.documento,
+        telefone: pessoa.telefone ?? undefined,
+        tipoCadastro: a.tipo_cadastro,
+        familiaNome: familiaNomeById.get(a.familia_id) ?? "",
+      },
+    ];
+  });
+
+  return { data, error: null };
+}
+
+/** Busca assistidos ativos por documento (normalizado), nome ou telefone. */
+export async function buscarAssistidosAtivosNoSupabase(
+  termo: string,
+): Promise<FamiliasSupabaseReadResult<AssistidoBuscaResultado[]>> {
+  try {
+    return await buscarAssistidos(termo);
+  } catch (error) {
+    return { data: null, error: toUnexpectedFamiliasSupabaseReadError("buscar_assistidos", error) };
   }
 }

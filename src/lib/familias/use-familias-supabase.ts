@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   atualizarFamiliaNoSupabase,
   atualizarResponsavelFamiliaNoSupabase,
+  buscarAssistidosAtivosNoSupabase,
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
@@ -31,6 +32,7 @@ export const familiasSupabaseQueryKeys = {
   detail: (id: string) => ["familias", "supabase", id] as const,
   resumoAtendimento: (assistidoId: string) =>
     ["familias", "supabase", "resumo-atendimento", assistidoId] as const,
+  buscaAssistidos: (termo: string) => ["familias", "supabase", "busca-assistidos", termo] as const,
 };
 
 export function useFamiliasSupabase() {
@@ -165,6 +167,20 @@ export function useAtualizarResponsavelSupabase() {
         queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
       });
     },
+  });
+}
+
+export function useBuscarAssistidosAtendimento(termo: string) {
+  const termoNormalizado = termo.trim();
+
+  return useQuery({
+    queryKey: familiasSupabaseQueryKeys.buscaAssistidos(termoNormalizado),
+    queryFn: async () => {
+      const result = await buscarAssistidosAtivosNoSupabase(termoNormalizado);
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+    enabled: termoNormalizado.length >= 3,
   });
 }
 
