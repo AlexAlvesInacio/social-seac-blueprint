@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { HandCoins, Landmark, Package, Plus, ShoppingCart, Trash2, Wallet } from "lucide-react";
+
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,21 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import {
-  Inbox,
-  HandCoins,
-  ShoppingCart,
-  Landmark,
-  Wallet,
-  Package,
-  Plus,
-  Trash2,
-  Eye,
-  PackagePlus,
-  Info,
-} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -36,396 +25,318 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useCriarRecebimento, useRecebimentos } from "@/lib/familias/use-familias-supabase";
+import type { RecebimentoOrigem } from "@/lib/familias/familias-supabase-types";
 
 export const Route = createFileRoute("/recebimentos")({
   head: () => ({ meta: [{ title: "Recebimentos — SEAC Social" }] }),
   component: RecebimentosPage,
 });
 
-const kpis = [
-  {
-    label: "Recebimentos no mês",
-    value: "12",
-    hint: "Maio/2025",
-    icon: Inbox,
-    tone: "bg-primary/10 text-primary",
-  },
-  {
-    label: "Doações recebidas",
-    value: "8",
-    hint: "No mês",
-    icon: HandCoins,
-    tone: "bg-emerald-100 text-emerald-700",
-  },
-  {
-    label: "Compras registradas",
-    value: "3",
-    hint: "No mês",
-    icon: ShoppingCart,
-    tone: "bg-sky-100 text-sky-700",
-  },
-  {
-    label: "Investimentos",
-    value: "1",
-    hint: "No mês",
-    icon: Landmark,
-    tone: "bg-violet-100 text-violet-700",
-  },
-  {
-    label: "Valor estimado",
-    value: "R$ 18.450,00",
-    hint: "Recebido no mês",
-    icon: Wallet,
-    tone: "bg-emerald-100 text-emerald-700",
-  },
-  {
-    label: "Itens recebidos",
-    value: "2.430",
-    hint: "Unidades / pacotes",
-    icon: Package,
-    tone: "bg-amber-100 text-amber-700",
-  },
+const ORIGENS: { value: RecebimentoOrigem; label: string }[] = [
+  { value: "doacao", label: "Doação" },
+  { value: "compra", label: "Compra" },
+  { value: "investimento", label: "Investimento" },
+  { value: "ajuste", label: "Ajuste" },
 ];
 
-const itensRecebimento = [
-  { item: "Arroz 5kg", qtd: 200, unidade: "pacote", vu: "R$ 24,00", total: "R$ 4.800,00" },
-  { item: "Feijão 1kg", qtd: 100, unidade: "pacote", vu: "R$ 8,50", total: "R$ 850,00" },
-  { item: "Óleo 900ml", qtd: 80, unidade: "unidade", vu: "R$ 7,50", total: "R$ 600,00" },
-];
-
-type StatusRec = "Registrado" | "Pendente conferência" | "Cancelado";
-
-const historico: {
-  data: string;
-  tipo: "Doação" | "Compra" | "Investimento";
-  parte: string;
-  itens: string;
-  valor: string;
-  status: StatusRec;
-}[] = [
-  {
-    data: "21/05/2025",
-    tipo: "Doação",
-    parte: "Supermercado Exemplo",
-    itens: "3 itens",
-    valor: "R$ 6.250,00",
-    status: "Registrado",
-  },
-  {
-    data: "20/05/2025",
-    tipo: "Compra",
-    parte: "Atacadão Exemplo",
-    itens: "5 itens",
-    valor: "R$ 3.850,00",
-    status: "Registrado",
-  },
-  {
-    data: "18/05/2025",
-    tipo: "Investimento",
-    parte: "Recurso interno SEAC",
-    itens: "2 itens",
-    valor: "R$ 2.500,00",
-    status: "Registrado",
-  },
-  {
-    data: "15/05/2025",
-    tipo: "Doação",
-    parte: "Padaria Bom Pão",
-    itens: "2 itens",
-    valor: "R$ 480,00",
-    status: "Pendente conferência",
-  },
-  {
-    data: "10/05/2025",
-    tipo: "Doação",
-    parte: "Família anônima",
-    itens: "1 item",
-    valor: "R$ 120,00",
-    status: "Cancelado",
-  },
-];
-
-function tipoBadge(tipo: "Doação" | "Compra" | "Investimento") {
-  const map = {
-    Doação: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    Compra: "bg-sky-100 text-sky-700 border-sky-200",
-    Investimento: "bg-violet-100 text-violet-700 border-violet-200",
-  } as const;
-  return (
-    <Badge variant="outline" className={map[tipo]}>
-      {tipo}
-    </Badge>
-  );
+function rotuloParte(origem: RecebimentoOrigem): string {
+  if (origem === "compra") return "Fornecedor";
+  if (origem === "investimento") return "Origem do recurso";
+  return "Doador ou fornecedor";
 }
 
-function statusBadge(status: StatusRec) {
-  const map: Record<StatusRec, string> = {
-    Registrado: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    "Pendente conferência": "bg-amber-100 text-amber-700 border-amber-200",
-    Cancelado: "bg-red-100 text-red-700 border-red-200",
-  };
-  return (
-    <Badge variant="outline" className={map[status]}>
-      {status}
-    </Badge>
-  );
+function labelOrigem(o: RecebimentoOrigem): string {
+  return ORIGENS.find((x) => x.value === o)?.label ?? o;
 }
+
+function brl(v: number): string {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function hojeISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+type ItemForm = { nome: string; quantidade: string; unidade: string; valorUnitario: string };
+const itemVazio: ItemForm = { nome: "", quantidade: "", unidade: "un", valorUnitario: "" };
 
 function RecebimentosPage() {
-  const [tipo, setTipo] = useState<"doacao" | "compra" | "investimento">("doacao");
-  const parteLabel =
-    tipo === "compra"
-      ? "Fornecedor"
-      : tipo === "investimento"
-        ? "Origem do recurso"
-        : "Doador ou fornecedor";
-  const partePlaceholder =
-    tipo === "compra"
-      ? "Nome do fornecedor"
-      : tipo === "investimento"
-        ? "Ex.: Recurso interno SEAC, campanha, parceiro"
-        : "Nome do doador ou fornecedor";
+  const recebimentos = useRecebimentos();
+  const criar = useCriarRecebimento();
+
+  const [data, setData] = useState(hojeISO());
+  const [origem, setOrigem] = useState<RecebimentoOrigem>("doacao");
+  const [parte, setParte] = useState("");
+  const [documento, setDocumento] = useState("");
+  const [valor, setValor] = useState("");
+  const [observacao, setObservacao] = useState("");
+  const [itens, setItens] = useState<ItemForm[]>([{ ...itemVazio }]);
+
+  const setItem = (i: number, patch: Partial<ItemForm>) =>
+    setItens((atual) => atual.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  const addItem = () => setItens((atual) => [...atual, { ...itemVazio }]);
+  const removerItem = (i: number) => setItens((atual) => atual.filter((_, idx) => idx !== i));
+
+  const reset = () => {
+    setData(hojeISO());
+    setOrigem("doacao");
+    setParte("");
+    setDocumento("");
+    setValor("");
+    setObservacao("");
+    setItens([{ ...itemVazio }]);
+  };
+
+  const lista = recebimentos.data ?? [];
+  const kpis = useMemo(() => {
+    const mesAtual = hojeISO().slice(0, 7);
+    const doMes = lista.filter((r) => r.data.slice(0, 7) === mesAtual);
+    const valorMes = doMes.reduce((acc, r) => acc + r.valor, 0);
+    const itensMes = doMes.reduce((acc, r) => acc + r.itensCount, 0);
+    return {
+      mes: doMes.length,
+      doacoes: doMes.filter((r) => r.origem === "doacao").length,
+      compras: doMes.filter((r) => r.origem === "compra").length,
+      valorMes,
+      itensMes,
+    };
+  }, [lista]);
+
+  const salvar = async () => {
+    if (!parte.trim()) {
+      toast.error("Informe o doador/fornecedor.");
+      return;
+    }
+    const itensValidos = itens
+      .filter((it) => it.nome.trim() && Number(it.quantidade) > 0)
+      .map((it) => {
+        const qtd = Number(it.quantidade);
+        const vu = it.valorUnitario ? Number(it.valorUnitario) : undefined;
+        return {
+          nome: it.nome,
+          quantidade: qtd,
+          unidade: it.unidade,
+          valorUnitario: vu,
+          valorTotal: vu !== undefined ? Number((vu * qtd).toFixed(2)) : undefined,
+        };
+      });
+
+    try {
+      await criar.mutateAsync({
+        data,
+        origem,
+        parte,
+        documento,
+        valor: valor ? Number(valor) : 0,
+        observacao,
+        itens: itensValidos,
+      });
+      toast.success("Recebimento registrado.");
+      reset();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível registrar o recebimento.");
+    }
+  };
+
   return (
     <AppShell title="Recebimentos">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {kpis.map((k) => {
-          const Icon = k.icon;
-          return (
-            <Card key={k.label}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${k.tone}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs leading-tight text-muted-foreground">{k.label}</p>
-                  <p className="mt-0.5 text-xl font-semibold leading-tight">{k.value}</p>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {k.hint}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <Kpi
+            icon={<Package className="h-4 w-4" />}
+            label="Recebimentos no mês"
+            valor={kpis.mes}
+          />
+          <Kpi
+            icon={<HandCoins className="h-4 w-4" />}
+            label="Doações (mês)"
+            valor={kpis.doacoes}
+          />
+          <Kpi
+            icon={<ShoppingCart className="h-4 w-4" />}
+            label="Compras (mês)"
+            valor={kpis.compras}
+          />
+          <Kpi
+            icon={<Wallet className="h-4 w-4" />}
+            label="Valor no mês"
+            texto={brl(kpis.valorMes)}
+          />
+          <Kpi icon={<Landmark className="h-4 w-4" />} label="Itens no mês" valor={kpis.itensMes} />
+        </div>
 
-      <div className="mt-3 flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-        <Info className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          Recebimentos registram a origem dos alimentos, compras e investimentos. A entrada efetiva
-          no estoque será controlada nas movimentações de estoque.
-        </p>
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
         <Card>
-          <CardContent className="space-y-4 p-4">
-            <div>
-              <p className="text-sm font-semibold">Novo recebimento</p>
-              <p className="text-xs text-muted-foreground">
-                Selecione o tipo e preencha os dados abaixo.
+          <CardHeader>
+            <CardTitle className="text-base">Novo recebimento</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <section className="grid gap-3 md:grid-cols-2">
+              <Campo label="Data do recebimento">
+                <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
+              </Campo>
+              <Campo label="Origem">
+                <Select value={origem} onValueChange={(v) => setOrigem(v as RecebimentoOrigem)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORIGENS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Campo>
+              <Campo label={`${rotuloParte(origem)} *`}>
+                <Input value={parte} onChange={(e) => setParte(e.target.value)} />
+              </Campo>
+              <Campo label="Documento / referência">
+                <Input
+                  value={documento}
+                  onChange={(e) => setDocumento(e.target.value)}
+                  placeholder="CNPJ, NF, protocolo…"
+                />
+              </Campo>
+              <Campo label="Valor total estimado (R$)">
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={valor}
+                  onChange={(e) => setValor(e.target.value)}
+                />
+              </Campo>
+              <Campo label="Observação">
+                <Textarea
+                  rows={1}
+                  value={observacao}
+                  onChange={(e) => setObservacao(e.target.value)}
+                />
+              </Campo>
+            </section>
+
+            <div className="rounded-md border p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-medium">Itens recebidos</p>
+                <Button size="sm" variant="outline" className="gap-2" onClick={addItem}>
+                  <Plus className="h-4 w-4" /> Adicionar item
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {itens.map((it, i) => (
+                  <div key={i} className="grid grid-cols-12 items-end gap-2">
+                    <div className="col-span-5">
+                      <Label className="text-xs text-muted-foreground">Item</Label>
+                      <Input
+                        value={it.nome}
+                        onChange={(e) => setItem(i, { nome: e.target.value })}
+                        placeholder="Ex.: Arroz 5kg"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs text-muted-foreground">Qtd.</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={it.quantidade}
+                        onChange={(e) => setItem(i, { quantidade: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs text-muted-foreground">Unidade</Label>
+                      <Input
+                        value={it.unidade}
+                        onChange={(e) => setItem(i, { unidade: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs text-muted-foreground">Valor unit.</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={it.valorUnitario}
+                        onChange={(e) => setItem(i, { valorUnitario: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Remover item"
+                        disabled={itens.length === 1}
+                        onClick={() => removerItem(i)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Os itens são registrados como texto. A geração de entrada no estoque será habilitada
+                quando o catálogo de itens estiver disponível.
               </p>
             </div>
 
-            <Tabs value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
-              <TabsList>
-                <TabsTrigger value="doacao">Doação</TabsTrigger>
-                <TabsTrigger value="compra">Compra</TabsTrigger>
-                <TabsTrigger value="investimento">Investimento</TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Data do recebimento">
-                <Input type="date" defaultValue="2025-05-21" />
-              </Field>
-              <Field label="Tipo / origem">
-                <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="doacao">Doação</SelectItem>
-                    <SelectItem value="compra">Compra</SelectItem>
-                    <SelectItem value="investimento">Investimento</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label={parteLabel}>
-                <Input placeholder={partePlaceholder} />
-              </Field>
-              <Field label="Documento ou referência (opcional)">
-                <Input placeholder="CNPJ, NF, protocolo..." />
-              </Field>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Valor total estimado (R$)</Label>
-                <Input placeholder="0,00" />
-                <p className="text-[11px] text-muted-foreground">
-                  Pode ser preenchido manualmente ou conferido com o total dos itens.
-                </p>
-              </div>
-              <Field label="Comprovante / anexo">
-                <Input type="file" />
-              </Field>
-            </div>
-            <Field label="Observação">
-              <Textarea placeholder="Observação opcional" />
-            </Field>
-
-            {/* Itens recebidos */}
-            <div className="rounded-md border">
-              <div className="border-b p-3">
-                <p className="text-sm font-semibold">Itens recebidos</p>
-                <p className="text-xs text-muted-foreground">
-                  Um recebimento pode conter vários itens.
-                </p>
-              </div>
-
-              <div className="space-y-3 border-b p-3">
-                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                  <Field label="Item">
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="arroz">Arroz 5kg</SelectItem>
-                        <SelectItem value="feijao">Feijão 1kg</SelectItem>
-                        <SelectItem value="oleo">Óleo 900ml</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  <Field label="Quantidade">
-                    <Input type="number" placeholder="Informe a quantidade" />
-                  </Field>
-                  <Field label="Unidade">
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="un">unidade</SelectItem>
-                        <SelectItem value="pc">pacote</SelectItem>
-                        <SelectItem value="cx">caixa</SelectItem>
-                        <SelectItem value="kg">kg</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                  <Field label="Valor unitário estimado (R$)">
-                    <Input placeholder="0,00" />
-                  </Field>
-                  <Field label="Valor total do item (R$)">
-                    <Input placeholder="0,00" />
-                  </Field>
-                  <Button variant="outline" className="gap-2 sm:col-span-2 md:col-span-1">
-                    <Plus className="h-4 w-4" /> Adicionar item
-                  </Button>
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Quantidade</TableHead>
-                    <TableHead>Unidade</TableHead>
-                    <TableHead>Valor unitário estimado</TableHead>
-                    <TableHead>Valor total do item</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {itensRecebimento.map((i) => (
-                    <TableRow key={i.item}>
-                      <TableCell className="font-medium">{i.item}</TableCell>
-                      <TableCell>{i.qtd}</TableCell>
-                      <TableCell>{i.unidade}</TableCell>
-                      <TableCell>{i.vu}</TableCell>
-                      <TableCell>{i.total}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-muted-foreground"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex items-center justify-between border-t bg-muted/40 p-3 text-sm">
-                <span className="text-muted-foreground">Total dos itens</span>
-                <span className="font-semibold text-emerald-700">R$ 6.250,00</span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                Salvar recebimento
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={reset} disabled={criar.isPending}>
+                Limpar
               </Button>
-              <Button variant="outline">Limpar</Button>
-              <Button variant="ghost">Cancelar edição</Button>
+              <Button onClick={() => void salvar()} disabled={criar.isPending}>
+                {criar.isPending ? "Salvando…" : "Salvar recebimento"}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold">Histórico de recebimentos</p>
-              <p className="text-xs text-muted-foreground">Últimos registros</p>
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Doador / fornecedor</TableHead>
-                  <TableHead>Itens</TableHead>
-                  <TableHead>Valor total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {historico.map((h, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="text-muted-foreground">{h.data}</TableCell>
-                    <TableCell>{tipoBadge(h.tipo)}</TableCell>
-                    <TableCell className="font-medium">{h.parte}</TableCell>
-                    <TableCell>{h.itens}</TableCell>
-                    <TableCell>{h.valor}</TableCell>
-                    <TableCell>{statusBadge(h.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          title="Ver detalhes"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-muted-foreground"
-                          title="Gerar entrada no estoque (em breve)"
-                          disabled
-                        >
-                          <PackagePlus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          <CardHeader>
+            <CardTitle className="text-base">Histórico de recebimentos</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {recebimentos.isPending ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">Carregando…</p>
+            ) : recebimentos.isError ? (
+              <p className="p-8 text-center text-sm text-destructive">
+                Não foi possível carregar os recebimentos.
+              </p>
+            ) : lista.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">
+                Nenhum recebimento registrado.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Origem</TableHead>
+                    <TableHead>Parte</TableHead>
+                    <TableHead>Itens</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <p className="mt-2 text-xs text-muted-foreground">Mostrando 1 a 5 de 12 recebimentos</p>
+                </TableHeader>
+                <TableBody>
+                  {lista.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-sm">
+                        {r.data.split("-").reverse().join("/")}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <Badge variant="outline">{labelOrigem(r.origem)}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">{r.parte}</TableCell>
+                      <TableCell className="text-sm">{r.itensCount}</TableCell>
+                      <TableCell className="text-sm">{brl(r.valor)}</TableCell>
+                      <TableCell className="text-sm capitalize">{r.status}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -433,7 +344,33 @@ function RecebimentosPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Kpi({
+  icon,
+  label,
+  valor,
+  texto,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  valor?: number;
+  texto?: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-xs text-muted-foreground">{label}</p>
+          <p className="text-lg font-semibold">{texto ?? valor}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
       <Label className="text-xs text-muted-foreground">{label}</Label>

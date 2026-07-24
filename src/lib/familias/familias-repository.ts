@@ -7,8 +7,11 @@ import type {
   AssistidoTipoCadastroSupabase,
   AtualizarFamiliaResult,
   BeneficioEstoque,
+  CriarRecebimentoResult,
   EntregaPainel,
   MovimentacaoEstoque,
+  Recebimento,
+  RecebimentoOrigem,
   RegistrarMovimentacaoResult,
   AtualizarResponsavelResult,
   CriarAssistidoResult,
@@ -1210,6 +1213,160 @@ export async function listarEntregasRecentesNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseReadError("listar_entregas_painel", error),
+    };
+  }
+}
+
+/* ============ Recebimentos ============ */
+
+export interface RecebimentoItemInput {
+  nome: string;
+  quantidade: number;
+  unidade?: string;
+  valorUnitario?: number;
+  valorTotal?: number;
+}
+
+export interface CriarRecebimentoInput {
+  data: string;
+  origem: RecebimentoOrigem;
+  parte: string;
+  documento?: string;
+  valor: number;
+  observacao?: string;
+  itens: RecebimentoItemInput[];
+}
+
+async function criarRecebimento(
+  input: CriarRecebimentoInput,
+): Promise<FamiliasSupabaseWriteResult<CriarRecebimentoResult>> {
+  const itens = input.itens.map((i) => ({
+    nome: i.nome.trim(),
+    quantidade: i.quantidade,
+    unidade: i.unidade?.trim() || null,
+    valor_unitario: i.valorUnitario ?? null,
+    valor_total: i.valorTotal ?? null,
+  }));
+
+  const { data, error } = await getSupabaseClient().rpc("criar_recebimento", {
+    p_data: input.data,
+    p_origem: input.origem,
+    p_parte: input.parte.trim(),
+    p_documento: nullableParam(input.documento),
+    p_valor: input.valor,
+    p_observacao: nullableParam(input.observacao),
+    p_itens: itens,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("criar_recebimento", error) };
+  }
+
+  const row = firstRow<CriarRecebimentoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "criar_recebimento",
+        code: "EMPTY_RESULT",
+        message: "O registro do recebimento não retornou identificador.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function criarRecebimentoNoSupabase(
+  input: CriarRecebimentoInput,
+): Promise<FamiliasSupabaseWriteResult<CriarRecebimentoResult>> {
+  try {
+    return await criarRecebimento(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("criar_recebimento", error),
+    };
+  }
+}
+
+type RecebimentoRow = {
+  id: string;
+  data: string;
+  origem: RecebimentoOrigem;
+  parte: string;
+  documento: string | null;
+  valor: number;
+  status: Recebimento["status"];
+  observacao: string | null;
+};
+
+async function listarRecebimentos(): Promise<FamiliasSupabaseReadResult<Recebimento[]>> {
+  const client = getSupabaseClient();
+
+  const recebimentosResult = await client
+    .from("recebimentos")
+    .select("id, data, origem, parte, documento, valor, status, observacao")
+    .order("data", { ascending: false })
+    .limit(200);
+
+  if (recebimentosResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_recebimentos", recebimentosResult.error),
+    };
+  }
+
+  const recebimentos = (recebimentosResult.data ?? []) as RecebimentoRow[];
+  if (recebimentos.length === 0) return { data: [], error: null };
+
+  const itensResult = await client
+    .from("recebimento_itens")
+    .select("recebimento_id")
+    .in(
+      "recebimento_id",
+      recebimentos.map((r) => r.id),
+    );
+
+  if (itensResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_recebimentos", itensResult.error),
+    };
+  }
+
+  const contagem = new Map<string, number>();
+  for (const item of (itensResult.data ?? []) as { recebimento_id: string }[]) {
+    contagem.set(item.recebimento_id, (contagem.get(item.recebimento_id) ?? 0) + 1);
+  }
+
+  return {
+    data: recebimentos.map((r) => ({
+      id: r.id,
+      data: r.data,
+      origem: r.origem,
+      parte: r.parte,
+      documento: r.documento ?? undefined,
+      valor: Number(r.valor),
+      status: r.status,
+      observacao: r.observacao ?? undefined,
+      itensCount: contagem.get(r.id) ?? 0,
+    })),
+    error: null,
+  };
+}
+
+export async function listarRecebimentosNoSupabase(): Promise<
+  FamiliasSupabaseReadResult<Recebimento[]>
+> {
+  try {
+    return await listarRecebimentos();
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseReadError("listar_recebimentos", error),
     };
   }
 }

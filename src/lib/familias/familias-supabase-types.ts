@@ -238,6 +238,7 @@ export type FamiliasSupabaseReadOperation =
   | "listar_beneficios"
   | "listar_movimentacoes"
   | "listar_entregas_painel"
+  | "listar_recebimentos"
   | "mapear_dados";
 
 export interface FamiliasSupabaseReadError {
@@ -324,7 +325,8 @@ export type FamiliasSupabaseWriteOperation =
   | "atualizar_responsavel"
   | "registrar_entrega"
   | "registrar_tentativa"
-  | "registrar_movimentacao";
+  | "registrar_movimentacao"
+  | "criar_recebimento";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -435,6 +437,27 @@ export interface MovimentacaoEstoque {
   motivo?: string;
   criadoEm: string;
   origem: "manual" | "entrega";
+}
+
+export type RecebimentoOrigem = "doacao" | "compra" | "investimento" | "ajuste";
+export type RecebimentoStatus = "registrado" | "pendente" | "cancelado";
+
+/** Recebimento (cabeçalho) com contagem de itens. */
+export interface Recebimento {
+  id: string;
+  data: string;
+  origem: RecebimentoOrigem;
+  parte: string;
+  documento?: string;
+  valor: number;
+  status: RecebimentoStatus;
+  observacao?: string;
+  itensCount: number;
+}
+
+/** Retorno de `public.criar_recebimento`. */
+export interface CriarRecebimentoResult {
+  recebimento_id: string;
 }
 
 /** Entrega recente para agregações do painel (com nomes resolvidos). */
