@@ -1,87 +1,59 @@
 # Status de implementação
 
-Avaliação baseada no código atual (atualizado em 2026-07-23, após a migração do
-domínio de famílias para o Supabase — PRs #10 a #17). “Homologado” em documentos
-anteriores pode significar experiência visual ou funcionamento local, não produção.
-
-> **Nota (2026-07-24):** a tabela abaixo ainda descreve estoque, recebimentos,
-> relatórios e painel como “local/protótipo”, mas as PRs #23–#27 já migraram
-> essas fatias para o Supabase (estoque de benefícios + ledger, recebimentos,
-> relatórios lendo do banco, painel repintado e, na #27, itens de estoque,
-> composição de cesta e montagem). A reconciliação da tabela está pendente; os
-> achados de revisão da #27 registrados na seção de riscos referem-se a essas
-> fatias novas.
+Avaliação baseada no código atual (reconciliado em 2026-07-26). Cobre a migração do
+protótipo (Zustand/localStorage) para o Supabase, concluída módulo a módulo nas PRs
+#10–#40. “Homologado” em documentos antigos pode significar apenas experiência visual
+ou funcionamento local — este arquivo é a fonte de status corrente.
 
 | Área | Classificação | Evidência e limite atual |
 | --- | --- | --- |
 | Login | Implementado (Supabase Auth) | `/auth` chama `signIn` real, valida sessão e status (`pendente`/`inativo`), e protege rotas via `RequireActiveProfile`. |
 | Usuários | Implementado (Supabase) | Fluxo administrativo por RPC (`aprovar_usuario`, `inativar_usuario`, `alterar_papel_usuario`) com RLS em `profiles`. |
-| Famílias | Migrado ao Supabase (leitura + escrita) | Schema + RLS + RPCs. Lista (com fallback ao store local) e detalhe por UUID; criação e edição de família e edição do responsável via RPC. O store local ainda coexiste (dual-source) até homologação. |
-| Assistidos | Migrado ao Supabase (criação + leitura) | Criação via `criar_assistido_em_familia` no detalhe remoto; leitura no agregado da família. |
-| Membros | Migrado ao Supabase (criação + leitura) | Criação via `criar_membro_em_familia`; leitura no agregado. Faixa etária calculada em leitura. |
-| Observações sociais | Migrado ao Supabase | Registro por INSERT (policy de equipe ativa) e leitura no detalhe remoto. |
-| Atendimento | Migrado ao Supabase | Tabelas `entregas` e `tentativas_bloqueadas` + RPCs `registrar_entrega_atendimento`/`registrar_tentativa_bloqueada` (migration `20260723233626`). Enforcement server-side dos 25 dias (SEAC2), 3 extras (SEAC1) e estoque (SEAC3); liberação excepcional só admin+motivo. A tela `/atendimento` e o histórico da família (entregas + tentativas) leem do Supabase. `atendimento-regras.ts` (client) é só exibição. A entrega gera baixa automática no ledger `movimentacoes_estoque` (motivo "Baixa automática", vínculo `entrega_id`; migration `20260724220332`). `registrar_entrega_atendimento` retorna status estruturado e grava a tentativa bloqueada (prazo/estoque/extra) atomicamente no mesmo passo (migrations `20260724221321`/`20260724221323`). Pré-cadastro persiste via `criar_pre_cadastro` (família implícita + assistido extra, com variante que entrega Cesta Extra origem `pre_cadastro`; migration `20260724223628`). |
-| Estoque | Implementação parcial local | Entrega confirmada reduz o saldo local; bases complementares estáticas; diálogos de entrada/saída/ajuste não persistem. Sem tabela no Supabase. |
-| Recebimentos | Protótipo visual | KPIs, formulário e histórico estáticos; salvar não persiste nem movimenta estoque. |
-| Auditoria | Funcional apenas localmente | Módulo de auditoria em Zustand/localStorage, mutável pela interface. As tabelas de famílias no banco têm autoria por trigger, mas não há trilha imutável do módulo de Auditoria. |
-| Relatórios | Funcional apenas localmente | Gera tabelas/CSV de stores e bases estáticas locais. |
-| Painel | Funcional apenas localmente | Consolida stores locais e algumas bases estáticas. |
-| Supabase | Implementado para auth e famílias | Cliente, migrations versionadas, RLS e RPCs cobrindo `profiles` e o domínio de famílias (`familias`, `pessoas`, `membros_familiares`, `assistidos`, `observacoes_sociais`). Atendimento, estoque, recebimentos e relatórios ainda não têm backend. |
-| Segurança | Parcial | RLS em todas as tabelas expostas; RPCs de escrita `SECURITY INVOKER`; `SECURITY DEFINER` só em bootstrap/triggers com `search_path=''`; proteção de rota por perfil ativo; autoria/timestamps por trigger. Faltam: backup testado, auditoria imutável do módulo Auditoria e enforcement das regras de atendimento/estoque no banco. |
-| Testes | Não implementado | Sem suíte automatizada. A migração de famílias foi validada por build, `typecheck` e testes manuais end-to-end (navegador headless). |
+| Famílias | Migrado ao Supabase | Schema + RLS + RPCs; criação/edição de família e do responsável. A lista ainda cai para o store local quando não há linhas no Supabase, e o detalhe por id numérico usa o store local (dual-source residual — ver riscos). |
+| Assistidos | Migrado ao Supabase | Criação via `criar_assistido_em_familia` (com reuso de pessoa existente, `p_pessoa_id`) e leitura no agregado da família. |
+| Membros | Migrado ao Supabase | Criação via `criar_membro_em_familia` (com reuso de pessoa) e leitura no agregado. |
+| Observações sociais | Migrado ao Supabase | Registro por INSERT (policy de equipe ativa); leitura no detalhe, com nome do autor resolvido via `profiles.nome_completo`. |
+| Atendimento | Migrado ao Supabase | `entregas`/`tentativas_bloqueadas` + `registrar_entrega_atendimento` (retorno estruturado; grava a tentativa — prazo/estoque/extra — atomicamente) e `registrar_tentativa_bloqueada`. Enforcement server-side de 25 dias/limite extra (lidos de `configuracoes`) e estoque; liberação excepcional só admin+motivo; baixa automática no ledger; pré-cadastro persistido (`criar_pre_cadastro`). |
+| Estoque (benefícios) | Migrado ao Supabase | `beneficios.saldo` real + ledger `movimentacoes_estoque`; entrada/saída/ajuste via `registrar_movimentacao_estoque`. Saldo só muda via RPC (trigger de proteção do ledger). |
+| Itens / Composição / Montagem | Migrado ao Supabase | `itens_estoque` + ledger `movimentacoes_itens`; `composicao_beneficio`; `montar_cesta` transacional. Saldo protegido por trigger. |
+| Recebimentos | Migrado ao Supabase | `criar_recebimento` (cabeçalho + itens). Itens vinculados ao catálogo (`recebimento_itens.item_id`) geram entrada no estoque. |
+| Painel | Migrado ao Supabase | Consolida estoque, entregas e demografia lidos do Supabase. |
+| Relatórios | Migrado ao Supabase | 10+ tipos + CSV lendo do Supabase, incluindo bloqueios por prazo/estoque/extra. |
+| Auditoria | Migrado ao Supabase (imutável) | Tabela `auditoria_eventos` append-only (só SELECT/INSERT; sem UPDATE/DELETE). A tela lê do banco, resolve o autor e não permite limpar o histórico. |
+| Configurações | Parcial | Os **parâmetros de regra** (`configuracoes`: 25 dias, limite extra, etc.) estão no banco e são autoritativos no atendimento (admin edita). Os cadastros auxiliares (itens/unidades/categorias/benefícios/doadores/fornecedores) ainda vivem em `config-store` (localStorage). |
+| Supabase | Implementado nos domínios ativos | Cliente, migrations versionadas, RLS e RPCs cobrindo profiles, famílias/pessoas/membros/assistidos/observações, atendimento/entregas/tentativas, benefícios+itens+composição+movimentações, recebimentos, configurações e auditoria. |
+| Segurança | Boa, com pendências | RLS em todas as tabelas expostas; RPCs de escrita `SECURITY INVOKER` com `search_path=''`; autoria/timestamps por trigger; enforcement das regras de atendimento no banco; ledger de saldo não-burlável (trigger + flag transacional); papel `estoque` habilitado no domínio de estoque. Faltam: backup testado e suíte de testes. |
+| Testes | Não implementado | Sem suíte automatizada. Validação por `bun run lint` + `bun run build` e testes manuais. |
 
 ## Divergências e riscos relevantes
 
-- **Fonte de verdade dupla (dual-source).** `familias.index.tsx` usa Supabase
-  quando há linhas e cai para o store local caso contrário; `familias.$id.tsx`
-  resolve o detalhe por UUID (Supabase) ou por id numérico (store local). É
-  intencional durante a migração, mas o store local só deve ser removido após
-  homologação explícita.
-- **Regras críticas já têm enforcement server-side.** O bloqueio dos 25 dias, o
-  limite de extras e o de falta de estoque são aplicados nas RPCs de atendimento
-  (`registrar_entrega_atendimento`), não mais burláveis pelo cliente. O
-  `atendimento-regras.ts` (client) é só exibição. Resíduo legado: o store
-  `atendimento-store.ts` (localStorage) não recebe mais escritas, mas ainda é lido
-  pelo caminho local de detalhe de família (`FamiliaLocalDetail`, id numérico) —
-  sua remoção fica adiada para quando o `familias-store` local for aposentado.
-- **Escopo pendente em famílias.** Reuso/transferência de pessoa existente
-  (as RPCs recusam documento duplicado), vínculo de observação a pessoa/assistido
-  específico e exibição do nome do autor (hoje UUID do perfil).
-- **Documentos antigos.** `HOMOLOGACAO_SEAC_SOCIAL.md` e afins descrevem como
-  “homologado” comportamentos que eram apenas locais; tratar este arquivo como a
-  fonte de status corrente.
+- **Protótipo local de famílias ainda presente (dual-source).** `familias.index.tsx`
+  cai para o store local quando o Supabase não retorna linhas; `familias.$id.tsx`
+  mantém `FamiliaLocalDetail` (id numérico) sobre `familias-store`/`atendimento-store`;
+  `nova-familia-dialog` e `familia-detail-dialogs` têm ramos locais. Aposentar isso
+  (tornar famílias **Supabase-only**) é o follow-up da tarefa 9.
+- **Transferência de pessoa entre famílias ativas.** O reuso de pessoa existente já
+  funciona (`p_pessoa_id`); a transferência (pessoa já ativa em outra família) ainda
+  não — o cadastro avisa e recusa (`SEAP1`).
+- **Vínculo de observação a pessoa/assistido específico.** A observação social é da
+  família; ligá-la a uma pessoa/assistido específico continua pendente.
+- **Configurações auxiliares em localStorage.** Itens/unidades/categorias/benefícios/
+  doadores/fornecedores em `config-store` — alguns duplicam tabelas já existentes no
+  Supabase; consolidação é fatia futura.
 - **Papéis vs. status.** Perfis usam papéis `administrador/atendente/estoque`
   separados dos status `pendente/ativo/inativo` (não confundir as duas colunas).
 
-## Achados da revisão da PR #27 (itens/composição/montagem) — 2026-07-24
+## Achados da revisão da PR #27 (itens/composição/montagem) — situação atual
 
-Registrados aqui como dívida para fatias futuras (nenhum bloqueou o merge da #27;
-a lógica de negócio crítica roda no servidor, transacional, com backstop `SEAI1`).
-
-- **[Corrigido na #27] Deadlock em montagens concorrentes.** `public.montar_cesta`
-  adquiria os locks (`FOR UPDATE`) dos itens em ordem não determinística. Resolvido
-  pela migration `20260724213726_montar_cesta_order_by_deadlock.sql`
-  (`order by c.item_id` no loop). Sem pendência.
-
-- **[A decidir] Papel `estoque` não acessa o estoque de itens.** As tabelas
-  `itens_estoque`, `movimentacoes_itens` e `composicao_beneficio` e suas RPCs
-  (`registrar_movimentacao_item`, `definir_composicao_beneficio`, `montar_cesta`)
-  usam o predicado `private.usuario_atual_pode_gerir_familias()`, que só admite
-  `administrador` e `atendente` — o papel `estoque` é recusado. É consistente com
-  as fatias #23–#26, mas semanticamente estranho (o papel chamado `estoque` não
-  movimenta estoque). Se o acesso do papel `estoque` for desejado, criar um
-  predicado dedicado (ex.: `private.usuario_atual_pode_gerir_estoque()`).
-
-- **[Dívida sistêmica] Ledger de itens burlável por `UPDATE` direto no `saldo`.**
-  `grant update on public.itens_estoque to authenticated` + a policy de update
-  permitem alterar `saldo` diretamente, sem gravar em `movimentacoes_itens` —
-  furando a integridade do ledger insert-only. Não é regressão da #27: o mesmo
-  padrão já existe em `public.beneficios` (homologado). Mitigável com grant por
-  coluna (excluir `saldo`) ou revogando `UPDATE` e forçando toda escrita de saldo
-  via RPC. Vale um passo transversal cobrindo os dois estoques.
-
-- **[Convenção] `src/lib/familias/familias-repository.ts` virou catch-all
-  (~1776 linhas).** Além de famílias, hospeda estoque, benefícios, recebimentos e
-  agora itens/composição/montagem. O padrão-alvo é uma pasta por domínio
-  (`src/lib/relatorios/` já existe). Introduzido nas fatias #23–#26, não na #27;
-  candidato a extração de `src/lib/estoque/` numa fatia futura.
+- **[Corrigido] Deadlock em montagens concorrentes.** `montar_cesta` recebeu
+  `order by c.item_id` (migration `20260724213726`).
+- **[Resolvido — tarefa 4] Papel `estoque` não acessava o estoque.** Novo predicado
+  `private.usuario_atual_pode_gerir_estoque()` (admin + atendente + estoque) aplicado
+  às RLS/RPCs de estoque, itens, composição e recebimentos.
+- **[Resolvido — tarefa 3] Ledger burlável por `UPDATE` direto no saldo.** Trigger
+  `private.impedir_alteracao_saldo_direta()` em `beneficios`/`itens_estoque` bloqueia
+  alteração de `saldo` fora das RPCs (flag transacional `seac.saldo_via_rpc`).
+- **[Dívida — aberta] `src/lib/familias/familias-repository.ts` catch-all.** Continua
+  hospedando famílias + estoque + recebimentos + atendimento. O padrão-alvo é uma
+  pasta por domínio (ex.: `src/lib/auditoria/`, `src/lib/configuracoes/` já existem);
+  extrair `src/lib/estoque/` segue como dívida de organização.
