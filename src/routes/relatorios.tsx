@@ -82,6 +82,12 @@ const CARDS: CardConfig[] = [
     desc: "Tentativas sem saldo disponível.",
   },
   {
+    tipo: "bloqueio_extra",
+    icon: Clock,
+    title: "Retiradas bloqueadas por limite de extras",
+    desc: "Cadastros extra que já completaram 3 retiradas.",
+  },
+  {
     tipo: "atencao_45",
     icon: AlertTriangle,
     title: "Famílias em atenção 45 dias+",
