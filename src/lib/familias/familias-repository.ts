@@ -1472,6 +1472,8 @@ export interface RecebimentoItemInput {
   unidade?: string;
   valorUnitario?: number;
   valorTotal?: number;
+  /** Item do catálogo vinculado; gera entrada no estoque quando presente. */
+  itemId?: string;
 }
 
 export interface CriarRecebimentoInput {
@@ -1493,6 +1495,7 @@ async function criarRecebimento(
     unidade: i.unidade?.trim() || null,
     valor_unitario: i.valorUnitario ?? null,
     valor_total: i.valorTotal ?? null,
+    item_id: i.itemId ?? null,
   }));
 
   const { data, error } = await getSupabaseClient().rpc("criar_recebimento", {
