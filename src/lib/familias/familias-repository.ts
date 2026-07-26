@@ -225,16 +225,38 @@ async function getFamiliaById(
   const relatedResult = await listRelatedRows([familia.id]);
   if (relatedResult.error) return relatedResult;
 
-  return {
-    data: mapFamiliaFromSupabase({
-      familia,
-      pessoas: relatedResult.data.pessoas,
-      membros: relatedResult.data.membros,
-      assistidos: relatedResult.data.assistidos,
-      observacoes: relatedResult.data.observacoes,
-    }),
-    error: null,
-  };
+  const modelo = mapFamiliaFromSupabase({
+    familia,
+    pessoas: relatedResult.data.pessoas,
+    membros: relatedResult.data.membros,
+    assistidos: relatedResult.data.assistidos,
+    observacoes: relatedResult.data.observacoes,
+  });
+
+  // Resolve o nome do autor das observações (o mapper deixa o UUID de criado_por);
+  // best-effort — mantém o UUID se o perfil não for legível.
+  modelo.observacoes = await resolverNomesAutores(modelo.observacoes);
+
+  return { data: modelo, error: null };
+}
+
+/** Substitui o UUID em `usuario` pelo nome do perfil (profiles.nome_completo). */
+async function resolverNomesAutores<T extends { usuario: string }>(itens: T[]): Promise<T[]> {
+  const autorIds = [...new Set(itens.map((i) => i.usuario))].filter((id): id is string =>
+    uuidPattern.test(id),
+  );
+  if (autorIds.length === 0) return itens;
+
+  const { data, error } = await getSupabaseClient()
+    .from("profiles")
+    .select("id, nome_completo")
+    .in("id", autorIds);
+  if (error) return itens;
+
+  const nomePorId = new Map(
+    ((data ?? []) as { id: string; nome_completo: string }[]).map((p) => [p.id, p.nome_completo]),
+  );
+  return itens.map((i) => ({ ...i, usuario: nomePorId.get(i.usuario) ?? i.usuario }));
 }
 
 /**
