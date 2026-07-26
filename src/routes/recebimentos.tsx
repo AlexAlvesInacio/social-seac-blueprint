@@ -25,7 +25,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCriarRecebimento, useRecebimentos } from "@/lib/familias/use-familias-supabase";
+import {
+  useCriarRecebimento,
+  useItensEstoque,
+  useRecebimentos,
+} from "@/lib/familias/use-familias-supabase";
 import type { RecebimentoOrigem } from "@/lib/familias/familias-supabase-types";
 
 export const Route = createFileRoute("/recebimentos")({
@@ -58,12 +62,28 @@ function hojeISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-type ItemForm = { nome: string; quantidade: string; unidade: string; valorUnitario: string };
-const itemVazio: ItemForm = { nome: "", quantidade: "", unidade: "un", valorUnitario: "" };
+type ItemForm = {
+  nome: string;
+  quantidade: string;
+  unidade: string;
+  valorUnitario: string;
+  itemId: string;
+};
+const itemVazio: ItemForm = {
+  nome: "",
+  quantidade: "",
+  unidade: "un",
+  valorUnitario: "",
+  itemId: "",
+};
+
+const CATALOGO_LIVRE = "__livre__";
 
 function RecebimentosPage() {
   const recebimentos = useRecebimentos();
   const criar = useCriarRecebimento();
+  const catalogo = useItensEstoque();
+  const itensCatalogo = (catalogo.data ?? []).filter((i) => i.ativo);
 
   const [data, setData] = useState(hojeISO());
   const [origem, setOrigem] = useState<RecebimentoOrigem>("doacao");
@@ -119,6 +139,7 @@ function RecebimentosPage() {
           unidade: it.unidade,
           valorUnitario: vu,
           valorTotal: vu !== undefined ? Number((vu * qtd).toFixed(2)) : undefined,
+          itemId: it.itemId || undefined,
         };
       });
 
@@ -227,7 +248,37 @@ function RecebimentosPage() {
               <div className="space-y-2">
                 {itens.map((it, i) => (
                   <div key={i} className="grid grid-cols-12 items-end gap-2">
-                    <div className="col-span-5">
+                    <div className="col-span-4">
+                      <Label className="text-xs text-muted-foreground">Catálogo (estoque)</Label>
+                      <Select
+                        value={it.itemId || CATALOGO_LIVRE}
+                        onValueChange={(v) => {
+                          if (v === CATALOGO_LIVRE) {
+                            setItem(i, { itemId: "" });
+                            return;
+                          }
+                          const cat = itensCatalogo.find((c) => c.id === v);
+                          setItem(i, {
+                            itemId: v,
+                            nome: cat?.nome ?? it.nome,
+                            unidade: cat?.unidade ?? it.unidade,
+                          });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={CATALOGO_LIVRE}>Texto livre (sem estoque)</SelectItem>
+                          {itensCatalogo.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-3">
                       <Label className="text-xs text-muted-foreground">Item</Label>
                       <Input
                         value={it.nome}
@@ -244,15 +295,15 @@ function RecebimentosPage() {
                         onChange={(e) => setItem(i, { quantidade: e.target.value })}
                       />
                     </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground">Unidade</Label>
+                    <div className="col-span-1">
+                      <Label className="text-xs text-muted-foreground">Unid.</Label>
                       <Input
                         value={it.unidade}
                         onChange={(e) => setItem(i, { unidade: e.target.value })}
                       />
                     </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground">Valor unit.</Label>
+                    <div className="col-span-1">
+                      <Label className="text-xs text-muted-foreground">Vlr.</Label>
                       <Input
                         type="number"
                         min={0}
@@ -276,8 +327,8 @@ function RecebimentosPage() {
                 ))}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Os itens são registrados como texto. A geração de entrada no estoque será habilitada
-                quando o catálogo de itens estiver disponível.
+                Itens vinculados ao catálogo geram entrada automática no estoque (quantidade
+                arredondada para inteiro). Itens em “texto livre” apenas registram o recebimento.
               </p>
             </div>
 

@@ -382,6 +382,8 @@ export function useCriarRecebimento() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.recebimentos });
+      // Itens vinculados ao catálogo geram entrada no estoque.
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.itensEstoque });
     },
   });
 }
