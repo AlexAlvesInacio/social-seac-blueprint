@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 104" role="img" aria-label="SEAC Social">
+  <!-- Telhado (casa) -->
+  <path d="M12 54 L60 17 L108 54" fill="none" stroke="#0B2A4A" stroke-width="9"
+        stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Chaminé -->
+  <rect x="90" y="24" width="8" height="20" rx="2" fill="#0B2A4A" />
+  <!-- Pessoas de mãos dadas -->
+  <g>
+    <!-- azul -->
+    <circle cx="27" cy="60" r="8" fill="#29ABE2" />
+    <path d="M18 96 V78 a9 9 0 0 1 18 0 V96 Z" fill="#29ABE2" />
+    <!-- vermelho -->
+    <circle cx="49" cy="60" r="8" fill="#C1272D" />
+    <path d="M40 96 V78 a9 9 0 0 1 18 0 V96 Z" fill="#C1272D" />
+    <!-- laranja -->
+    <circle cx="71" cy="60" r="8" fill="#F7A81B" />
+    <path d="M62 96 V78 a9 9 0 0 1 18 0 V96 Z" fill="#F7A81B" />
+    <!-- verde/teal -->
+    <circle cx="93" cy="60" r="8" fill="#0E9C8E" />
+    <path d="M84 96 V78 a9 9 0 0 1 18 0 V96 Z" fill="#0E9C8E" />
+  </g>
+</svg>

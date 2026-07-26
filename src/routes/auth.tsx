@@ -17,8 +17,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getCurrentProfile, signIn, signOut } from "@/lib/auth/auth-service";
-import seacBrand from "@/assets/seac-brand.jpeg.asset.json";
-import seacLogo from "@/assets/seac-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -89,7 +87,7 @@ function AuthPage() {
             <CardContent className="p-8">
               <div className="mb-6 flex flex-col items-center gap-3 text-center">
                 <img
-                  src={seacLogo.url}
+                  src="/seac-logo.svg"
                   alt="SEAC Social"
                   className="h-14 w-14 rounded-2xl object-contain"
                 />
@@ -165,9 +163,9 @@ function AuthPage() {
           <div className="relative z-10 flex w-full flex-col items-center justify-center gap-8 px-10 py-16 text-center">
             <div className="flex flex-col items-center gap-4">
               <img
-                src={seacBrand.url}
+                src="/seac-logo.svg"
                 alt="SEAC — Sopa, Esperança, Amor e Caridade"
-                className="w-full max-w-md rounded-2xl bg-background/60 p-4 shadow-sm ring-1 ring-border"
+                className="w-full max-w-xs rounded-2xl bg-background/60 p-8 shadow-sm ring-1 ring-border"
               />
             </div>
             <div className="max-w-md space-y-3">

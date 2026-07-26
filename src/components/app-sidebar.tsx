@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -11,6 +12,7 @@ import {
   UserCog,
   BarChart3,
   ShieldCheck,
+  House,
   LogOut,
 } from "lucide-react";
 import {
@@ -25,7 +27,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import seacLogo from "@/assets/seac-logo.png.asset.json";
 
 const operacional = [
   { title: "Painel", url: "/painel", icon: LayoutDashboard },
@@ -74,11 +75,24 @@ export function AppSidebar() {
     </SidebarGroup>
   );
 
+  const [logoError, setLogoError] = useState(false);
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <Link to="/painel" className="flex items-center gap-2 px-2 py-3">
-          <img src={seacLogo.url} alt="SEAC Social" className="h-9 w-9 rounded-lg object-contain" />
+          {logoError ? (
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <House className="h-5 w-5" />
+            </span>
+          ) : (
+            <img
+              src="/seac-logo.svg"
+              alt="SEAC Social"
+              className="h-9 w-9 rounded-lg object-contain"
+              onError={() => setLogoError(true)}
+            />
+          )}
           <div className="flex flex-col leading-tight">
             <span className="text-base font-semibold text-foreground">
               SEAC <span className="text-primary">Social</span>
