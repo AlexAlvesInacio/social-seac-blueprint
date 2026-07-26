@@ -4,6 +4,7 @@ import {
   atualizarFamiliaNoSupabase,
   atualizarResponsavelFamiliaNoSupabase,
   buscarAssistidosAtivosNoSupabase,
+  buscarPessoaPorDocumentoNoSupabase,
   criarRecebimentoNoSupabase,
   definirComposicaoBeneficioNoSupabase,
   listarBeneficiosNoSupabase,
@@ -211,6 +212,16 @@ export function useBuscarAssistidosAtendimento(termo: string) {
       return result.data;
     },
     enabled: termoNormalizado.length >= 3,
+  });
+}
+
+export function usePessoaPorDocumento(documento: string) {
+  const doc = documento.trim();
+  const norm = doc.replace(/[^0-9a-z]/gi, "");
+  return useQuery({
+    queryKey: ["familias", "supabase", "pessoa-documento", norm] as const,
+    queryFn: () => buscarPessoaPorDocumentoNoSupabase(doc),
+    enabled: norm.length >= 3,
   });
 }
 

@@ -36,6 +36,7 @@ import type {
   FamiliasSupabaseWriteResult,
   MembroFamiliarSupabaseRow,
   ObservacaoSocialSupabaseRow,
+  PessoaExistente,
   PessoaSupabaseRow,
   PessoaTipoDocumentoSupabase,
   RegistrarEntregaResult,
@@ -285,6 +286,8 @@ export interface CriarAssistidoInput {
   nascimento?: string;
   pcd?: boolean;
   gestante?: boolean;
+  /** Reutiliza uma pessoa existente em vez de criar nova. */
+  pessoaId?: string;
 }
 
 export interface CriarMembroInput {
@@ -297,6 +300,8 @@ export interface CriarMembroInput {
   nascimento?: string;
   pcd?: boolean;
   gestante?: boolean;
+  /** Reutiliza uma pessoa existente em vez de criar nova. */
+  pessoaId?: string;
 }
 
 export interface AtualizarFamiliaInput {
@@ -394,6 +399,7 @@ async function criarAssistido(
     p_nascimento: nullableParam(input.nascimento),
     p_pcd: input.pcd ?? false,
     p_gestante: input.gestante ?? false,
+    p_pessoa_id: nullableParam(input.pessoaId),
   });
 
   if (error) {
@@ -440,6 +446,7 @@ async function criarMembro(
     p_nascimento: nullableParam(input.nascimento),
     p_pcd: input.pcd ?? false,
     p_gestante: input.gestante ?? false,
+    p_pessoa_id: nullableParam(input.pessoaId),
   });
 
   if (error) {
@@ -721,6 +728,39 @@ export async function registrarTentativaBloqueadaNoSupabase(
   }
 }
 
+type PessoaExistenteRow = {
+  pessoa_id: string;
+  nome: string;
+  documento: string;
+  telefone: string | null;
+  familia_ativa_id: string | null;
+  familia_ativa_nome: string | null;
+};
+
+/** Localiza uma pessoa pelo documento (best-effort; retorna null em erro/ausência). */
+export async function buscarPessoaPorDocumentoNoSupabase(
+  documento: string,
+): Promise<PessoaExistente | null> {
+  try {
+    const { data, error } = await getSupabaseClient().rpc("buscar_pessoa_por_documento", {
+      p_documento: documento,
+    });
+    if (error) return null;
+    const row = firstRow<PessoaExistenteRow>(data);
+    if (!row) return null;
+    return {
+      pessoaId: row.pessoa_id,
+      nome: row.nome,
+      documento: row.documento,
+      telefone: row.telefone ?? undefined,
+      familiaAtivaId: row.familia_ativa_id ?? undefined,
+      familiaAtivaNome: row.familia_ativa_nome ?? undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface CriarPreCadastroInput {
   nome: string;
   tipoDocumento: PessoaTipoDocumentoSupabase;
@@ -731,6 +771,8 @@ export interface CriarPreCadastroInput {
   /** true = já entregar Cesta Extra no pré-cadastro. */
   entregar: boolean;
   observacao?: string;
+  /** Reutiliza uma pessoa existente em vez de criar nova. */
+  pessoaId?: string;
 }
 
 async function criarPreCadastro(
@@ -745,6 +787,7 @@ async function criarPreCadastro(
     p_pcd: input.pcd ?? false,
     p_entregar: input.entregar,
     p_observacao: nullableParam(input.observacao),
+    p_pessoa_id: nullableParam(input.pessoaId),
   });
 
   if (error) {

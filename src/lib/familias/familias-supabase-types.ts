@@ -570,6 +570,17 @@ export interface MontarCestaResult {
   itens_consumidos: number;
 }
 
+/** Pessoa localizada por documento (para reuso no cadastro). */
+export interface PessoaExistente {
+  pessoaId: string;
+  nome: string;
+  documento: string;
+  telefone?: string;
+  /** Preenchidos quando a pessoa é membro ativo de alguma família. */
+  familiaAtivaId?: string;
+  familiaAtivaNome?: string;
+}
+
 /** Resultado da busca de assistidos ativos para atendimento. */
 export interface AssistidoBuscaResultado {
   assistidoId: AssistidoSupabaseId;

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useCriarMembroSupabase } from "@/lib/familias/use-familias-supabase";
 import type { PessoaTipoDocumentoSupabase } from "@/lib/familias/familias-supabase-types";
+import { PessoaExistenteBanner } from "@/components/pessoa-existente-banner";
 
 type Props = {
   open: boolean;
@@ -38,6 +39,7 @@ const empty = {
   nascimento: "",
   pcd: false,
   gestante: false,
+  pessoaId: "",
 };
 
 /**
@@ -84,6 +86,7 @@ export function AdicionarMembroSupabaseDialog({
         nascimento: form.nascimento,
         pcd: form.pcd,
         gestante: form.gestante,
+        pessoaId: form.pessoaId || undefined,
       });
       toast.success("Membro adicionado.");
       onOpenChange(false);
@@ -130,7 +133,18 @@ export function AdicionarMembroSupabaseDialog({
               </Select>
             </F>
             <F label="CPF / RG *" erro={erros.documento}>
-              <Input value={form.documento} onChange={(e) => set("documento", e.target.value)} />
+              <Input
+                value={form.documento}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, documento: e.target.value, pessoaId: "" }))
+                }
+              />
+              <PessoaExistenteBanner
+                documento={form.documento}
+                pessoaIdSelecionado={form.pessoaId}
+                onReutilizar={(p) => setForm((f) => ({ ...f, pessoaId: p.pessoaId, nome: p.nome }))}
+                onLimpar={() => set("pessoaId", "")}
+              />
             </F>
             <F label="Telefone">
               <Input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} />
