@@ -259,7 +259,10 @@ async function entregasBloco(f: FiltrosRelatorio, somenteExcepcionais: boolean):
   };
 }
 
-async function tentativasBloco(f: FiltrosRelatorio, motivo: "prazo" | "estoque"): Promise<Bloco> {
+async function tentativasBloco(
+  f: FiltrosRelatorio,
+  motivo: "prazo" | "estoque" | "extra",
+): Promise<Bloco> {
   const tentativas = unwrap(await listarTentativasBloqueadasNoSupabase(JANELA_DIAS, LIMITE));
   const linhas = tentativas
     .filter((t) => t.motivo === motivo && within(t.criadoEm, f.de, f.ate))
@@ -369,6 +372,8 @@ async function blocoPorTipo(tipo: TipoRelatorio, f: FiltrosRelatorio): Promise<B
       return tentativasBloco(f, "prazo");
     case "bloqueio_estoque":
       return tentativasBloco(f, "estoque");
+    case "bloqueio_extra":
+      return tentativasBloco(f, "extra");
     case "atencao_45":
       return acompanhamentoBloco(f, ["atencao_45", "atencao_60"]);
     case "contato_90":

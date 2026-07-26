@@ -8,6 +8,7 @@ export type TipoRelatorio =
   | "entregas"
   | "bloqueio_prazo"
   | "bloqueio_estoque"
+  | "bloqueio_extra"
   | "atencao_45"
   | "contato_90"
   | "estoque"
@@ -39,6 +40,7 @@ export const TIPOS_RELATORIO: { tipo: TipoRelatorio; titulo: string }[] = [
   { tipo: "entregas", titulo: "Entregas" },
   { tipo: "bloqueio_prazo", titulo: "Retiradas bloqueadas por prazo" },
   { tipo: "bloqueio_estoque", titulo: "Retiradas bloqueadas por estoque" },
+  { tipo: "bloqueio_extra", titulo: "Retiradas bloqueadas por limite de extras" },
   { tipo: "atencao_45", titulo: "Famílias em atenção 45 dias+" },
   { tipo: "contato_90", titulo: "Famílias com contato necessário 90 dias+" },
   { tipo: "estoque", titulo: "Estoque" },
