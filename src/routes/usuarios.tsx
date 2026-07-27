@@ -38,8 +38,8 @@ import {
   approveUser,
   changeUserName,
   changeUserRole,
+  criarUsuario,
   deactivateUser,
-  inviteUser,
   listProfiles,
 } from "@/lib/auth/user-admin-service";
 
@@ -214,7 +214,7 @@ function UsuariosContent() {
     setErrorMessage(null);
     setSuccessMessage(null);
     try {
-      const { error } = await inviteUser({
+      const { error } = await criarUsuario({
         nome: inviteForm.nome.trim(),
         email: inviteForm.email.trim(),
         papel: inviteForm.papel,
@@ -223,7 +223,9 @@ function UsuariosContent() {
         setErrorMessage(error.message);
         return;
       }
-      setSuccessMessage("Convite enviado. O usuário receberá um e-mail para definir a senha.");
+      setSuccessMessage(
+        'Usuário criado e ativo. Ele deve usar "Esqueci a senha" na tela de login para definir a senha no primeiro acesso.',
+      );
       setInviteOpen(false);
       setInviteForm({ nome: "", email: "", papel: "atendente" });
       await loadProfiles(false);
@@ -250,7 +252,8 @@ function UsuariosContent() {
           <DialogHeader>
             <DialogTitle>Incluir usuário</DialogTitle>
             <DialogDescription>
-              O usuário receberá um e-mail para definir a senha e já entra com o papel escolhido.
+              O usuário é criado já ativo com o papel escolhido. No primeiro acesso, ele define a
+              senha usando “Esqueci a senha” na tela de login.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
@@ -291,7 +294,7 @@ function UsuariosContent() {
               Cancelar
             </Button>
             <Button onClick={() => void handleInvite()} disabled={inviting}>
-              {inviting ? "Enviando…" : "Enviar convite"}
+              {inviting ? "Incluindo…" : "Incluir"}
             </Button>
           </DialogFooter>
         </DialogContent>

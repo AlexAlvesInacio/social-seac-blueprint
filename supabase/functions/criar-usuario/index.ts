@@ -1,10 +1,10 @@
 // Edge Function: criar-usuario
 //
-// Convida um novo usuário por e-mail (fluxo "invite"): o admin informa nome, e-mail
-// e papel; a função valida que o chamador é administrador ativo, cria o usuário via
-// service_role (auth.admin.inviteUserByEmail) e deixa o perfil ativo com o papel
-// escolhido. O usuário recebe um e-mail, define a própria senha (rota /definir-senha)
-// e passa a logar.
+// O admin informa nome, e-mail e papel; a função valida que o chamador é
+// administrador ativo e cria o usuário JÁ ATIVO (e-mail confirmado), SEM senha e
+// SEM enviar convite (auth.admin.createUser via service_role). O usuário define a
+// senha no 1º acesso pela opção "Esqueci a senha" da tela de login (e-mail de
+// recuperação → rota /definir-senha).
 //
 // A service_role NUNCA vai para o frontend: é lida aqui do ambiente do Supabase
 // (SUPABASE_SERVICE_ROLE_KEY, injetada automaticamente na function).
@@ -62,7 +62,6 @@ Deno.serve(async (req) => {
     const nome = String(body.nome ?? "").trim();
     const email = String(body.email ?? "").trim();
     const papel = String(body.papel ?? "");
-    const redirectTo = typeof body.redirectTo === "string" ? body.redirectTo : undefined;
 
     if (!nome || !email || !papel) {
       return json({ ok: false, error: "Nome, e-mail e papel são obrigatórios." }, 200);
@@ -71,14 +70,16 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: "Papel inválido." }, 200);
     }
 
-    // Convite por e-mail: cria o usuário (sem senha) e dispara o e-mail.
-    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { nome_completo: nome },
-      redirectTo,
+    // Cria o usuário já ativo (e-mail confirmado), SEM senha e SEM enviar convite.
+    // O usuário define a senha no 1º acesso via "Esqueci a senha" (e-mail de recuperação).
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { nome_completo: nome },
     });
 
-    if (inviteError || !invited?.user) {
-      const msg = inviteError?.message ?? "Falha ao convidar o usuário.";
+    if (createError || !created?.user) {
+      const msg = createError?.message ?? "Falha ao criar o usuário.";
       const jaExiste = /already|registered|exists/i.test(msg);
       return json(
         { ok: false, error: jaExiste ? "Já existe um usuário com este e-mail." : msg },
@@ -96,7 +97,7 @@ Deno.serve(async (req) => {
         aprovado_em: new Date().toISOString(),
         aprovado_por: callerId,
       })
-      .eq("id", invited.user.id);
+      .eq("id", created.user.id);
 
     if (updateError) {
       return json(
@@ -105,7 +106,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    return json({ ok: true, user_id: invited.user.id });
+    return json({ ok: true, user_id: created.user.id });
   } catch (error) {
     return json({ ok: false, error: `Erro inesperado: ${(error as Error).message}` }, 200);
   }
