@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
       email_confirm: true,
-      user_metadata: { nome_completo: nome },
+      user_metadata: { nome_completo: nome, display_name: nome },
     });
 
     if (createError || !created?.user) {
