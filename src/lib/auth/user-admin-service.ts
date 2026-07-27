@@ -58,3 +58,29 @@ export async function changeUserName(
 
   return { data: null, error };
 }
+
+export interface InviteUserInput {
+  nome: string;
+  email: string;
+  papel: PapelPerfil;
+}
+
+/**
+ * Convida um usuário por e-mail via Edge Function `criar-usuario` (a service_role
+ * fica no servidor). O usuário definirá a senha em /definir-senha e já entra ativo.
+ */
+export async function inviteUser(
+  input: InviteUserInput,
+): Promise<{ error: { message: string } | null }> {
+  const redirectTo =
+    typeof window !== "undefined" ? `${window.location.origin}/definir-senha` : undefined;
+
+  const { data, error } = await getSupabaseClient().functions.invoke("criar-usuario", {
+    body: { ...input, redirectTo },
+  });
+
+  if (error) return { error: { message: error.message || "Falha ao chamar a função." } };
+  if (data && data.ok === false)
+    return { error: { message: data.error || "Não foi possível incluir o usuário." } };
+  return { error: null };
+}

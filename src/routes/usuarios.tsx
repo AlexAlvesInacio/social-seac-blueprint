@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Pencil, UserCheck, UserCog, UserX } from "lucide-react";
+import { Pencil, UserCheck, UserCog, UserPlus, UserX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -24,6 +24,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { getCurrentProfile } from "@/lib/auth/auth-service";
 import type { PapelPerfil, Perfil, StatusPerfil } from "@/lib/auth/types";
 import {
@@ -31,6 +39,7 @@ import {
   changeUserName,
   changeUserRole,
   deactivateUser,
+  inviteUser,
   listProfiles,
 } from "@/lib/auth/user-admin-service";
 
@@ -79,6 +88,11 @@ function UsuariosContent() {
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState<{ nome: string; email: string; papel: PapelPerfil }>(
+    { nome: "", email: "", papel: "atendente" },
+  );
+  const [inviting, setInviting] = useState(false);
 
   const loadProfiles = useCallback(async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -191,11 +205,97 @@ function UsuariosContent() {
     );
   }
 
+  async function handleInvite() {
+    if (!inviteForm.nome.trim() || !inviteForm.email.trim()) {
+      setErrorMessage("Informe nome e e-mail para incluir o usuário.");
+      return;
+    }
+    setInviting(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const { error } = await inviteUser({
+        nome: inviteForm.nome.trim(),
+        email: inviteForm.email.trim(),
+        papel: inviteForm.papel,
+      });
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+      setSuccessMessage("Convite enviado. O usuário receberá um e-mail para definir a senha.");
+      setInviteOpen(false);
+      setInviteForm({ nome: "", email: "", papel: "atendente" });
+      await loadProfiles(false);
+    } catch {
+      setErrorMessage("Não foi possível enviar o convite. Tente novamente.");
+    } finally {
+      setInviting(false);
+    }
+  }
+
   return (
     <>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Apenas administradores ativos podem consultar e gerenciar usuários.
-      </p>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Apenas administradores ativos podem consultar e gerenciar usuários.
+        </p>
+        <Button className="gap-2" onClick={() => setInviteOpen(true)}>
+          <UserPlus className="h-4 w-4" /> Incluir usuário
+        </Button>
+      </div>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Incluir usuário</DialogTitle>
+            <DialogDescription>
+              O usuário receberá um e-mail para definir a senha e já entra com o papel escolhido.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Nome *</Label>
+              <Input
+                value={inviteForm.nome}
+                onChange={(e) => setInviteForm((f) => ({ ...f, nome: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">E-mail *</Label>
+              <Input
+                type="email"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Papel</Label>
+              <Select
+                value={inviteForm.papel}
+                onValueChange={(v) => setInviteForm((f) => ({ ...f, papel: v as PapelPerfil }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="administrador">Administrador</SelectItem>
+                  <SelectItem value="atendente">Atendente</SelectItem>
+                  <SelectItem value="estoque">Estoque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteOpen(false)} disabled={inviting}>
+              Cancelar
+            </Button>
+            <Button onClick={() => void handleInvite()} disabled={inviting}>
+              {inviting ? "Enviando…" : "Enviar convite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-4">
