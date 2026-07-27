@@ -352,6 +352,8 @@ export interface CriarFamiliaResult {
   familia_id: FamiliaSupabaseId;
   pessoa_id: PessoaSupabaseId;
   membro_familiar_id: MembroFamiliarSupabaseId;
+  /** Assistido do responsável, criado na mesma transação. */
+  assistido_id: AssistidoSupabaseId;
 }
 
 /** Retorno de `public.criar_assistido_em_familia`. */

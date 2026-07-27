@@ -78,7 +78,7 @@ const emptyForm: FormState = {
   cidade: "",
   uf: "",
   cep: "",
-  tipoCadastro: "extra",
+  tipoCadastro: "definitivo",
   status: "liberado",
   moradores: "",
   criancas: "",
@@ -219,6 +219,7 @@ export function NovaFamiliaDialog({
         responsavelNome: form.responsavel,
         responsavelTipoDocumento: form.tipoDocumento,
         responsavelDocumento: form.documento,
+        tipoCadastro: form.tipoCadastro,
         responsavelTelefone: form.telefone,
         endereco: form.endereco,
         numero: form.numero,
@@ -517,10 +518,26 @@ export function NovaFamiliaDialog({
               </F>
             </>
           ) : (
-            <p className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-              Tipo de cadastro, status, contagens e observações sociais não são parâmetros desta
-              RPC. O banco aplica seus valores iniciais e não cria assistido nesta etapa.
-            </p>
+            <section className="grid gap-3 md:grid-cols-2">
+              <F label="Tipo de cadastro do responsável *">
+                <Select
+                  value={form.tipoCadastro}
+                  onValueChange={(value) => set("tipoCadastro", value as TipoCadastro)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="definitivo">Definitivo (Cesta Padrão)</SelectItem>
+                    <SelectItem value="extra">Extra (Avaliação)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </F>
+              <p className="self-center rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground md:col-span-1">
+                O responsável é cadastrado como <strong>assistido</strong> deste tipo, já apto ao
+                atendimento. Status e contagens da família seguem os valores iniciais do banco.
+              </p>
+            </section>
           )}
         </fieldset>
 
