@@ -46,3 +46,39 @@ export async function changeUserRole(
 
   return { data: null, error };
 }
+
+export async function changeUserName(
+  profileId: string,
+  nome: string,
+): Promise<UserAdminResult<null>> {
+  const { error } = await getSupabaseClient().rpc("alterar_nome_usuario", {
+    p_profile_id: profileId,
+    p_nome: nome,
+  });
+
+  return { data: null, error };
+}
+
+export interface CriarUsuarioInput {
+  nome: string;
+  email: string;
+  papel: PapelPerfil;
+}
+
+/**
+ * Cria um usuário já ativo (sem senha, sem convite) via Edge Function `criar-usuario`
+ * (a service_role fica no servidor). O usuário define a senha no 1º acesso pela opção
+ * "Esqueci a senha" da tela de login.
+ */
+export async function criarUsuario(
+  input: CriarUsuarioInput,
+): Promise<{ error: { message: string } | null }> {
+  const { data, error } = await getSupabaseClient().functions.invoke("criar-usuario", {
+    body: input,
+  });
+
+  if (error) return { error: { message: error.message || "Falha ao chamar a função." } };
+  if (data && data.ok === false)
+    return { error: { message: data.error || "Não foi possível incluir o usuário." } };
+  return { error: null };
+}

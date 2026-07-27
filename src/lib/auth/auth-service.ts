@@ -62,5 +62,7 @@ export async function getCurrentProfile(): Promise<ProfileResult> {
 }
 
 export async function resetPassword(email: string): Promise<AuthResult<Record<string, never>>> {
-  return getSupabaseClient().auth.resetPasswordForEmail(email);
+  const redirectTo =
+    typeof window !== "undefined" ? `${window.location.origin}/definir-senha` : undefined;
+  return getSupabaseClient().auth.resetPasswordForEmail(email, { redirectTo });
 }

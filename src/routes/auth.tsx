@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getCurrentProfile, signIn, signOut } from "@/lib/auth/auth-service";
+import { getCurrentProfile, resetPassword, signIn, signOut } from "@/lib/auth/auth-service";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -33,7 +33,33 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
+  async function handleForgotPassword() {
+    setErrorMessage(null);
+    setInfoMessage(null);
+    if (!email.trim()) {
+      setErrorMessage("Informe o e-mail para redefinir a senha.");
+      return;
+    }
+    setIsResetting(true);
+    try {
+      const { error } = await resetPassword(email.trim());
+      if (error) {
+        setErrorMessage("Não foi possível enviar o e-mail de redefinição. Tente novamente.");
+        return;
+      }
+      setInfoMessage(
+        "Enviamos um e-mail para redefinir a senha. Abra o link para criar sua senha e acessar.",
+      );
+    } catch {
+      setErrorMessage("Não foi possível enviar o e-mail agora. Tente novamente.");
+    } finally {
+      setIsResetting(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -136,10 +162,25 @@ function AuthPage() {
                     />
                     <Eye className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 cursor-pointer text-muted-foreground" />
                   </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline disabled:opacity-60"
+                      disabled={isResetting || isSubmitting}
+                      onClick={() => void handleForgotPassword()}
+                    >
+                      {isResetting ? "Enviando…" : "Esqueci a senha"}
+                    </button>
+                  </div>
                 </div>
                 {errorMessage && (
                   <Alert variant="destructive" aria-live="polite">
                     <AlertDescription>{errorMessage}</AlertDescription>
+                  </Alert>
+                )}
+                {infoMessage && (
+                  <Alert aria-live="polite">
+                    <AlertDescription>{infoMessage}</AlertDescription>
                   </Alert>
                 )}
                 <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
