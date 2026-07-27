@@ -11,6 +11,7 @@ export type StatusPerfil = (typeof statusPerfil)[number];
 export interface Perfil {
   id: string;
   nome_completo: string;
+  email: string | null;
   papel: PapelPerfil;
   status: StatusPerfil;
   criado_em: string;

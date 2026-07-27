@@ -61,15 +61,6 @@ const statusLabels: Record<StatusPerfil, string> = {
   inativo: "Inativo",
 };
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
 function UsuariosPage() {
   return (
     <AppShell title="Gestão de usuários" requiredRole="administrador">
@@ -137,7 +128,7 @@ function UsuariosContent() {
       const matchesSearch =
         !normalizedSearch ||
         profile.nome_completo.toLocaleLowerCase("pt-BR").includes(normalizedSearch) ||
-        profile.id.toLocaleLowerCase("pt-BR").includes(normalizedSearch);
+        (profile.email ?? "").toLocaleLowerCase("pt-BR").includes(normalizedSearch);
 
       return matchesRole && matchesStatus && matchesSearch;
     });
@@ -348,7 +339,7 @@ function UsuariosContent() {
           <div className="space-y-1 md:col-span-2">
             <Label className="text-xs text-muted-foreground">Buscar</Label>
             <Input
-              placeholder="Nome ou identificação"
+              placeholder="Nome ou e-mail"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -375,11 +366,9 @@ function UsuariosContent() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Identificação</TableHead>
+                <TableHead>E-mail</TableHead>
                 <TableHead>Papel</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Criado em</TableHead>
-                <TableHead>Inativado em</TableHead>
                 <TableHead className="min-w-72">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -425,22 +414,13 @@ function UsuariosContent() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <span
-                          className="font-mono text-xs"
-                          title="E-mail não disponível em profiles"
-                        >
-                          {profile.id}
-                        </span>
-                      </TableCell>
+                      <TableCell className="text-sm">{profile.email ?? "—"}</TableCell>
                       <TableCell>{roleLabels[profile.papel]}</TableCell>
                       <TableCell>
                         <Badge variant={profile.status === "ativo" ? "default" : "secondary"}>
                           {statusLabels[profile.status]}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatDate(profile.criado_em)}</TableCell>
-                      <TableCell>{formatDate(profile.inativado_em)}</TableCell>
                       <TableCell>
                         {profile.status === "pendente" && (
                           <Button

@@ -53,7 +53,7 @@ export async function getCurrentProfile(): Promise<ProfileResult> {
   const { data, error } = await client
     .from("profiles")
     .select(
-      "id, nome_completo, papel, status, criado_em, atualizado_em, aprovado_em, aprovado_por, inativado_em, inativado_por",
+      "id, nome_completo, email, papel, status, criado_em, atualizado_em, aprovado_em, aprovado_por, inativado_em, inativado_por",
     )
     .eq("id", userData.user.id)
     .maybeSingle();
