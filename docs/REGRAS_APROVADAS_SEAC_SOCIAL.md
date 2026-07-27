@@ -13,6 +13,17 @@ registro do motivo neste arquivo.
 - Assistido é quem pode receber benefício.
 - Membro familiar compõe a família, mas não necessariamente recebe
   benefício.
+- Ao cadastrar a família, o **responsável é criado também como
+  assistido**, do tipo escolhido pelo operador (Definitivo → Cesta
+  Padrão / Extra → Avaliação). Documento (CPF/RG) do responsável
+  continua obrigatório.
+  - **Alteração registrada em 2026-07-27 (homologação, issue #43).**
+    Motivo: no fluxo real o responsável quase sempre é o beneficiário;
+    antes ele nascia só como membro e exigia um segundo cadastro manual
+    para poder ser atendido. A criação passou a ser transacional
+    (família + responsável + assistido) na RPC
+    `criar_familia_com_responsavel`. Adicionar demais membros/assistidos
+    segue sendo explícito, na tela de detalhe da família.
 
 ## 2. Atendimento
 

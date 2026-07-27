@@ -9,7 +9,7 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 | --- | --- | --- |
 | Login | Implementado (Supabase Auth) | `/auth` chama `signIn` real, valida sessão e status (`pendente`/`inativo`), e protege rotas via `RequireActiveProfile`. |
 | Usuários | Implementado (Supabase) | Fluxo administrativo por RPC (`aprovar_usuario`, `inativar_usuario`, `alterar_papel_usuario`) com RLS em `profiles`. |
-| Famílias | Migrado ao Supabase | Schema + RLS + RPCs; criação/edição de família e do responsável. A lista ainda cai para o store local quando não há linhas no Supabase, e o detalhe por id numérico usa o store local (dual-source residual — ver riscos). |
+| Famílias | Migrado ao Supabase | Schema + RLS + RPCs; criação/edição de família e do responsável. A criação (`criar_familia_com_responsavel`) passou a cadastrar o responsável **também como assistido** (tipo definitivo/extra) na mesma transação — regra registrada em `REGRAS_APROVADAS_SEAC_SOCIAL.md` §1. A lista ainda cai para o store local quando não há linhas no Supabase, e o detalhe por id numérico usa o store local (dual-source residual — ver riscos). |
 | Assistidos | Migrado ao Supabase | Criação via `criar_assistido_em_familia` (com reuso de pessoa existente, `p_pessoa_id`) e leitura no agregado da família. |
 | Membros | Migrado ao Supabase | Criação via `criar_membro_em_familia` (com reuso de pessoa) e leitura no agregado. |
 | Observações sociais | Migrado ao Supabase | Registro por INSERT (policy de equipe ativa); leitura no detalhe, com nome do autor resolvido via `profiles.nome_completo`. |

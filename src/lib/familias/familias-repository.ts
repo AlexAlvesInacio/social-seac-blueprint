@@ -287,6 +287,8 @@ export interface CriarFamiliaInput {
   responsavelNome: string;
   responsavelTipoDocumento: PessoaTipoDocumentoSupabase;
   responsavelDocumento: string;
+  /** Tipo de cadastro do assistido do responsável (definitivo/extra). */
+  tipoCadastro: AssistidoTipoCadastroSupabase;
   responsavelTelefone?: string;
   endereco?: string;
   numero?: string;
@@ -366,6 +368,7 @@ async function criarFamilia(
     p_responsavel_nome: input.responsavelNome.trim(),
     p_responsavel_tipo_documento: input.responsavelTipoDocumento,
     p_responsavel_documento: input.responsavelDocumento.trim(),
+    p_tipo_cadastro: input.tipoCadastro,
     p_responsavel_telefone: nullableParam(input.responsavelTelefone),
     p_endereco: nullableParam(input.endereco),
     p_numero: nullableParam(input.numero),
