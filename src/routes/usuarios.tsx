@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { UserCheck, UserCog, UserX } from "lucide-react";
+import { Pencil, UserCheck, UserCog, UserX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -28,6 +28,7 @@ import { getCurrentProfile } from "@/lib/auth/auth-service";
 import type { PapelPerfil, Perfil, StatusPerfil } from "@/lib/auth/types";
 import {
   approveUser,
+  changeUserName,
   changeUserRole,
   deactivateUser,
   listProfiles,
@@ -159,6 +160,15 @@ function UsuariosContent() {
     );
   }
 
+  function handleRename(profile: Perfil) {
+    const novoNome = window.prompt("Nome do usuário:", profile.nome_completo)?.trim();
+    if (!novoNome || novoNome === profile.nome_completo) return;
+
+    void runAction(`rename:${profile.id}`, "Nome atualizado com sucesso.", () =>
+      changeUserName(profile.id, novoNome),
+    );
+  }
+
   function handleDeactivate(profile: Perfil) {
     if (profile.id === currentProfileId || profile.status !== "ativo") return;
 
@@ -257,7 +267,6 @@ function UsuariosContent() {
                 <TableHead>Papel</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Criado em</TableHead>
-                <TableHead>Aprovado em</TableHead>
                 <TableHead>Inativado em</TableHead>
                 <TableHead className="min-w-72">Ações</TableHead>
               </TableRow>
@@ -289,7 +298,21 @@ function UsuariosContent() {
 
                   return (
                     <TableRow key={profile.id}>
-                      <TableCell className="font-medium">{profile.nome_completo}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1">
+                          <span>{profile.nome_completo}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-muted-foreground"
+                            title="Editar nome"
+                            disabled={isActing}
+                            onClick={() => handleRename(profile)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <span
                           className="font-mono text-xs"
@@ -305,7 +328,6 @@ function UsuariosContent() {
                         </Badge>
                       </TableCell>
                       <TableCell>{formatDate(profile.criado_em)}</TableCell>
-                      <TableCell>{formatDate(profile.aprovado_em)}</TableCell>
                       <TableCell>{formatDate(profile.inativado_em)}</TableCell>
                       <TableCell>
                         {profile.status === "pendente" && (
@@ -379,11 +401,6 @@ function UsuariosContent() {
           </Table>
         </CardContent>
       </Card>
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        O e-mail administrativo não está disponível em profiles. Até existir uma coluna segura ou
-        função/view controlada, o identificador do perfil é exibido como referência.
-      </p>
     </>
   );
 }

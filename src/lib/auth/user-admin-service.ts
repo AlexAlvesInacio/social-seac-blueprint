@@ -46,3 +46,15 @@ export async function changeUserRole(
 
   return { data: null, error };
 }
+
+export async function changeUserName(
+  profileId: string,
+  nome: string,
+): Promise<UserAdminResult<null>> {
+  const { error } = await getSupabaseClient().rpc("alterar_nome_usuario", {
+    p_profile_id: profileId,
+    p_nome: nome,
+  });
+
+  return { data: null, error };
+}
