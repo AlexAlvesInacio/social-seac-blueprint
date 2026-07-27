@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -27,6 +27,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { getCurrentProfile } from "@/lib/auth/auth-service";
 
 const operacional = [
   { title: "Painel", url: "/painel", icon: LayoutDashboard },
@@ -41,10 +42,10 @@ const estoque = [
 ];
 
 const admin = [
-  { title: "Usuários", url: "/usuarios", icon: UserCog },
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
-  { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
-  { title: "Auditoria", url: "/auditoria", icon: ShieldCheck },
+  { title: "Usuários", url: "/usuarios", icon: UserCog, adminOnly: true },
+  { title: "Configurações", url: "/configuracoes", icon: Settings, adminOnly: false },
+  { title: "Relatórios", url: "/relatorios", icon: BarChart3, adminOnly: false },
+  { title: "Auditoria", url: "/auditoria", icon: ShieldCheck, adminOnly: false },
 ];
 
 export function AppSidebar() {
@@ -76,6 +77,20 @@ export function AppSidebar() {
   );
 
   const [logoError, setLogoError] = useState(false);
+  const [papel, setPapel] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    void getCurrentProfile().then(({ data }) => {
+      if (ativo) setPapel(data?.papel ?? null);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  // Esconde itens exclusivos de administrador (ex.: Usuários) de outros papéis.
+  const adminItems = admin.filter((item) => !item.adminOnly || papel === "administrador");
 
   return (
     <Sidebar collapsible="icon">
@@ -104,7 +119,7 @@ export function AppSidebar() {
       <SidebarContent>
         {renderGroup("Operacional", operacional)}
         {renderGroup("Estoque", estoque)}
-        {renderGroup("Administração", admin)}
+        {renderGroup("Administração", adminItems)}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
