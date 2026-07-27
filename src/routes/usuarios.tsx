@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Pencil, UserCheck, UserCog, UserPlus, UserX } from "lucide-react";
+import { Pencil, UserCheck, UserPlus, UserX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -75,7 +75,6 @@ function UsuariosContent() {
   const [roleFilter, setRoleFilter] = useState<PapelPerfil | "all">("all");
   const [statusFilter, setStatusFilter] = useState<StatusPerfil | "all">("all");
   const [search, setSearch] = useState("");
-  const [roleDrafts, setRoleDrafts] = useState<Record<string, PapelPerfil>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -85,6 +84,11 @@ function UsuariosContent() {
     { nome: "", email: "", papel: "atendente" },
   );
   const [inviting, setInviting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Perfil | null>(null);
+  const [editNome, setEditNome] = useState("");
+  const [editPapel, setEditPapel] = useState<PapelPerfil>("atendente");
+  const [editing, setEditing] = useState(false);
 
   const loadProfiles = useCallback(async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -166,13 +170,57 @@ function UsuariosContent() {
     );
   }
 
-  function handleRename(profile: Perfil) {
-    const novoNome = window.prompt("Nome do usuário:", profile.nome_completo)?.trim();
-    if (!novoNome || novoNome === profile.nome_completo) return;
+  function handleOpenEdit(profile: Perfil) {
+    setEditTarget(profile);
+    setEditNome(profile.nome_completo);
+    setEditPapel(profile.papel);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setEditOpen(true);
+  }
 
-    void runAction(`rename:${profile.id}`, "Nome atualizado com sucesso.", () =>
-      changeUserName(profile.id, novoNome),
-    );
+  async function handleSaveEdit() {
+    if (!editTarget) return;
+
+    const nome = editNome.trim();
+    if (!nome) {
+      setErrorMessage("Informe o nome do usuário.");
+      return;
+    }
+
+    const isSelf = editTarget.id === currentProfileId;
+    const podeMudarPapel = editTarget.status === "ativo" && !isSelf;
+
+    setEditing(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      if (nome !== editTarget.nome_completo) {
+        const { error } = await changeUserName(editTarget.id, nome);
+        if (error) {
+          setErrorMessage(error.message || "Não foi possível salvar o nome.");
+          return;
+        }
+      }
+
+      if (podeMudarPapel && editPapel !== editTarget.papel) {
+        const { error } = await changeUserRole(editTarget.id, editPapel);
+        if (error) {
+          setErrorMessage(error.message || "Não foi possível salvar o papel.");
+          return;
+        }
+      }
+
+      setSuccessMessage("Usuário atualizado com sucesso.");
+      setEditOpen(false);
+      setEditTarget(null);
+      await loadProfiles(false);
+    } catch {
+      setErrorMessage("A operação não pôde ser concluída. Tente novamente.");
+    } finally {
+      setEditing(false);
+    }
   }
 
   function handleDeactivate(profile: Perfil) {
@@ -191,17 +239,6 @@ function UsuariosContent() {
 
     void runAction(`reactivate:${profile.id}`, "Usuário reativado com sucesso.", () =>
       reactivateUser(profile.id),
-    );
-  }
-
-  function handleRoleChange(profile: Perfil) {
-    if (profile.id === currentProfileId || profile.status !== "ativo") return;
-
-    const nextRole = roleDrafts[profile.id] ?? profile.papel;
-    if (nextRole === profile.papel) return;
-
-    void runAction(`role:${profile.id}`, "Papel alterado com sucesso.", () =>
-      changeUserRole(profile.id, nextRole),
     );
   }
 
@@ -295,6 +332,65 @@ function UsuariosContent() {
             </Button>
             <Button onClick={() => void handleInvite()} disabled={inviting}>
               {inviting ? "Incluindo…" : "Incluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar usuário</DialogTitle>
+            <DialogDescription>
+              Altere o nome e o papel do usuário. O papel só pode ser alterado com o usuário ativo.
+            </DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const isSelf = editTarget?.id === currentProfileId;
+            const podeMudarPapel = editTarget?.status === "ativo" && !isSelf;
+            return (
+              <div className="grid gap-3 py-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">E-mail</Label>
+                  <Input value={editTarget?.email ?? "—"} disabled readOnly />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Nome *</Label>
+                  <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Papel</Label>
+                  <Select
+                    value={editPapel}
+                    disabled={!podeMudarPapel}
+                    onValueChange={(v) => setEditPapel(v as PapelPerfil)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="administrador">Administrador</SelectItem>
+                      <SelectItem value="atendente">Atendente</SelectItem>
+                      <SelectItem value="estoque">Estoque</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!podeMudarPapel && (
+                    <p className="text-xs text-muted-foreground">
+                      {isSelf
+                        ? "Você não pode alterar o próprio papel."
+                        : "O papel só pode ser alterado com o usuário ativo."}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editing}>
+              Cancelar
+            </Button>
+            <Button onClick={() => void handleSaveEdit()} disabled={editing}>
+              {editing ? "Salvando…" : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -394,26 +490,11 @@ function UsuariosContent() {
               ) : (
                 filteredProfiles.map((profile) => {
                   const isSelf = profile.id === currentProfileId;
-                  const selectedRole = roleDrafts[profile.id] ?? profile.papel;
                   const isActing = activeAction?.endsWith(profile.id) ?? false;
 
                   return (
                     <TableRow key={profile.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-1">
-                          <span>{profile.nome_completo}</span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6 text-muted-foreground"
-                            title="Editar nome"
-                            disabled={isActing}
-                            onClick={() => handleRename(profile)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      <TableCell className="font-medium">{profile.nome_completo}</TableCell>
                       <TableCell className="text-sm">{profile.email ?? "—"}</TableCell>
                       <TableCell>{roleLabels[profile.papel]}</TableCell>
                       <TableCell>
@@ -422,49 +503,33 @@ function UsuariosContent() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {profile.status === "pendente" && (
-                          <Button
-                            size="sm"
-                            className="gap-2"
-                            disabled={isActing}
-                            onClick={() => handleApprove(profile)}
-                          >
-                            <UserCheck className="h-4 w-4" />
-                            Aprovar
-                          </Button>
-                        )}
-
-                        {profile.status === "ativo" && (
-                          <div className="flex min-w-72 flex-wrap items-center gap-2">
-                            <Select
-                              value={selectedRole}
-                              disabled={isSelf || isActing}
-                              onValueChange={(value) =>
-                                setRoleDrafts((current) => ({
-                                  ...current,
-                                  [profile.id]: value as PapelPerfil,
-                                }))
-                              }
-                            >
-                              <SelectTrigger className="w-36">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="administrador">Administrador</SelectItem>
-                                <SelectItem value="atendente">Atendente</SelectItem>
-                                <SelectItem value="estoque">Estoque</SelectItem>
-                              </SelectContent>
-                            </Select>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {profile.status === "pendente" && (
                             <Button
-                              variant="outline"
                               size="sm"
                               className="gap-2"
-                              disabled={isSelf || isActing || selectedRole === profile.papel}
-                              onClick={() => handleRoleChange(profile)}
+                              disabled={isActing}
+                              onClick={() => handleApprove(profile)}
                             >
-                              <UserCog className="h-4 w-4" />
-                              Salvar papel
+                              <UserCheck className="h-4 w-4" />
+                              Aprovar
                             </Button>
+                          )}
+
+                          {profile.status !== "pendente" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                              disabled={isActing}
+                              onClick={() => handleOpenEdit(profile)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Editar
+                            </Button>
+                          )}
+
+                          {profile.status === "ativo" && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -475,24 +540,25 @@ function UsuariosContent() {
                               <UserX className="h-4 w-4" />
                               Inativar
                             </Button>
-                            {isSelf && (
-                              <span className="text-xs text-muted-foreground">Sua conta</span>
-                            )}
-                          </div>
-                        )}
+                          )}
 
-                        {profile.status === "inativo" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            disabled={isActing}
-                            onClick={() => handleReactivate(profile)}
-                          >
-                            <UserCheck className="h-4 w-4" />
-                            Reativar
-                          </Button>
-                        )}
+                          {profile.status === "inativo" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                              disabled={isActing}
+                              onClick={() => handleReactivate(profile)}
+                            >
+                              <UserCheck className="h-4 w-4" />
+                              Reativar
+                            </Button>
+                          )}
+
+                          {isSelf && profile.status === "ativo" && (
+                            <span className="text-xs text-muted-foreground">Sua conta</span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
