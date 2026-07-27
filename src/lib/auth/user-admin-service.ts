@@ -55,16 +55,23 @@ export async function changeUserRole(
   return { data: null, error };
 }
 
+/**
+ * Altera o nome do usuário via Edge Function `atualizar-nome-usuario` (service_role
+ * no servidor): grava em `profiles.nome_completo` (fonte de verdade) e também na
+ * metadata do Auth (Display name do painel Authentication).
+ */
 export async function changeUserName(
   profileId: string,
   nome: string,
-): Promise<UserAdminResult<null>> {
-  const { error } = await getSupabaseClient().rpc("alterar_nome_usuario", {
-    p_profile_id: profileId,
-    p_nome: nome,
+): Promise<{ error: { message: string } | null }> {
+  const { data, error } = await getSupabaseClient().functions.invoke("atualizar-nome-usuario", {
+    body: { profile_id: profileId, nome },
   });
 
-  return { data: null, error };
+  if (error) return { error: { message: error.message || "Falha ao chamar a função." } };
+  if (data && data.ok === false)
+    return { error: { message: data.error || "Não foi possível salvar o nome." } };
+  return { error: null };
 }
 
 export interface CriarUsuarioInput {
