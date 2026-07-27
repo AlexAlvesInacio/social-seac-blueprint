@@ -35,6 +35,14 @@ export async function deactivateUser(profileId: string): Promise<UserAdminResult
   return { data: null, error };
 }
 
+export async function reactivateUser(profileId: string): Promise<UserAdminResult<null>> {
+  const { error } = await getSupabaseClient().rpc("reativar_usuario", {
+    p_profile_id: profileId,
+  });
+
+  return { data: null, error };
+}
+
 export async function changeUserRole(
   profileId: string,
   role: PapelPerfil,

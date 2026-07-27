@@ -41,6 +41,7 @@ import {
   criarUsuario,
   deactivateUser,
   listProfiles,
+  reactivateUser,
 } from "@/lib/auth/user-admin-service";
 
 export const Route = createFileRoute("/usuarios")({
@@ -191,6 +192,14 @@ function UsuariosContent() {
 
     void runAction(`deactivate:${profile.id}`, "Usuário inativado com sucesso.", () =>
       deactivateUser(profile.id),
+    );
+  }
+
+  function handleReactivate(profile: Perfil) {
+    if (profile.status !== "inativo") return;
+
+    void runAction(`reactivate:${profile.id}`, "Usuário reativado com sucesso.", () =>
+      reactivateUser(profile.id),
     );
   }
 
@@ -493,7 +502,16 @@ function UsuariosContent() {
                         )}
 
                         {profile.status === "inativo" && (
-                          <span className="text-xs text-muted-foreground">Somente consulta</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            disabled={isActing}
+                            onClick={() => handleReactivate(profile)}
+                          >
+                            <UserCheck className="h-4 w-4" />
+                            Reativar
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
