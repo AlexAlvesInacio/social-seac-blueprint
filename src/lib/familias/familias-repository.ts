@@ -22,6 +22,7 @@ import type {
   TentativaBloqueadaPainel,
   AprovarAssistidoResult,
   InativarAssistidoResult,
+  ReativarAssistidoResult,
   AtualizarResponsavelResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
@@ -538,6 +539,47 @@ export async function inativarAssistidoNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseWriteError("inativar_assistido", error),
+    };
+  }
+}
+
+async function reativarAssistido(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<ReativarAssistidoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("reativar_assistido", {
+    p_assistido_id: assistidoId,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("reativar_assistido", error) };
+  }
+
+  const row = firstRow<ReativarAssistidoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "reativar_assistido",
+        code: "EMPTY_RESULT",
+        message: "A reativação do assistido não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function reativarAssistidoNoSupabase(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<ReativarAssistidoResult>> {
+  try {
+    return await reativarAssistido(assistidoId);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("reativar_assistido", error),
     };
   }
 }

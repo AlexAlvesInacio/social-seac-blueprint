@@ -398,6 +398,12 @@ export interface InativarAssistidoResult {
   familia_id: FamiliaSupabaseId;
 }
 
+/** Retorno de `public.reativar_assistido`. */
+export interface ReativarAssistidoResult {
+  assistido_id: AssistidoSupabaseId;
+  familia_id: FamiliaSupabaseId;
+}
+
 /** Retorno de `public.atualizar_familia`. */
 export interface AtualizarFamiliaResult {
   familia_id: FamiliaSupabaseId;
