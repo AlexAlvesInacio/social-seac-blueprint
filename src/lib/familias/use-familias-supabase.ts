@@ -23,6 +23,10 @@ import {
   type MontarCestaInput,
   type RegistrarMovimentacaoInput,
   type RegistrarMovimentacaoItemInput,
+  aprovarAssistidoDefinitivoNoSupabase,
+  inativarAssistidoNoSupabase,
+  reativarAssistidoNoSupabase,
+  atualizarMembroFamiliarNoSupabase,
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
@@ -34,6 +38,7 @@ import {
   registrarEntregaAtendimentoNoSupabase,
   registrarTentativaBloqueadaNoSupabase,
   type AtualizarFamiliaInput,
+  type AtualizarMembroInput,
   type AtualizarResponsavelInput,
   type CriarAssistidoInput,
   type CriarFamiliaInput,
@@ -126,6 +131,89 @@ export function useCriarAssistidoSupabase() {
       void queryClient.invalidateQueries({
         queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
       });
+    },
+  });
+}
+
+export function useAprovarAssistidoDefinitivo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (variables: { assistidoId: string; familiaId: string }) => {
+      const result = await aprovarAssistidoDefinitivoNoSupabase(variables.assistidoId);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.resumoAtendimento(variables.assistidoId),
+      });
+    },
+  });
+}
+
+export function useInativarAssistido() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (variables: { assistidoId: string; familiaId: string }) => {
+      const result = await inativarAssistidoNoSupabase(variables.assistidoId);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.resumoAtendimento(variables.assistidoId),
+      });
+    },
+  });
+}
+
+export function useReativarAssistido() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (variables: { assistidoId: string; familiaId: string }) => {
+      const result = await reativarAssistidoNoSupabase(variables.assistidoId);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.resumoAtendimento(variables.assistidoId),
+      });
+    },
+  });
+}
+
+export function useAtualizarMembro() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: AtualizarMembroInput) => {
+      const result = await atualizarMembroFamiliarNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      if (data?.familia_id) {
+        void queryClient.invalidateQueries({
+          queryKey: familiasSupabaseQueryKeys.detail(data.familia_id),
+        });
+      }
     },
   });
 }

@@ -20,6 +20,10 @@ import type {
   RecebimentoOrigem,
   RegistrarMovimentacaoResult,
   TentativaBloqueadaPainel,
+  AprovarAssistidoResult,
+  InativarAssistidoResult,
+  ReativarAssistidoResult,
+  AtualizarMembroResult,
   AtualizarResponsavelResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
@@ -328,6 +332,16 @@ export interface CriarMembroInput {
   pessoaId?: string;
 }
 
+export interface AtualizarMembroInput {
+  membroFamiliarId: string;
+  nome: string;
+  parentesco?: string;
+  telefone?: string;
+  nascimento?: string;
+  pcd?: boolean;
+  gestante?: boolean;
+}
+
 export interface AtualizarFamiliaInput {
   familiaId: string;
   nomeReferencia: string;
@@ -455,6 +469,176 @@ export async function criarAssistidoEmFamiliaNoSupabase(
     return await criarAssistido(input);
   } catch (error) {
     return { data: null, error: toUnexpectedFamiliasSupabaseWriteError("criar_assistido", error) };
+  }
+}
+
+async function aprovarAssistido(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<AprovarAssistidoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("aprovar_assistido_definitivo", {
+    p_assistido_id: assistidoId,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("aprovar_assistido", error) };
+  }
+
+  const row = firstRow<AprovarAssistidoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "aprovar_assistido",
+        code: "EMPTY_RESULT",
+        message: "A aprovação do cadastro não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function aprovarAssistidoDefinitivoNoSupabase(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<AprovarAssistidoResult>> {
+  try {
+    return await aprovarAssistido(assistidoId);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("aprovar_assistido", error),
+    };
+  }
+}
+
+async function inativarAssistido(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<InativarAssistidoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("inativar_assistido", {
+    p_assistido_id: assistidoId,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("inativar_assistido", error) };
+  }
+
+  const row = firstRow<InativarAssistidoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "inativar_assistido",
+        code: "EMPTY_RESULT",
+        message: "A inativação do assistido não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function inativarAssistidoNoSupabase(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<InativarAssistidoResult>> {
+  try {
+    return await inativarAssistido(assistidoId);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("inativar_assistido", error),
+    };
+  }
+}
+
+async function reativarAssistido(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<ReativarAssistidoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("reativar_assistido", {
+    p_assistido_id: assistidoId,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("reativar_assistido", error) };
+  }
+
+  const row = firstRow<ReativarAssistidoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "reativar_assistido",
+        code: "EMPTY_RESULT",
+        message: "A reativação do assistido não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function reativarAssistidoNoSupabase(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<ReativarAssistidoResult>> {
+  try {
+    return await reativarAssistido(assistidoId);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("reativar_assistido", error),
+    };
+  }
+}
+
+async function atualizarMembro(
+  input: AtualizarMembroInput,
+): Promise<FamiliasSupabaseWriteResult<AtualizarMembroResult>> {
+  const { data, error } = await getSupabaseClient().rpc("atualizar_membro_familiar", {
+    p_membro_familiar_id: input.membroFamiliarId,
+    p_nome: input.nome.trim(),
+    p_parentesco: nullableParam(input.parentesco),
+    p_telefone: nullableParam(input.telefone),
+    p_nascimento: nullableParam(input.nascimento),
+    p_pcd: input.pcd ?? false,
+    p_gestante: input.gestante ?? false,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("atualizar_membro", error) };
+  }
+
+  const row = firstRow<AtualizarMembroResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "atualizar_membro",
+        code: "EMPTY_RESULT",
+        message: "A atualização do membro não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function atualizarMembroFamiliarNoSupabase(
+  input: AtualizarMembroInput,
+): Promise<FamiliasSupabaseWriteResult<AtualizarMembroResult>> {
+  try {
+    return await atualizarMembro(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("atualizar_membro", error),
+    };
   }
 }
 

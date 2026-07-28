@@ -18,10 +18,13 @@ import {
   verificarElegibilidadeAtendimento,
   type Elegibilidade,
 } from "@/lib/atendimento-regras";
+import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 import { getCurrentProfile } from "@/lib/auth/auth-service";
 import { useConfiguracoes } from "@/lib/configuracoes/configuracoes-supabase";
 import type { AssistidoParaEntrega } from "@/lib/familias/familias-supabase-types";
 import {
+  useAprovarAssistidoDefinitivo,
+  useInativarAssistido,
   useRegistrarEntregaSupabase,
   useRegistrarTentativaSupabase,
   useResumoAtendimento,
@@ -49,6 +52,8 @@ export function RegistrarEntregaSupabaseDialog({
   const limiteExtra = configQuery.data?.limiteExtra ?? 3;
   const registrarEntrega = useRegistrarEntregaSupabase();
   const registrarTentativa = useRegistrarTentativaSupabase();
+  const aprovarDefinitivo = useAprovarAssistidoDefinitivo();
+  const inativarAssistido = useInativarAssistido();
   const [motivo, setMotivo] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -66,7 +71,11 @@ export function RegistrarEntregaSupabaseDialog({
     };
   }, [open]);
 
-  const salvando = registrarEntrega.isPending || registrarTentativa.isPending;
+  const salvando =
+    registrarEntrega.isPending ||
+    registrarTentativa.isPending ||
+    aprovarDefinitivo.isPending ||
+    inativarAssistido.isPending;
 
   const elegibilidade: Elegibilidade | null =
     assistido && resumoQuery.data
@@ -111,6 +120,46 @@ export function RegistrarEntregaSupabaseDialog({
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível registrar a entrega.");
+    }
+  };
+
+  const aprovarCadastroDefinitivo = async () => {
+    if (!assistido) return;
+    try {
+      await aprovarDefinitivo.mutateAsync({
+        assistidoId: assistido.id,
+        familiaId: assistido.familiaId,
+      });
+      registrarAuditoria({
+        acao: "Cadastro aprovado como definitivo",
+        modulo: "Atendimento",
+        registro: `${assistido.nome} (${assistido.documento})`,
+        observacao: "Extra → Definitivo; passa a receber Cesta Padrão.",
+      });
+      toast.success("Cadastro aprovado como definitivo — passa a receber Cesta Padrão.");
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível aprovar o cadastro.");
+    }
+  };
+
+  const negarCadastro = async () => {
+    if (!assistido) return;
+    try {
+      await inativarAssistido.mutateAsync({
+        assistidoId: assistido.id,
+        familiaId: assistido.familiaId,
+      });
+      registrarAuditoria({
+        acao: "Cadastro negado (assistido inativado)",
+        modulo: "Atendimento",
+        registro: `${assistido.nome} (${assistido.documento})`,
+        observacao: "Avaliação após 3 Cestas Extra: cadastro negado; assistido inativado.",
+      });
+      toast.success("Cadastro negado — assistido inativado.");
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível negar o cadastro.");
     }
   };
 
@@ -218,14 +267,28 @@ export function RegistrarEntregaSupabaseDialog({
             )}
 
             {elegibilidade.cenario === "extra_completou" && (
-              <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Fechar
-                </Button>
-                <Button disabled={salvando} onClick={() => void registrarBloqueio("extra")}>
-                  Registrar tentativa
-                </Button>
-              </DialogFooter>
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Avalie o cadastro: <strong>aprovar</strong> torna o assistido definitivo (passa a
+                  receber <strong>Cesta Padrão</strong>); <strong>negar</strong> inativa o assistido
+                  (deixa de receber e sai da busca).
+                </p>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    Fechar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={salvando}
+                    onClick={() => void negarCadastro()}
+                  >
+                    {inativarAssistido.isPending ? "Negando…" : "Negar cadastro"}
+                  </Button>
+                  <Button disabled={salvando} onClick={() => void aprovarCadastroDefinitivo()}>
+                    {aprovarDefinitivo.isPending ? "Aprovando…" : "Aprovar cadastro"}
+                  </Button>
+                </DialogFooter>
+              </div>
             )}
           </div>
         )}

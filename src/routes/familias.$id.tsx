@@ -13,6 +13,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  UserCheck,
   Users,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -53,10 +54,12 @@ import { useAtendimentoStore } from "@/lib/atendimento-store";
 import type {
   AssistidoSupabaseReadModel,
   FamiliaSupabaseReadModel,
+  MembroFamiliarSupabaseReadModel,
 } from "@/lib/familias/familias-supabase-types";
 import {
   useEntregasFamilia,
   useFamiliaSupabase,
+  useReativarAssistido,
   useTentativasFamilia,
 } from "@/lib/familias/use-familias-supabase";
 import {
@@ -67,6 +70,7 @@ import {
 } from "@/components/familia-detail-dialogs";
 import { AdicionarAssistidoSupabaseDialog } from "@/components/adicionar-assistido-supabase-dialog";
 import { AdicionarMembroSupabaseDialog } from "@/components/adicionar-membro-supabase-dialog";
+import { EditarMembroSupabaseDialog } from "@/components/editar-membro-supabase-dialog";
 import { EditarFamiliaSupabaseDialog } from "@/components/editar-familia-supabase-dialog";
 import { RegistrarObservacaoSupabaseDialog } from "@/components/registrar-observacao-supabase-dialog";
 import { RegistrarEntregaSupabaseDialog } from "@/components/registrar-entrega-supabase-dialog";
@@ -709,6 +713,23 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
   const [editarOpen, setEditarOpen] = useState(false);
   const [obsOpen, setObsOpen] = useState(false);
   const [entregaAssistido, setEntregaAssistido] = useState<AssistidoSupabaseReadModel | null>(null);
+  const [membroEditar, setMembroEditar] = useState<MembroFamiliarSupabaseReadModel | null>(null);
+  const reativarAssistido = useReativarAssistido();
+
+  const handleReativar = async (assistido: AssistidoSupabaseReadModel) => {
+    try {
+      await reativarAssistido.mutateAsync({ assistidoId: assistido.id, familiaId: familia.id });
+      registrarAuditoria({
+        acao: "Assistido reativado",
+        modulo: "Famílias",
+        registro: `${assistido.nome} (${assistido.documento})`,
+        observacao: "Reativação de assistido inativo.",
+      });
+      toast.success("Assistido reativado.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível reativar o assistido.");
+    }
+  };
 
   return (
     <AppShell
@@ -772,6 +793,13 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
         }}
         assistido={entregaAssistido}
         familiaNome={familia.nome || "família"}
+      />
+      <EditarMembroSupabaseDialog
+        open={membroEditar !== null}
+        onOpenChange={(o) => {
+          if (!o) setMembroEditar(null);
+        }}
+        membro={membroEditar}
       />
       <div className="space-y-6">
         <Card className="border-primary/30 bg-primary/5">
@@ -887,15 +915,27 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
                           <TableCell className="text-sm capitalize">{assistido.status}</TableCell>
                           <TableCell className="text-sm">{assistido.pcd ? "Sim" : "Não"}</TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-2"
-                              disabled={assistido.status !== "ativo"}
-                              onClick={() => setEntregaAssistido(assistido)}
-                            >
-                              <HeartHandshake className="h-4 w-4" /> Registrar entrega
-                            </Button>
+                            {assistido.status === "inativo" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2"
+                                disabled={reativarAssistido.isPending}
+                                onClick={() => void handleReativar(assistido)}
+                              >
+                                <UserCheck className="h-4 w-4" /> Reativar
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2"
+                                disabled={assistido.status !== "ativo"}
+                                onClick={() => setEntregaAssistido(assistido)}
+                              >
+                                <HeartHandshake className="h-4 w-4" /> Registrar entrega
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -923,6 +963,7 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
                         <TableHead>Faixa etária</TableHead>
                         <TableHead>Marcadores</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -950,6 +991,16 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
                                 .join(" · ") || "—"}
                             </TableCell>
                             <TableCell className="text-sm capitalize">{membro.status}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2"
+                                onClick={() => setMembroEditar(membro)}
+                              >
+                                <Pencil className="h-4 w-4" /> Editar
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         );
                       })}

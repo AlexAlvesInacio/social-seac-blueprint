@@ -386,6 +386,31 @@ export interface CriarMembroResult {
   membro_familiar_id: MembroFamiliarSupabaseId;
 }
 
+/** Retorno de `public.aprovar_assistido_definitivo`. */
+export interface AprovarAssistidoResult {
+  assistido_id: AssistidoSupabaseId;
+  familia_id: FamiliaSupabaseId;
+}
+
+/** Retorno de `public.inativar_assistido`. */
+export interface InativarAssistidoResult {
+  assistido_id: AssistidoSupabaseId;
+  familia_id: FamiliaSupabaseId;
+}
+
+/** Retorno de `public.reativar_assistido`. */
+export interface ReativarAssistidoResult {
+  assistido_id: AssistidoSupabaseId;
+  familia_id: FamiliaSupabaseId;
+}
+
+/** Retorno de `public.atualizar_membro_familiar`. */
+export interface AtualizarMembroResult {
+  membro_familiar_id: MembroFamiliarSupabaseId;
+  familia_id: FamiliaSupabaseId;
+  pessoa_id: PessoaSupabaseId;
+}
+
 /** Retorno de `public.atualizar_familia`. */
 export interface AtualizarFamiliaResult {
   familia_id: FamiliaSupabaseId;
