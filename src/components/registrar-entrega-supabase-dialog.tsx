@@ -19,6 +19,7 @@ import {
   type Elegibilidade,
 } from "@/lib/atendimento-regras";
 import { getCurrentProfile } from "@/lib/auth/auth-service";
+import { useConfiguracoes } from "@/lib/configuracoes/configuracoes-supabase";
 import type { AssistidoParaEntrega } from "@/lib/familias/familias-supabase-types";
 import {
   useRegistrarEntregaSupabase,
@@ -43,6 +44,9 @@ export function RegistrarEntregaSupabaseDialog({
 }: Props) {
   const assistidoId = open && assistido ? assistido.id : "";
   const resumoQuery = useResumoAtendimento(assistidoId);
+  const configQuery = useConfiguracoes();
+  const intervaloMinimoDias = configQuery.data?.intervaloMinimoDias ?? 25;
+  const limiteExtra = configQuery.data?.limiteExtra ?? 3;
   const registrarEntrega = useRegistrarEntregaSupabase();
   const registrarTentativa = useRegistrarTentativaSupabase();
   const [motivo, setMotivo] = useState("");
@@ -81,6 +85,8 @@ export function RegistrarEntregaSupabaseDialog({
             cestaPadrao: resumoQuery.data.saldoPadrao,
             cestaExtra: resumoQuery.data.saldoExtra,
           },
+          undefined,
+          { intervaloMinimoDias, limiteExtra },
         )
       : null;
 
@@ -100,7 +106,7 @@ export function RegistrarEntregaSupabaseDialog({
       } else {
         // O servidor reaplicou as regras e bloqueou (ex.: saldo/prazo mudou desde a
         // verificação). A tentativa já foi registrada pela própria RPC.
-        toast.warning(mensagemBloqueioServidor(data.status));
+        toast.warning(mensagemBloqueioServidor(data.status, intervaloMinimoDias, limiteExtra));
       }
       onOpenChange(false);
     } catch (err) {
@@ -143,7 +149,11 @@ export function RegistrarEntregaSupabaseDialog({
           </p>
         ) : (
           <div className="space-y-4 py-2">
-            <CenarioResumo elegibilidade={elegibilidade} />
+            <CenarioResumo
+              elegibilidade={elegibilidade}
+              intervaloMinimoDias={intervaloMinimoDias}
+              limiteExtra={limiteExtra}
+            />
 
             {(elegibilidade.cenario === "liberado_padrao" ||
               elegibilidade.cenario === "liberado_extra") && (
@@ -226,18 +236,28 @@ export function RegistrarEntregaSupabaseDialog({
 
 function mensagemBloqueioServidor(
   status: "bloqueado_prazo" | "bloqueado_estoque" | "bloqueado_extra",
+  intervaloMinimoDias: number,
+  limiteExtra: number,
 ): string {
   switch (status) {
     case "bloqueado_prazo":
-      return "Entrega bloqueada pelo servidor: intervalo mínimo de 25 dias não cumprido. Tentativa registrada.";
+      return `Entrega bloqueada pelo servidor: intervalo mínimo de ${intervaloMinimoDias} dias não cumprido. Tentativa registrada.`;
     case "bloqueado_estoque":
       return "Entrega bloqueada pelo servidor: sem saldo em estoque. Tentativa registrada.";
     case "bloqueado_extra":
-      return "Entrega bloqueada pelo servidor: cadastro extra já completou o limite de retiradas. Tentativa registrada.";
+      return `Entrega bloqueada pelo servidor: cadastro extra já completou o limite de ${limiteExtra} retiradas. Tentativa registrada.`;
   }
 }
 
-function CenarioResumo({ elegibilidade }: { elegibilidade: Elegibilidade }) {
+function CenarioResumo({
+  elegibilidade,
+  intervaloMinimoDias,
+  limiteExtra,
+}: {
+  elegibilidade: Elegibilidade;
+  intervaloMinimoDias: number;
+  limiteExtra: number;
+}) {
   switch (elegibilidade.cenario) {
     case "liberado_padrao":
       return (
@@ -250,14 +270,15 @@ function CenarioResumo({ elegibilidade }: { elegibilidade: Elegibilidade }) {
       return (
         <div className="text-sm">
           <Badge className="mr-2 bg-primary/15 text-primary hover:bg-primary/15">Liberado</Badge>
-          Elegível para <strong>Cesta Extra</strong> — retirada {elegibilidade.progresso}/3.
+          Elegível para <strong>Cesta Extra</strong> — retirada {elegibilidade.progresso}/
+          {limiteExtra}.
         </div>
       );
     case "bloqueio_25dias":
       return (
         <div className="text-sm">
           <Badge variant="destructive" className="mr-2">
-            Bloqueado (25 dias)
+            Bloqueado ({intervaloMinimoDias} dias)
           </Badge>
           Próxima data permitida: <strong>{formatBR(elegibilidade.proximaDataISO)}</strong> (faltam{" "}
           {elegibilidade.diasRestantes} {elegibilidade.diasRestantes === 1 ? "dia" : "dias"}).
@@ -279,7 +300,8 @@ function CenarioResumo({ elegibilidade }: { elegibilidade: Elegibilidade }) {
           <Badge variant="destructive" className="mr-2">
             Extra completou
           </Badge>
-          Já foram feitas 3 retiradas de Cesta Extra; aguardar avaliação de cadastro definitivo.
+          Já foram feitas {limiteExtra} retiradas de Cesta Extra; aguardar avaliação de cadastro
+          definitivo.
         </div>
       );
   }
