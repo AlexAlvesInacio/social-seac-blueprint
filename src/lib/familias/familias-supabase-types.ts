@@ -404,6 +404,13 @@ export interface ReativarAssistidoResult {
   familia_id: FamiliaSupabaseId;
 }
 
+/** Retorno de `public.atualizar_membro_familiar`. */
+export interface AtualizarMembroResult {
+  membro_familiar_id: MembroFamiliarSupabaseId;
+  familia_id: FamiliaSupabaseId;
+  pessoa_id: PessoaSupabaseId;
+}
+
 /** Retorno de `public.atualizar_familia`. */
 export interface AtualizarFamiliaResult {
   familia_id: FamiliaSupabaseId;

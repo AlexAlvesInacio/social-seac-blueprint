@@ -26,6 +26,7 @@ import {
   aprovarAssistidoDefinitivoNoSupabase,
   inativarAssistidoNoSupabase,
   reativarAssistidoNoSupabase,
+  atualizarMembroFamiliarNoSupabase,
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
@@ -37,6 +38,7 @@ import {
   registrarEntregaAtendimentoNoSupabase,
   registrarTentativaBloqueadaNoSupabase,
   type AtualizarFamiliaInput,
+  type AtualizarMembroInput,
   type AtualizarResponsavelInput,
   type CriarAssistidoInput,
   type CriarFamiliaInput,
@@ -192,6 +194,26 @@ export function useReativarAssistido() {
       void queryClient.invalidateQueries({
         queryKey: familiasSupabaseQueryKeys.resumoAtendimento(variables.assistidoId),
       });
+    },
+  });
+}
+
+export function useAtualizarMembro() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: AtualizarMembroInput) => {
+      const result = await atualizarMembroFamiliarNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      if (data?.familia_id) {
+        void queryClient.invalidateQueries({
+          queryKey: familiasSupabaseQueryKeys.detail(data.familia_id),
+        });
+      }
     },
   });
 }

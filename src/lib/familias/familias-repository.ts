@@ -23,6 +23,7 @@ import type {
   AprovarAssistidoResult,
   InativarAssistidoResult,
   ReativarAssistidoResult,
+  AtualizarMembroResult,
   AtualizarResponsavelResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
@@ -331,6 +332,16 @@ export interface CriarMembroInput {
   pessoaId?: string;
 }
 
+export interface AtualizarMembroInput {
+  membroFamiliarId: string;
+  nome: string;
+  parentesco?: string;
+  telefone?: string;
+  nascimento?: string;
+  pcd?: boolean;
+  gestante?: boolean;
+}
+
 export interface AtualizarFamiliaInput {
   familiaId: string;
   nomeReferencia: string;
@@ -580,6 +591,53 @@ export async function reativarAssistidoNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseWriteError("reativar_assistido", error),
+    };
+  }
+}
+
+async function atualizarMembro(
+  input: AtualizarMembroInput,
+): Promise<FamiliasSupabaseWriteResult<AtualizarMembroResult>> {
+  const { data, error } = await getSupabaseClient().rpc("atualizar_membro_familiar", {
+    p_membro_familiar_id: input.membroFamiliarId,
+    p_nome: input.nome.trim(),
+    p_parentesco: nullableParam(input.parentesco),
+    p_telefone: nullableParam(input.telefone),
+    p_nascimento: nullableParam(input.nascimento),
+    p_pcd: input.pcd ?? false,
+    p_gestante: input.gestante ?? false,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("atualizar_membro", error) };
+  }
+
+  const row = firstRow<AtualizarMembroResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "atualizar_membro",
+        code: "EMPTY_RESULT",
+        message: "A atualização do membro não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function atualizarMembroFamiliarNoSupabase(
+  input: AtualizarMembroInput,
+): Promise<FamiliasSupabaseWriteResult<AtualizarMembroResult>> {
+  try {
+    return await atualizarMembro(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("atualizar_membro", error),
     };
   }
 }
