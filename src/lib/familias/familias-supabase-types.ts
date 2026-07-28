@@ -392,6 +392,12 @@ export interface AprovarAssistidoResult {
   familia_id: FamiliaSupabaseId;
 }
 
+/** Retorno de `public.inativar_assistido`. */
+export interface InativarAssistidoResult {
+  assistido_id: AssistidoSupabaseId;
+  familia_id: FamiliaSupabaseId;
+}
+
 /** Retorno de `public.atualizar_familia`. */
 export interface AtualizarFamiliaResult {
   familia_id: FamiliaSupabaseId;

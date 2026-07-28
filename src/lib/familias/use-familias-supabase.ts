@@ -24,6 +24,7 @@ import {
   type RegistrarMovimentacaoInput,
   type RegistrarMovimentacaoItemInput,
   aprovarAssistidoDefinitivoNoSupabase,
+  inativarAssistidoNoSupabase,
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
@@ -137,6 +138,27 @@ export function useAprovarAssistidoDefinitivo() {
   return useMutation({
     mutationFn: async (variables: { assistidoId: string; familiaId: string }) => {
       const result = await aprovarAssistidoDefinitivoNoSupabase(variables.assistidoId);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.resumoAtendimento(variables.assistidoId),
+      });
+    },
+  });
+}
+
+export function useInativarAssistido() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (variables: { assistidoId: string; familiaId: string }) => {
+      const result = await inativarAssistidoNoSupabase(variables.assistidoId);
       if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
       return result.data;
     },

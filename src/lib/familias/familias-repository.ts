@@ -21,6 +21,7 @@ import type {
   RegistrarMovimentacaoResult,
   TentativaBloqueadaPainel,
   AprovarAssistidoResult,
+  InativarAssistidoResult,
   AtualizarResponsavelResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
@@ -496,6 +497,47 @@ export async function aprovarAssistidoDefinitivoNoSupabase(
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseWriteError("aprovar_assistido", error),
+    };
+  }
+}
+
+async function inativarAssistido(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<InativarAssistidoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("inativar_assistido", {
+    p_assistido_id: assistidoId,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("inativar_assistido", error) };
+  }
+
+  const row = firstRow<InativarAssistidoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "inativar_assistido",
+        code: "EMPTY_RESULT",
+        message: "A inativação do assistido não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function inativarAssistidoNoSupabase(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<InativarAssistidoResult>> {
+  try {
+    return await inativarAssistido(assistidoId);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("inativar_assistido", error),
     };
   }
 }

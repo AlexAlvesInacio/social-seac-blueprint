@@ -24,6 +24,7 @@ import { useConfiguracoes } from "@/lib/configuracoes/configuracoes-supabase";
 import type { AssistidoParaEntrega } from "@/lib/familias/familias-supabase-types";
 import {
   useAprovarAssistidoDefinitivo,
+  useInativarAssistido,
   useRegistrarEntregaSupabase,
   useRegistrarTentativaSupabase,
   useResumoAtendimento,
@@ -52,6 +53,7 @@ export function RegistrarEntregaSupabaseDialog({
   const registrarEntrega = useRegistrarEntregaSupabase();
   const registrarTentativa = useRegistrarTentativaSupabase();
   const aprovarDefinitivo = useAprovarAssistidoDefinitivo();
+  const inativarAssistido = useInativarAssistido();
   const [motivo, setMotivo] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -70,7 +72,10 @@ export function RegistrarEntregaSupabaseDialog({
   }, [open]);
 
   const salvando =
-    registrarEntrega.isPending || registrarTentativa.isPending || aprovarDefinitivo.isPending;
+    registrarEntrega.isPending ||
+    registrarTentativa.isPending ||
+    aprovarDefinitivo.isPending ||
+    inativarAssistido.isPending;
 
   const elegibilidade: Elegibilidade | null =
     assistido && resumoQuery.data
@@ -135,6 +140,26 @@ export function RegistrarEntregaSupabaseDialog({
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível aprovar o cadastro.");
+    }
+  };
+
+  const negarCadastro = async () => {
+    if (!assistido) return;
+    try {
+      await inativarAssistido.mutateAsync({
+        assistidoId: assistido.id,
+        familiaId: assistido.familiaId,
+      });
+      registrarAuditoria({
+        acao: "Cadastro negado (assistido inativado)",
+        modulo: "Atendimento",
+        registro: `${assistido.nome} (${assistido.documento})`,
+        observacao: "Avaliação após 3 Cestas Extra: cadastro negado; assistido inativado.",
+      });
+      toast.success("Cadastro negado — assistido inativado.");
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível negar o cadastro.");
     }
   };
 
@@ -244,22 +269,23 @@ export function RegistrarEntregaSupabaseDialog({
             {elegibilidade.cenario === "extra_completou" && (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground">
-                  Após a avaliação, aprove o cadastro como definitivo para o assistido passar a
-                  receber <strong>Cesta Padrão</strong> nas próximas retiradas.
+                  Avalie o cadastro: <strong>aprovar</strong> torna o assistido definitivo (passa a
+                  receber <strong>Cesta Padrão</strong>); <strong>negar</strong> inativa o assistido
+                  (deixa de receber e sai da busca).
                 </p>
                 <DialogFooter className="gap-2">
                   <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Fechar
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     disabled={salvando}
-                    onClick={() => void registrarBloqueio("extra")}
+                    onClick={() => void negarCadastro()}
                   >
-                    Registrar tentativa
+                    {inativarAssistido.isPending ? "Negando…" : "Negar cadastro"}
                   </Button>
                   <Button disabled={salvando} onClick={() => void aprovarCadastroDefinitivo()}>
-                    {aprovarDefinitivo.isPending ? "Aprovando…" : "Aprovar cadastro definitivo"}
+                    {aprovarDefinitivo.isPending ? "Aprovando…" : "Aprovar cadastro"}
                   </Button>
                 </DialogFooter>
               </div>
