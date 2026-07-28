@@ -71,6 +71,7 @@ import {
 import { AdicionarAssistidoSupabaseDialog } from "@/components/adicionar-assistido-supabase-dialog";
 import { AdicionarMembroSupabaseDialog } from "@/components/adicionar-membro-supabase-dialog";
 import { EditarMembroSupabaseDialog } from "@/components/editar-membro-supabase-dialog";
+import { EditarResponsavelSupabaseDialog } from "@/components/editar-responsavel-supabase-dialog";
 import { EditarFamiliaSupabaseDialog } from "@/components/editar-familia-supabase-dialog";
 import { RegistrarObservacaoSupabaseDialog } from "@/components/registrar-observacao-supabase-dialog";
 import { RegistrarEntregaSupabaseDialog } from "@/components/registrar-entrega-supabase-dialog";
@@ -711,6 +712,7 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
   const [assistidoOpen, setAssistidoOpen] = useState(false);
   const [membroOpen, setMembroOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
+  const [responsavelOpen, setResponsavelOpen] = useState(false);
   const [obsOpen, setObsOpen] = useState(false);
   const [entregaAssistido, setEntregaAssistido] = useState<AssistidoSupabaseReadModel | null>(null);
   const [membroEditar, setMembroEditar] = useState<MembroFamiliarSupabaseReadModel | null>(null);
@@ -749,6 +751,14 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
           <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditarOpen(true)}>
             <Pencil className="h-4 w-4" /> Editar família
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            onClick={() => setResponsavelOpen(true)}
+          >
+            <Pencil className="h-4 w-4" /> Editar responsável
+          </Button>
           <Button size="sm" className="gap-2" onClick={() => setAssistidoOpen(true)}>
             <Plus className="h-4 w-4" /> Adicionar assistido
           </Button>
@@ -778,6 +788,11 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
       <EditarFamiliaSupabaseDialog
         open={editarOpen}
         onOpenChange={setEditarOpen}
+        familia={familia}
+      />
+      <EditarResponsavelSupabaseDialog
+        open={responsavelOpen}
+        onOpenChange={setResponsavelOpen}
         familia={familia}
       />
       <RegistrarObservacaoSupabaseDialog
@@ -810,10 +825,9 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
                 Dados do Supabase — edição de família, assistidos, membros e observações
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Já é possível editar a família, adicionar assistidos e membros, registrar
-                observações, atender (registrar entrega) e consultar o histórico de entregas e
-                tentativas bloqueadas. A edição do responsável ainda não está disponível para
-                famílias remotas.
+                Já é possível editar a família e o responsável, adicionar/editar assistidos e
+                membros, registrar observações, atender (registrar entrega) e consultar o histórico
+                de entregas e tentativas bloqueadas.
               </p>
             </div>
           </CardContent>
