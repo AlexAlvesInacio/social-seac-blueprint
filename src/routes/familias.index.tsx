@@ -410,22 +410,13 @@ function FamiliasPage() {
                           />
                         </TableCell>
                         <TableCell className="font-medium">
-                          {familia.origem === "local" ? (
-                            <Link
-                              to="/familias/$id"
-                              params={{ id: String(familia.id) }}
-                              className="text-foreground hover:underline"
-                            >
-                              {familia.nome}
-                            </Link>
-                          ) : (
-                            <div className="flex flex-col">
-                              <span>{familia.nome || "Família sem nome de referência"}</span>
-                              <span className="text-[11px] font-normal text-muted-foreground">
-                                Ações remotas desta lista ainda não integradas
-                              </span>
-                            </div>
-                          )}
+                          <Link
+                            to="/familias/$id"
+                            params={{ id: String(familia.id) }}
+                            className="text-foreground hover:underline"
+                          >
+                            {familia.nome || "Família sem nome de referência"}
+                          </Link>
                         </TableCell>
                         <TableCell>{familia.responsavel || "—"}</TableCell>
                         <TableCell className="whitespace-nowrap">
