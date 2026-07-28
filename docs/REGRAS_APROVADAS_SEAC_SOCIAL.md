@@ -29,8 +29,14 @@ registro do motivo neste arquivo.
 
 - Busca por CPF, RG, documento, nome ou telefone.
 - Entrega permitida somente para assistido ativo e elegível.
-- Intervalo mínimo para nova retirada: 25 dias.
-- Antes dos 25 dias, a entrega fica bloqueada.
+- Intervalo mínimo para nova retirada: 25 dias (**padrão**).
+  - O intervalo e o limite de extras são **parametrizáveis** em Configurações
+    (`configuracoes.intervalo_minimo_dias` / `limite_extra`), autoritativos tanto
+    no servidor quanto na tela de atendimento. `intervalo_minimo_dias = 0`
+    desliga o bloqueio por prazo (sem espera). Registrado em 2026-07-28
+    (homologação #43): o frontend passou a ler esses valores da tabela em vez de
+    constantes fixas, e o CHECK do intervalo foi relaxado de `> 0` para `>= 0`.
+- Antes do prazo configurado, a entrega fica bloqueada.
 - Bloqueio por prazo deve registrar tentativa bloqueada.
 - Liberação excepcional somente para Administrador.
 - Liberação excepcional exige motivo/observação obrigatória.
