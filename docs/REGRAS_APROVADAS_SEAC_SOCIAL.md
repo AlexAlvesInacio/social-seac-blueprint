@@ -51,6 +51,14 @@ registro do motivo neste arquivo.
 - Após avaliação definitiva aprovada, assistido passa a receber
   Cesta Padrão.
 - Não converter automaticamente para definitivo.
+- A aprovação é **manual**, feita no atendimento (estado "Extra
+  completou") por **administrador ou atendente** ativo, via RPC
+  `aprovar_assistido_definitivo` (Extra → Definitivo, benefício passa
+  a Cesta Padrão).
+  - **Registrado em 2026-07-28 (homologação #43).** Motivo: o estado
+    "Extra completou" não tinha ação de avaliação; faltava permitir a
+    conversão manual que a própria regra prevê ("não converter
+    automaticamente").
 
 ## 4. Acompanhamento
 

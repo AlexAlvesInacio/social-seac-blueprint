@@ -386,6 +386,12 @@ export interface CriarMembroResult {
   membro_familiar_id: MembroFamiliarSupabaseId;
 }
 
+/** Retorno de `public.aprovar_assistido_definitivo`. */
+export interface AprovarAssistidoResult {
+  assistido_id: AssistidoSupabaseId;
+  familia_id: FamiliaSupabaseId;
+}
+
 /** Retorno de `public.atualizar_familia`. */
 export interface AtualizarFamiliaResult {
   familia_id: FamiliaSupabaseId;

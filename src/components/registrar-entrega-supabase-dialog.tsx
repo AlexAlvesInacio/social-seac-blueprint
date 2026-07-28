@@ -18,10 +18,12 @@ import {
   verificarElegibilidadeAtendimento,
   type Elegibilidade,
 } from "@/lib/atendimento-regras";
+import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 import { getCurrentProfile } from "@/lib/auth/auth-service";
 import { useConfiguracoes } from "@/lib/configuracoes/configuracoes-supabase";
 import type { AssistidoParaEntrega } from "@/lib/familias/familias-supabase-types";
 import {
+  useAprovarAssistidoDefinitivo,
   useRegistrarEntregaSupabase,
   useRegistrarTentativaSupabase,
   useResumoAtendimento,
@@ -49,6 +51,7 @@ export function RegistrarEntregaSupabaseDialog({
   const limiteExtra = configQuery.data?.limiteExtra ?? 3;
   const registrarEntrega = useRegistrarEntregaSupabase();
   const registrarTentativa = useRegistrarTentativaSupabase();
+  const aprovarDefinitivo = useAprovarAssistidoDefinitivo();
   const [motivo, setMotivo] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -66,7 +69,8 @@ export function RegistrarEntregaSupabaseDialog({
     };
   }, [open]);
 
-  const salvando = registrarEntrega.isPending || registrarTentativa.isPending;
+  const salvando =
+    registrarEntrega.isPending || registrarTentativa.isPending || aprovarDefinitivo.isPending;
 
   const elegibilidade: Elegibilidade | null =
     assistido && resumoQuery.data
@@ -111,6 +115,26 @@ export function RegistrarEntregaSupabaseDialog({
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível registrar a entrega.");
+    }
+  };
+
+  const aprovarCadastroDefinitivo = async () => {
+    if (!assistido) return;
+    try {
+      await aprovarDefinitivo.mutateAsync({
+        assistidoId: assistido.id,
+        familiaId: assistido.familiaId,
+      });
+      registrarAuditoria({
+        acao: "Cadastro aprovado como definitivo",
+        modulo: "Atendimento",
+        registro: `${assistido.nome} (${assistido.documento})`,
+        observacao: "Extra → Definitivo; passa a receber Cesta Padrão.",
+      });
+      toast.success("Cadastro aprovado como definitivo — passa a receber Cesta Padrão.");
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível aprovar o cadastro.");
     }
   };
 
@@ -218,14 +242,27 @@ export function RegistrarEntregaSupabaseDialog({
             )}
 
             {elegibilidade.cenario === "extra_completou" && (
-              <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Fechar
-                </Button>
-                <Button disabled={salvando} onClick={() => void registrarBloqueio("extra")}>
-                  Registrar tentativa
-                </Button>
-              </DialogFooter>
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Após a avaliação, aprove o cadastro como definitivo para o assistido passar a
+                  receber <strong>Cesta Padrão</strong> nas próximas retiradas.
+                </p>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    Fechar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={salvando}
+                    onClick={() => void registrarBloqueio("extra")}
+                  >
+                    Registrar tentativa
+                  </Button>
+                  <Button disabled={salvando} onClick={() => void aprovarCadastroDefinitivo()}>
+                    {aprovarDefinitivo.isPending ? "Aprovando…" : "Aprovar cadastro definitivo"}
+                  </Button>
+                </DialogFooter>
+              </div>
             )}
           </div>
         )}

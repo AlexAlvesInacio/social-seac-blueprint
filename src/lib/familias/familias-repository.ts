@@ -20,6 +20,7 @@ import type {
   RecebimentoOrigem,
   RegistrarMovimentacaoResult,
   TentativaBloqueadaPainel,
+  AprovarAssistidoResult,
   AtualizarResponsavelResult,
   CriarAssistidoResult,
   CriarFamiliaResult,
@@ -455,6 +456,47 @@ export async function criarAssistidoEmFamiliaNoSupabase(
     return await criarAssistido(input);
   } catch (error) {
     return { data: null, error: toUnexpectedFamiliasSupabaseWriteError("criar_assistido", error) };
+  }
+}
+
+async function aprovarAssistido(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<AprovarAssistidoResult>> {
+  const { data, error } = await getSupabaseClient().rpc("aprovar_assistido_definitivo", {
+    p_assistido_id: assistidoId,
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("aprovar_assistido", error) };
+  }
+
+  const row = firstRow<AprovarAssistidoResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "aprovar_assistido",
+        code: "EMPTY_RESULT",
+        message: "A aprovação do cadastro não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function aprovarAssistidoDefinitivoNoSupabase(
+  assistidoId: string,
+): Promise<FamiliasSupabaseWriteResult<AprovarAssistidoResult>> {
+  try {
+    return await aprovarAssistido(assistidoId);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("aprovar_assistido", error),
+    };
   }
 }
 
