@@ -326,7 +326,8 @@ function PainelPage() {
     { label: "PCD", value: dados.publico.pcd, hint: "Deficiência" },
   ];
 
-  const PIE_COLORS = ["#1E5AA8", "#E8712A", "#4C8FD1", "#F4A96B"];
+  // Paleta da marca (cores do logo) via tokens de tema — acompanha light/dark.
+  const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
 
   return (
     <AppShell title="Painel">
@@ -407,7 +408,7 @@ function PainelPage() {
                   />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Bar dataKey="qtd" fill="#1E5AA8" radius={[4, 4, 0, 0]} minPointSize={4}>
+                  <Bar dataKey="qtd" fill="var(--chart-1)" radius={[4, 4, 0, 0]} minPointSize={4}>
                     <LabelList
                       dataKey="qtd"
                       position="top"

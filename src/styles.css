@@ -84,11 +84,13 @@
   --border: oklch(0.92 0.01 180);
   --input: oklch(0.92 0.01 180);
   --ring: oklch(0.58 0.14 165);
-  --chart-1: #1e5aa8;
-  --chart-2: #e8712a;
-  --chart-3: #4c8fd1;
-  --chart-4: #f4a96b;
-  --chart-5: #0f3d7a;
+  /* Paleta de gráficos = cores da marca (logo SEAC): verde, azul, laranja,
+     marinho, vermelho. Em hex por exatidão com o logo (o restante do tema usa oklch). */
+  --chart-1: #0e9c8e;
+  --chart-2: #29abe2;
+  --chart-3: #f7a81b;
+  --chart-4: #0b2a4a;
+  --chart-5: #c1272d;
   --sidebar: oklch(0.995 0 0);
   --sidebar-foreground: oklch(0.3 0.03 180);
   --sidebar-primary: oklch(0.58 0.14 165);
@@ -108,8 +110,9 @@
   --card-foreground: oklch(0.984 0.003 247.858);
   --popover: oklch(0.208 0.042 265.755);
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
+  /* Mantém o verde da marca também no dark (antes virava quase-neutro). */
+  --primary: oklch(0.58 0.14 165);
+  --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.279 0.041 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
   --muted: oklch(0.279 0.041 260.031);
@@ -120,12 +123,13 @@
   --destructive-foreground: oklch(0.984 0.003 247.858);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --ring: oklch(0.58 0.14 165);
+  /* Mesma paleta de gráficos do light (cores do logo) para consistência. */
+  --chart-1: #0e9c8e;
+  --chart-2: #29abe2;
+  --chart-3: #f7a81b;
+  --chart-4: #0b2a4a;
+  --chart-5: #c1272d;
   --sidebar: oklch(0.208 0.042 265.755);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
   --sidebar-primary: oklch(0.488 0.243 264.376);
