@@ -89,7 +89,6 @@ function RecebimentosPage() {
   const [origem, setOrigem] = useState<RecebimentoOrigem>("doacao");
   const [parte, setParte] = useState("");
   const [documento, setDocumento] = useState("");
-  const [valor, setValor] = useState("");
   const [observacao, setObservacao] = useState("");
   const [itens, setItens] = useState<ItemForm[]>([{ ...itemVazio }]);
 
@@ -103,10 +102,20 @@ function RecebimentosPage() {
     setOrigem("doacao");
     setParte("");
     setDocumento("");
-    setValor("");
     setObservacao("");
     setItens([{ ...itemVazio }]);
   };
+
+  // Valor total = soma de (quantidade × valor unitário) dos itens informados.
+  const valorTotal = useMemo(
+    () =>
+      itens.reduce((acc, it) => {
+        const qtd = Number(it.quantidade);
+        const vu = Number(it.valorUnitario);
+        return acc + (Number.isFinite(qtd) && Number.isFinite(vu) ? qtd * vu : 0);
+      }, 0),
+    [itens],
+  );
 
   const lista = recebimentos.data ?? [];
   const kpis = useMemo(() => {
@@ -149,7 +158,7 @@ function RecebimentosPage() {
         origem,
         parte,
         documento,
-        valor: valor ? Number(valor) : 0,
+        valor: Number(valorTotal.toFixed(2)),
         observacao,
         itens: itensValidos,
       });
@@ -220,14 +229,11 @@ function RecebimentosPage() {
                   placeholder="CNPJ, NF, protocolo…"
                 />
               </Campo>
-              <Campo label="Valor total estimado (R$)">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={valor}
-                  onChange={(e) => setValor(e.target.value)}
-                />
+              <Campo label="Valor total (R$)">
+                <Input value={brl(valorTotal)} readOnly disabled />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Calculado automaticamente pela soma dos itens (quantidade × valor unitário).
+                </p>
               </Campo>
               <Campo label="Observação">
                 <Textarea
