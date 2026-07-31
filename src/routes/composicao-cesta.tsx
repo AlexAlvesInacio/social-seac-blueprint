@@ -30,7 +30,7 @@ import {
   useDefinirComposicaoBeneficio,
   useItensEstoque,
   useMontarCesta,
-} from "@/lib/familias/use-familias-supabase";
+} from "@/lib/estoque/use-estoque-supabase";
 import type { ItemEstoque } from "@/lib/familias/familias-supabase-types";
 
 export const Route = createFileRoute("/composicao-cesta")({

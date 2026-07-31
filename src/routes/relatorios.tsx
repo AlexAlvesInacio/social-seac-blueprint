@@ -42,7 +42,8 @@ import {
   type FiltrosRelatorio,
 } from "@/lib/relatorios-store";
 import { gerarRelatorioSupabase } from "@/lib/relatorios/relatorios-supabase";
-import { useBeneficiosEstoque, useFamiliasSupabase } from "@/lib/familias/use-familias-supabase";
+import { useBeneficiosEstoque } from "@/lib/estoque/use-estoque-supabase";
+import { useFamiliasSupabase } from "@/lib/familias/use-familias-supabase";
 import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
 
 export const Route = createFileRoute("/relatorios")({

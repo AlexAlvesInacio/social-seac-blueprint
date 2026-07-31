@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { familiasSupabaseQueryKeys } from "@/lib/familias/use-familias-supabase";
+import { estoqueQueryKeys } from "@/lib/estoque/use-estoque-supabase";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 /**
@@ -527,8 +527,8 @@ const QUERY_KEYS_POR_TABELA: Record<CadastroTabela, readonly (readonly string[])
   fornecedores: [cadastrosQueryKeys.fornecedores],
   // Itens e benefícios também alimentam as telas de estoque/recebimentos/
   // composição — invalida as queries correspondentes do domínio de famílias.
-  itens_estoque: [cadastrosQueryKeys.itens, familiasSupabaseQueryKeys.itensEstoque],
-  beneficios: [cadastrosQueryKeys.beneficios, familiasSupabaseQueryKeys.beneficiosEstoque],
+  itens_estoque: [cadastrosQueryKeys.itens, estoqueQueryKeys.itens],
+  beneficios: [cadastrosQueryKeys.beneficios, estoqueQueryKeys.beneficios],
 };
 
 function useInvalidarCadastro(tabela: CadastroTabela) {

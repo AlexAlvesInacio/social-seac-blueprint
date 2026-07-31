@@ -25,11 +25,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  useCriarRecebimento,
-  useItensEstoque,
-  useRecebimentos,
-} from "@/lib/familias/use-familias-supabase";
+import { useItensEstoque } from "@/lib/estoque/use-estoque-supabase";
+import { useCriarRecebimento, useRecebimentos } from "@/lib/familias/use-familias-supabase";
 import type { RecebimentoOrigem } from "@/lib/familias/familias-supabase-types";
 
 export const Route = createFileRoute("/recebimentos")({

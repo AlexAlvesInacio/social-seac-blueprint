@@ -31,7 +31,7 @@ import {
   useBeneficiosEstoque,
   useMovimentacoesEstoque,
   useRegistrarMovimentacaoEstoque,
-} from "@/lib/familias/use-familias-supabase";
+} from "@/lib/estoque/use-estoque-supabase";
 import type {
   BeneficioEstoque,
   MovimentacaoEstoqueTipo,
