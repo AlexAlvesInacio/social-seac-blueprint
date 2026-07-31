@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// Resquício do protótipo local: itens e benefícios ainda vivem aqui até serem
+// religados às tabelas reais itens_estoque/beneficios do Supabase (fatia
+// pendente em docs/07_STATUS_IMPLEMENTACAO.md). Unidades, categorias, doadores
+// e fornecedores já migraram para src/lib/cadastros/cadastros-supabase.ts.
+
 export type Status = "ativo" | "inativo";
 
 export type Item = {
@@ -13,21 +18,6 @@ export type Item = {
   observacao?: string;
 };
 
-export type Unidade = {
-  codigo: string;
-  nome: string;
-  sigla: string;
-  usadaEstoque: boolean;
-  status: Status;
-};
-
-export type Categoria = {
-  codigo: string;
-  nome: string;
-  descricao: string;
-  status: Status;
-};
-
 export type Beneficio = {
   codigo: string;
   nome: string;
@@ -35,43 +25,6 @@ export type Beneficio = {
   controlaEstoque: boolean;
   status: Status;
   observacao?: string;
-};
-
-export type Doador = {
-  codigo: string; // id interno
-  nome: string;
-  tipo: "Pessoa física" | "Empresa" | "Anônimo";
-  documento?: string;
-  telefone?: string;
-  email?: string;
-  endereco?: string;
-  ultimaDoacao?: string;
-  observacao?: string;
-  status: Status;
-};
-
-export type Fornecedor = {
-  codigo: string;
-  nome: string;
-  documento?: string;
-  telefone?: string;
-  email?: string;
-  categoria: string;
-  observacao?: string;
-  status: Status;
-};
-
-export type Parametros = {
-  intervaloMinimoDias: number;
-  alertaLiberadoSemRetiradaDias: number;
-  limiteExtra: number;
-  aposLimiteExtra: string;
-  inatividadeContatoDias: number;
-  liberacaoExcepcional: "admin" | "admin_atendente";
-  bloqueioSemEstoque: boolean;
-  observacaoObrigatoriaLiberacao: boolean;
-  auditoriaAtiva: boolean;
-  baixaAutomatica: boolean;
 };
 
 const SEED_ITENS: Item[] = [
@@ -157,39 +110,6 @@ const SEED_ITENS: Item[] = [
   },
 ];
 
-const SEED_UNIDADES: Unidade[] = [
-  { codigo: "UN", nome: "Unidade", sigla: "un.", usadaEstoque: true, status: "ativo" },
-  { codigo: "PCT", nome: "Pacote", sigla: "pct.", usadaEstoque: true, status: "ativo" },
-  { codigo: "KG", nome: "Quilo", sigla: "kg", usadaEstoque: true, status: "ativo" },
-  { codigo: "LT", nome: "Litro", sigla: "lt", usadaEstoque: true, status: "ativo" },
-  { codigo: "CX", nome: "Caixa", sigla: "cx", usadaEstoque: true, status: "ativo" },
-  { codigo: "FD", nome: "Fardo", sigla: "fd", usadaEstoque: true, status: "ativo" },
-];
-
-const SEED_CATEGORIAS: Categoria[] = [
-  {
-    codigo: "ALI",
-    nome: "Alimentos",
-    descricao: "Itens de alimentação usados em cestas",
-    status: "ativo",
-  },
-  { codigo: "BEB", nome: "Bebidas", descricao: "Leite, sucos e bebidas em geral", status: "ativo" },
-  {
-    codigo: "BEN",
-    nome: "Benefício montado",
-    descricao: "Cesta Padrão, Cesta Extra e kits",
-    status: "ativo",
-  },
-  { codigo: "HIG", nome: "Higiene", descricao: "Produtos de higiene pessoal", status: "ativo" },
-  {
-    codigo: "REF",
-    nome: "Refeição",
-    descricao: "Itens usados em ações de comida de rua",
-    status: "ativo",
-  },
-  { codigo: "OUT", nome: "Outros", descricao: "Itens diversos", status: "ativo" },
-];
-
 const SEED_BENEFICIOS: Beneficio[] = [
   {
     codigo: "BEN001",
@@ -220,76 +140,6 @@ const SEED_BENEFICIOS: Beneficio[] = [
     status: "ativo",
   },
 ];
-
-const SEED_DOADORES: Doador[] = [
-  {
-    codigo: "DOA001",
-    nome: "Supermercado Exemplo",
-    tipo: "Empresa",
-    documento: "00.000.000/0001-00",
-    telefone: "(11) 99999-0000",
-    ultimaDoacao: "2025-05-21",
-    status: "ativo",
-  },
-  {
-    codigo: "DOA002",
-    nome: "Família Anônima",
-    tipo: "Pessoa física",
-    documento: "Não informado",
-    telefone: "",
-    ultimaDoacao: "2025-05-10",
-    status: "ativo",
-  },
-  {
-    codigo: "DOA003",
-    nome: "Padaria Bom Pão",
-    tipo: "Empresa",
-    documento: "11.111.111/0001-11",
-    telefone: "(11) 98888-1111",
-    ultimaDoacao: "2025-05-15",
-    status: "ativo",
-  },
-];
-
-const SEED_FORNECEDORES: Fornecedor[] = [
-  {
-    codigo: "FOR001",
-    nome: "Atacadão Exemplo",
-    documento: "22.222.222/0001-22",
-    telefone: "(11) 97777-2222",
-    categoria: "Alimentos",
-    status: "ativo",
-  },
-  {
-    codigo: "FOR002",
-    nome: "Mercado Bom Preço",
-    documento: "33.333.333/0001-33",
-    telefone: "(11) 96666-3333",
-    categoria: "Alimentos",
-    status: "ativo",
-  },
-  {
-    codigo: "FOR003",
-    nome: "Distribuidora Solidária",
-    documento: "44.444.444/0001-44",
-    telefone: "(11) 95555-4444",
-    categoria: "Diversos",
-    status: "ativo",
-  },
-];
-
-const SEED_PARAMETROS: Parametros = {
-  intervaloMinimoDias: 25,
-  alertaLiberadoSemRetiradaDias: 45,
-  limiteExtra: 3,
-  aposLimiteExtra: "Avaliar cadastro definitivo",
-  inatividadeContatoDias: 90,
-  liberacaoExcepcional: "admin",
-  bloqueioSemEstoque: true,
-  observacaoObrigatoriaLiberacao: true,
-  auditoriaAtiva: true,
-  baixaAutomatica: true,
-};
 
 type CrudMethods<T extends { codigo: string }> = {
   upsert: (r: T) => void;
@@ -322,34 +172,4 @@ function makeStore<T extends { codigo: string }>(name: string, seed: T[]) {
 }
 
 export const useItens = makeStore<Item>("seac.itens.v1", SEED_ITENS);
-export const useUnidades = makeStore<Unidade>("seac.unidades.v1", SEED_UNIDADES);
-export const useCategorias = makeStore<Categoria>("seac.categorias.v1", SEED_CATEGORIAS);
 export const useBeneficios = makeStore<Beneficio>("seac.beneficios.v1", SEED_BENEFICIOS);
-export const useDoadores = makeStore<Doador>("seac.doadores.v1", SEED_DOADORES);
-export const useFornecedores = makeStore<Fornecedor>("seac.fornecedores.v1", SEED_FORNECEDORES);
-
-export const useParametros = create<{
-  params: Parametros;
-  setParams: (p: Parametros) => void;
-}>()(
-  persist(
-    (set) => ({
-      params: SEED_PARAMETROS,
-      setParams: (p) => set({ params: p }),
-    }),
-    { name: "seac.parametros.v1" },
-  ),
-);
-
-// Helpers para outras telas: apenas ativos.
-export const getItensAtivos = () => useItens.getState().rows.filter((r) => r.status === "ativo");
-export const getUnidadesAtivas = () =>
-  useUnidades.getState().rows.filter((r) => r.status === "ativo");
-export const getCategoriasAtivas = () =>
-  useCategorias.getState().rows.filter((r) => r.status === "ativo");
-export const getBeneficiosAtivos = () =>
-  useBeneficios.getState().rows.filter((r) => r.status === "ativo");
-export const getDoadoresAtivos = () =>
-  useDoadores.getState().rows.filter((r) => r.status === "ativo");
-export const getFornecedoresAtivos = () =>
-  useFornecedores.getState().rows.filter((r) => r.status === "ativo");
