@@ -60,8 +60,9 @@ observações relevantes de cada área do MVP.
   edição da família, adicionar/editar assistido e membro.
 - **Regras principais:** responsável conta como morador; assistidos e
   membros são deduplicados por documento.
-- **Observações:** dados vindos do store `familias-store` durante a
-  homologação.
+- **Observações:** homologado originalmente sobre o store local
+  `familias-store`; desde 2026-07-30 a tela é Supabase-only (o store
+  local foi removido — ver `07_STATUS_IMPLEMENTACAO.md`).
 - **Pendências não bloqueantes:** anexos e documentos digitalizados
   ficam para fase posterior.
 

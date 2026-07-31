@@ -9,7 +9,7 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 | --- | --- | --- |
 | Login | Implementado (Supabase Auth) | `/auth` chama `signIn` real, valida sessão e status (`pendente`/`inativo`), e protege rotas via `RequireActiveProfile`. |
 | Usuários | Implementado (Supabase) | Fluxo administrativo por RPC (`aprovar_usuario`, `inativar_usuario`, `alterar_papel_usuario`) com RLS em `profiles`. |
-| Famílias | Migrado ao Supabase | Schema + RLS + RPCs; criação/edição de família e do responsável. A criação (`criar_familia_com_responsavel`) passou a cadastrar o responsável **também como assistido** (tipo definitivo/extra) na mesma transação — regra registrada em `REGRAS_APROVADAS_SEAC_SOCIAL.md` §1. A lista ainda cai para o store local quando não há linhas no Supabase, e o detalhe por id numérico usa o store local (dual-source residual — ver riscos). |
+| Famílias | Supabase-only | Schema + RLS + RPCs; criação/edição de família e do responsável. A criação (`criar_familia_com_responsavel`) passou a cadastrar o responsável **também como assistido** (tipo definitivo/extra) na mesma transação — regra registrada em `REGRAS_APROVADAS_SEAC_SOCIAL.md` §1. O dual-source foi aposentado em 2026-07-30: lista, detalhe e cadastros usam exclusivamente o Supabase; `familias-store`, `atendimento-store` e os dialogs locais foram removidos, e os helpers de faixa etária migraram para `src/lib/familias/faixa-etaria.ts`. |
 | Assistidos | Migrado ao Supabase | Criação via `criar_assistido_em_familia` (com reuso de pessoa existente, `p_pessoa_id`) e leitura no agregado da família. Avaliação manual no atendimento (estado "Extra completou"): aprovar (`aprovar_assistido_definitivo`, Extra → Definitivo) ou negar (`inativar_assistido`). |
 | Membros | Migrado ao Supabase | Criação via `criar_membro_em_familia` (com reuso de pessoa) e leitura no agregado. |
 | Observações sociais | Migrado ao Supabase | Registro por INSERT (policy de equipe ativa); leitura no detalhe, com nome do autor resolvido via `profiles.nome_completo`. |
@@ -27,11 +27,12 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 
 ## Divergências e riscos relevantes
 
-- **Protótipo local de famílias ainda presente (dual-source).** `familias.index.tsx`
-  cai para o store local quando o Supabase não retorna linhas; `familias.$id.tsx`
-  mantém `FamiliaLocalDetail` (id numérico) sobre `familias-store`/`atendimento-store`;
-  `nova-familia-dialog` e `familia-detail-dialogs` têm ramos locais. Aposentar isso
-  (tornar famílias **Supabase-only**) é o follow-up da tarefa 9.
+- **[Resolvido — 2026-07-30] Protótipo local de famílias (dual-source) aposentado.**
+  `familias.index.tsx` e `familias.$id.tsx` são Supabase-only; ids numéricos no
+  detalhe mostram mensagem de identificador inválido. `familias-store.ts`,
+  `atendimento-store.ts` e `familia-detail-dialogs.tsx` foram removidos (era o
+  follow-up da tarefa 9). A coluna "Progresso Extra" saiu da lista — o dado era
+  exclusivo do protótipo local e nunca existiu no read model remoto.
 - **Transferência de pessoa entre famílias ativas.** O reuso de pessoa existente já
   funciona (`p_pessoa_id`); a transferência (pessoa já ativa em outra família) ainda
   não — o cadastro avisa e recusa (`SEAP1`).
