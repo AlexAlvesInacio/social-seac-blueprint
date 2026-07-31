@@ -20,7 +20,7 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 | Painel | Migrado ao Supabase | Consolida estoque, entregas e demografia lidos do Supabase. |
 | Relatórios | Migrado ao Supabase | 10+ tipos + CSV lendo do Supabase, incluindo bloqueios por prazo/estoque/extra. |
 | Auditoria | Migrado ao Supabase (imutável) | Tabela `auditoria_eventos` append-only (só SELECT/INSERT; sem UPDATE/DELETE). A tela lê do banco, resolve o autor e não permite limpar o histórico. |
-| Configurações | Parcial | Os **parâmetros de regra** (`configuracoes`: 25 dias, limite extra, etc.) estão no banco e são autoritativos no atendimento (admin edita). Em 2026-07-30, unidades, categorias, doadores e fornecedores migraram para tabelas próprias no Supabase (migration `20260731004140_cadastros_auxiliares`; RLS: equipe de estoque consulta, só admin altera; camada em `src/lib/cadastros/`). Restam em `config-store` (localStorage) apenas **itens** e **benefícios**, que duplicam `itens_estoque`/`beneficios` — religá-los às tabelas reais é a próxima fatia. |
+| Configurações | Migrado ao Supabase | Os **parâmetros de regra** (`configuracoes`: 25 dias, limite extra, etc.) estão no banco e são autoritativos no atendimento (admin edita). Em 2026-07-30, os cadastros auxiliares migraram por completo: unidades/categorias/doadores/fornecedores em tabelas próprias (migration `20260731004140`; RLS: equipe de estoque consulta, só admin altera) e as abas Itens/Benefícios religadas às tabelas reais `itens_estoque`/`beneficios` (migration `20260731005549`: campos de cadastro tipo/observacao, normalização de categoria/unidade e policies de insert/delete). Camada em `src/lib/cadastros/`; `config-store` foi removido. |
 | Supabase | Implementado nos domínios ativos | Cliente, migrations versionadas, RLS e RPCs cobrindo profiles, famílias/pessoas/membros/assistidos/observações, atendimento/entregas/tentativas, benefícios+itens+composição+movimentações, recebimentos, configurações e auditoria. |
 | Segurança | Boa, com pendências | RLS em todas as tabelas expostas; RPCs de escrita `SECURITY INVOKER` com `search_path=''`; autoria/timestamps por trigger; enforcement das regras de atendimento no banco; ledger de saldo não-burlável (trigger + flag transacional); papel `estoque` habilitado no domínio de estoque. Faltam: backup testado e suíte de testes. |
 | Testes | Não implementado | Sem suíte automatizada. Validação por `bun run lint` + `bun run build` e testes manuais. |
@@ -38,10 +38,13 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
   não — o cadastro avisa e recusa (`SEAP1`).
 - **Vínculo de observação a pessoa/assistido específico.** A observação social é da
   família; ligá-la a uma pessoa/assistido específico continua pendente.
-- **Itens e benefícios da tela de Configurações ainda em localStorage.** As abas
-  Itens e Benefícios seguem no `config-store` e duplicam `itens_estoque`/`beneficios`
-  do Supabase; religá-las às tabelas reais é a fatia restante da consolidação
-  (unidades/categorias/doadores/fornecedores já migraram em 2026-07-30).
+- **[Resolvido — 2026-07-30] Cadastros auxiliares consolidados no Supabase.**
+  `config-store.ts` foi removido: unidades/categorias/doadores/fornecedores têm
+  tabelas próprias e as abas Itens/Benefícios editam `itens_estoque`/`beneficios`
+  diretamente (saldo continua protegido — só muda via RPCs de movimentação).
+  Convenção nova: `itens_estoque.categoria`/`unidade` guardam o **nome** do
+  cadastro auxiliar (ex.: "Alimentos", "Pacote"); os seeds antigos foram
+  normalizados na migration `20260731005549`.
 - **Papéis vs. status.** Perfis usam papéis `administrador/atendente/estoque`
   separados dos status `pendente/ativo/inativo` (não confundir as duas colunas).
 
