@@ -38,8 +38,6 @@ import {
   useConfiguracoes,
   type Configuracoes,
 } from "@/lib/configuracoes/configuracoes-supabase";
-import type { Familia, TipoCadastro } from "@/lib/familias-store";
-import { useFamilias } from "@/lib/familias-store";
 import type { FamiliaSupabaseReadModel } from "@/lib/familias/familias-supabase-types";
 import { useFamiliasSupabase } from "@/lib/familias/use-familias-supabase";
 import { NovaFamiliaDialog } from "@/components/nova-familia-dialog";
@@ -52,51 +50,19 @@ export const Route = createFileRoute("/familias/")({
   component: FamiliasPage,
 });
 
-type FamiliaListaBase = {
+type FamiliaListaItem = {
+  id: string;
   nome: string;
   responsavel: string;
   documento: string;
   telefone: string;
   bairro: string;
-  tipoCadastro: TipoCadastro | "misto" | null;
-  progressoExtra: string | null;
-  ultimaRetirada: string | null;
-  acompanhamento: Familia["acompanhamento"];
-  status: Familia["status"];
+  tipoCadastro: "definitivo" | "extra" | "misto" | null;
+  acompanhamento: FamiliaSupabaseReadModel["acompanhamento"];
+  status: FamiliaSupabaseReadModel["status"];
 };
 
-type FamiliaListaLocal = FamiliaListaBase & {
-  origem: "local";
-  id: number;
-};
-
-type FamiliaListaSupabase = FamiliaListaBase & {
-  origem: "supabase";
-  id: string;
-};
-
-type FamiliaListaItem = FamiliaListaLocal | FamiliaListaSupabase;
-
-function mapFamiliaLocalParaLista(familia: Familia): FamiliaListaLocal {
-  return {
-    origem: "local",
-    id: familia.id,
-    nome: familia.nome,
-    responsavel: familia.responsavel,
-    documento: familia.documento,
-    telefone: familia.telefone,
-    bairro: familia.bairro,
-    tipoCadastro: familia.tipoCadastro,
-    progressoExtra: familia.progressoExtra,
-    ultimaRetirada: familia.ultimaRetirada,
-    acompanhamento: familia.acompanhamento,
-    status: familia.status,
-  };
-}
-
-function resumirTipoCadastroSupabase(
-  familia: FamiliaSupabaseReadModel,
-): FamiliaListaSupabase["tipoCadastro"] {
+function resumirTipoCadastro(familia: FamiliaSupabaseReadModel): FamiliaListaItem["tipoCadastro"] {
   const tiposAtivos = new Set(
     familia.assistidos
       .filter((assistido) => assistido.status !== "inativo")
@@ -109,57 +75,42 @@ function resumirTipoCadastroSupabase(
   return null;
 }
 
-function mapFamiliaSupabaseParaLista(familia: FamiliaSupabaseReadModel): FamiliaListaSupabase {
+function mapFamiliaParaLista(familia: FamiliaSupabaseReadModel): FamiliaListaItem {
   return {
-    origem: "supabase",
     id: familia.id,
     nome: familia.nome,
     responsavel: familia.responsavel,
     documento: familia.documento,
     telefone: familia.telefone,
     bairro: familia.bairro,
-    tipoCadastro: resumirTipoCadastroSupabase(familia),
-    progressoExtra: null,
-    ultimaRetirada: null,
+    tipoCadastro: resumirTipoCadastro(familia),
     acompanhamento: familia.acompanhamento,
     status: familia.status,
   };
 }
 
 function FamiliasPage() {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [novaOpen, setNovaOpen] = useState(false);
   const [cadastroMessage, setCadastroMessage] = useState<string | null>(null);
-  const familiasLocais = useFamilias((s) => s.familias);
   const {
     data: familiasSupabase,
-    isLoadingError: supabaseFalhaInicial,
-    isRefetchError: supabaseFalhaAtualizacao,
-    isPending: supabaseCarregando,
+    isLoadingError: falhaInicial,
+    isRefetchError: falhaAtualizacao,
+    isPending: carregando,
   } = useFamiliasSupabase();
-  const temFamiliasSupabase = Boolean(familiasSupabase?.length);
-  const usandoSupabase = temFamiliasSupabase && !supabaseFalhaInicial;
-  const todasFamilias: FamiliaListaItem[] = usandoSupabase
-    ? (familiasSupabase ?? []).map(mapFamiliaSupabaseParaLista)
-    : familiasLocais.map(mapFamiliaLocalParaLista);
+  const todasFamilias: FamiliaListaItem[] = (familiasSupabase ?? []).map(mapFamiliaParaLista);
   const { foco } = Route.useSearch();
-  const exemploFamilias =
+  const familiasFiltradas =
     foco === "avaliar"
-      ? todasFamilias.filter(
-          (f) =>
-            f.status === "avaliar" || (f.tipoCadastro === "extra" && f.progressoExtra === "3/3"),
-        )
+      ? todasFamilias.filter((f) => f.status === "avaliar")
       : foco === "contato90"
         ? todasFamilias.filter((f) => f.acompanhamento === "sem_retirada_90")
         : todasFamilias;
-  const selected =
-    exemploFamilias.find(
-      (familia): familia is FamiliaListaLocal =>
-        familia.origem === "local" && familia.id === selectedId,
-    ) ?? null;
+  const selected = familiasFiltradas.find((familia) => familia.id === selectedId) ?? null;
   const { data: configData } = useConfiguracoes();
   const params = configData ?? CONFIGURACOES_PADRAO;
-  const toggleSelect = (id: number) => setSelectedId((cur) => (cur === id ? null : id));
+  const toggleSelect = (id: string) => setSelectedId((cur) => (cur === id ? null : id));
 
   const total = todasFamilias.length;
   const definitivos = todasFamilias.filter(
@@ -198,21 +149,12 @@ function FamiliasPage() {
       <NovaFamiliaDialog
         open={novaOpen}
         onOpenChange={setNovaOpen}
-        onCreated={({ origem, nome }) =>
-          setCadastroMessage(
-            origem === "supabase"
-              ? `${nome} foi cadastrada no Supabase.`
-              : `${nome} foi salva somente neste navegador.`,
-          )
-        }
-        destinoInicial="supabase"
-        fonteLista={usandoSupabase ? "supabase" : "local"}
+        onCreated={({ nome }) => setCadastroMessage(`${nome} foi cadastrada com sucesso.`)}
       />
       <FonteDadosNotice
-        carregando={supabaseCarregando}
-        falhaInicial={supabaseFalhaInicial}
-        falhaAtualizacao={supabaseFalhaAtualizacao}
-        usandoSupabase={usandoSupabase}
+        carregando={carregando}
+        falhaInicial={falhaInicial}
+        falhaAtualizacao={falhaAtualizacao}
       />
       {cadastroMessage && (
         <div
@@ -312,7 +254,7 @@ function FamiliasPage() {
               </span>
               <div className="ml-auto flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" className="gap-1" asChild>
-                  <Link to="/familias/$id" params={{ id: String(selected.id) }}>
+                  <Link to="/familias/$id" params={{ id: selected.id }}>
                     <Eye className="h-3.5 w-3.5" /> Ver detalhes
                   </Link>
                 </Button>
@@ -330,11 +272,6 @@ function FamiliasPage() {
                     <Link to="/atendimento" search={{ assistido: undefined }}>
                       <ArrowRight className="h-3.5 w-3.5" /> Ir para atendimento
                     </Link>
-                  </Button>
-                )}
-                {selected.progressoExtra === "3/3" && (
-                  <Button variant="warning" size="sm" className="gap-1">
-                    <AlertTriangle className="h-3.5 w-3.5" /> Avaliar cadastro definitivo
                   </Button>
                 )}
                 <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
@@ -362,57 +299,38 @@ function FamiliasPage() {
                   <TableHead className="whitespace-nowrap">Telefone</TableHead>
                   <TableHead>Bairro</TableHead>
                   <TableHead>Tipo de cadastro</TableHead>
-                  <TableHead>Progresso Extra</TableHead>
                   <TableHead>Acompanhamento</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {exemploFamilias.length === 0 ? (
+                {familiasFiltradas.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
+                      colSpan={9}
                       className="py-16 text-center text-sm text-muted-foreground"
                     >
-                      {usandoSupabase ? (
-                        "Nenhuma família do Supabase corresponde ao filtro atual."
-                      ) : (
-                        <>
-                          Nenhuma família cadastrada ainda.
-                          <br />
-                          <Link
-                            to="/familias/$id"
-                            params={{ id: "exemplo" }}
-                            className="mt-2 inline-block text-primary hover:underline"
-                          >
-                            Ver exemplo de detalhe →
-                          </Link>
-                        </>
-                      )}
+                      {todasFamilias.length > 0
+                        ? "Nenhuma família corresponde ao filtro atual."
+                        : "Nenhuma família cadastrada ainda."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  exemploFamilias.map((familia) => {
-                    const isSelected = familia.origem === "local" && selectedId === familia.id;
+                  familiasFiltradas.map((familia) => {
+                    const isSelected = selectedId === familia.id;
                     return (
-                      <TableRow
-                        key={`${familia.origem}-${familia.id}`}
-                        className={cn(isSelected && "bg-muted/40")}
-                      >
+                      <TableRow key={familia.id} className={cn(isSelected && "bg-muted/40")}>
                         <TableCell className="w-10">
                           <Checkbox
                             checked={isSelected}
-                            disabled={familia.origem === "supabase"}
-                            onCheckedChange={() => {
-                              if (familia.origem === "local") toggleSelect(familia.id);
-                            }}
+                            onCheckedChange={() => toggleSelect(familia.id)}
                             aria-label={`Selecionar ${familia.nome}`}
                           />
                         </TableCell>
                         <TableCell className="font-medium">
                           <Link
                             to="/familias/$id"
-                            params={{ id: String(familia.id) }}
+                            params={{ id: familia.id }}
                             className="text-foreground hover:underline"
                           >
                             {familia.nome || "Família sem nome de referência"}
@@ -441,34 +359,7 @@ function FamiliasPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {familia.status === "inativo" ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : familia.tipoCadastro === "definitivo" ||
-                            familia.tipoCadastro === null ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : familia.origem === "supabase" ? (
-                            <span className="text-muted-foreground">Não disponível</span>
-                          ) : (
-                            <span
-                              className={
-                                familia.progressoExtra === "3/3"
-                                  ? "text-warning font-medium"
-                                  : "text-foreground font-medium"
-                              }
-                            >
-                              {familia.progressoExtra}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <AcompanhamentoBadge status={familia.acompanhamento} params={params} />
-                            {familia.ultimaRetirada && familia.ultimaRetirada !== "—" && (
-                              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                                Última retirada: {familia.ultimaRetirada}
-                              </span>
-                            )}
-                          </div>
+                          <AcompanhamentoBadge status={familia.acompanhamento} params={params} />
                         </TableCell>
                         <TableCell>
                           {familia.status === "liberado" && <Badge>Liberado</Badge>}
@@ -503,32 +394,18 @@ function FonteDadosNotice({
   carregando,
   falhaInicial,
   falhaAtualizacao,
-  usandoSupabase,
 }: {
   carregando: boolean;
   falhaInicial: boolean;
   falhaAtualizacao: boolean;
-  usandoSupabase: boolean;
 }) {
-  let mensagem =
-    "Nenhuma família foi retornada pelo Supabase. Exibindo os dados locais temporariamente; novos cadastros usam o Supabase por padrão.";
+  if (!carregando && !falhaInicial && !falhaAtualizacao) return null;
 
-  if (carregando) {
-    mensagem =
-      "Consultando o Supabase. Os dados locais permanecem visíveis durante o carregamento.";
-  } else if (falhaAtualizacao && usandoSupabase) {
-    mensagem =
-      "Não foi possível atualizar o Supabase. Mantendo os últimos dados remotos carregados.";
-  } else if (falhaAtualizacao) {
-    mensagem =
-      "Não foi possível atualizar o Supabase. Exibindo os dados locais até a próxima consulta.";
-  } else if (falhaInicial) {
-    mensagem =
-      "Não foi possível consultar o Supabase. Exibindo os dados locais; o cadastro local permanece uma opção explícita e separada.";
-  } else if (usandoSupabase) {
-    mensagem =
-      "Exibindo famílias do Supabase. O cadastro remoto é o padrão e o modo local permanece separado.";
-  }
+  const mensagem = carregando
+    ? "Carregando famílias do Supabase..."
+    : falhaInicial
+      ? "Não foi possível consultar o Supabase. Verifique a conexão e tente novamente."
+      : "Não foi possível atualizar a lista. Mantendo os últimos dados carregados.";
 
   return (
     <div

@@ -22,24 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { registrarAuditoria } from "@/lib/auditoria/auditoria-supabase";
-import { useFamilias, type FamiliaStatus, type TipoCadastro } from "@/lib/familias-store";
 import {
   FamiliasSupabaseWriteQueryError,
+  type AssistidoTipoCadastroSupabase,
   type PessoaTipoDocumentoSupabase,
 } from "@/lib/familias/familias-supabase-types";
 import { useCriarFamiliaSupabase } from "@/lib/familias/use-familias-supabase";
 
-type CadastroFamiliaDestino = "supabase" | "local";
-type FonteListaFamilias = "supabase" | "local";
-
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: (result: { origem: CadastroFamiliaDestino; nome: string }) => void;
-  destinoInicial: CadastroFamiliaDestino;
-  fonteLista: FonteListaFamilias;
+  onCreated: (result: { nome: string }) => void;
 };
 
 type FormState = {
@@ -55,14 +48,7 @@ type FormState = {
   cidade: string;
   uf: string;
   cep: string;
-  tipoCadastro: TipoCadastro;
-  status: FamiliaStatus;
-  moradores: string;
-  criancas: string;
-  idosos: string;
-  gestantes: string;
-  pcd: string;
-  observacoes: string;
+  tipoCadastro: AssistidoTipoCadastroSupabase;
 };
 
 const emptyForm: FormState = {
@@ -79,18 +65,11 @@ const emptyForm: FormState = {
   uf: "",
   cep: "",
   tipoCadastro: "definitivo",
-  status: "liberado",
-  moradores: "",
-  criancas: "",
-  idosos: "",
-  gestantes: "",
-  pcd: "",
-  observacoes: "",
 };
 
 function getSupabaseErrorMessage(error: unknown): string {
   if (!(error instanceof FamiliasSupabaseWriteQueryError)) {
-    return "Não foi possível confirmar o cadastro no Supabase. Nenhum dado foi salvo localmente; atualize a lista antes de tentar novamente.";
+    return "Não foi possível confirmar o cadastro no Supabase. Atualize a lista antes de tentar novamente.";
   }
 
   switch (error.code) {
@@ -101,24 +80,15 @@ function getSupabaseErrorMessage(error: unknown): string {
     case "42501":
       return "Apenas administrador ou atendente ativo pode cadastrar famílias.";
     default:
-      return "Não foi possível confirmar o cadastro no Supabase. Nenhum dado foi salvo localmente; atualize a lista antes de tentar novamente.";
+      return "Não foi possível confirmar o cadastro no Supabase. Atualize a lista antes de tentar novamente.";
   }
 }
 
-export function NovaFamiliaDialog({
-  open,
-  onOpenChange,
-  onCreated,
-  destinoInicial,
-  fonteLista,
-}: Props) {
+export function NovaFamiliaDialog({ open, onOpenChange, onCreated }: Props) {
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [destino, setDestino] = useState<CadastroFamiliaDestino>(destinoInicial);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [acaoPendente, setAcaoPendente] = useState<"salvar" | "abrir" | null>(null);
-  const add = useFamilias((state) => state.add);
-  const existsDocumento = useFamilias((state) => state.existsDocumento);
   const criarFamiliaSupabase = useCriarFamiliaSupabase();
   const navigate = useNavigate();
   const envioRemotoEmAndamento = useRef(false);
@@ -136,7 +106,6 @@ export function NovaFamiliaDialog({
 
   const reset = () => {
     setForm(emptyForm);
-    setDestino(destinoInicial);
     setErros({});
     setErroEnvio(null);
     setAcaoPendente(null);
@@ -148,11 +117,7 @@ export function NovaFamiliaDialog({
 
     if (!form.nome.trim()) nextErrors.nome = "Informe o nome da família.";
     if (!form.responsavel.trim()) nextErrors.responsavel = "Informe o responsável.";
-    if (!form.documento.trim()) {
-      nextErrors.documento = "Informe o documento do responsável.";
-    } else if (destino === "local" && existsDocumento(form.documento)) {
-      nextErrors.documento = "Já existe uma família local cadastrada com este documento.";
-    }
+    if (!form.documento.trim()) nextErrors.documento = "Informe o documento do responsável.";
 
     setErros(nextErrors);
     setErroEnvio(null);
@@ -168,47 +133,9 @@ export function NovaFamiliaDialog({
     }
   };
 
-  const salvarLocal = (irParaDetalhe: boolean) => {
-    const nova = add({
-      nome: form.nome.trim(),
-      responsavel: form.responsavel.trim(),
-      documento: form.documento.trim(),
-      telefone: form.telefone.trim(),
-      bairro: form.bairro.trim(),
-      endereco: form.endereco.trim() || undefined,
-      numero: form.numero.trim() || undefined,
-      complemento: form.complemento.trim() || undefined,
-      cidade: form.cidade.trim() || undefined,
-      uf: form.uf.trim() || undefined,
-      cep: form.cep.trim() || undefined,
-      tipoCadastro: form.tipoCadastro,
-      progressoExtra: form.tipoCadastro === "extra" ? "novo" : null,
-      ultimaRetirada: "—",
-      proximaData: "—",
-      acompanhamento: "em_dia",
-      status: form.status,
-      moradores: form.moradores ? Number(form.moradores) : undefined,
-      criancas: form.criancas ? Number(form.criancas) : undefined,
-      idosos: form.idosos ? Number(form.idosos) : undefined,
-      gestantes: form.gestantes ? Number(form.gestantes) : undefined,
-      pcd: form.pcd ? Number(form.pcd) : undefined,
-      observacoes: form.observacoes.trim() || undefined,
-    });
-
-    registrarAuditoria({
-      usuario: "operador",
-      acao: "Família criada",
-      modulo: "Famílias",
-      registro: `${nova.nome} (${nova.responsavel})`,
-      observacao: `Doc. ${nova.documento}`,
-    });
-    toast.success("Família salva somente neste navegador.");
-    onCreated({ origem: "local", nome: nova.nome });
-    concluirCadastro(String(nova.id), irParaDetalhe);
-  };
-
-  const salvarRemoto = async (irParaDetalhe: boolean) => {
-    if (envioRemotoEmAndamento.current) return;
+  const salvar = async (irParaDetalhe: boolean) => {
+    if (envioRemotoEmAndamento.current || criarFamiliaSupabase.isPending) return;
+    if (!validar()) return;
 
     envioRemotoEmAndamento.current = true;
     setAcaoPendente(irParaDetalhe ? "abrir" : "salvar");
@@ -230,8 +157,8 @@ export function NovaFamiliaDialog({
         cep: form.cep,
       });
 
-      toast.success("Família cadastrada no Supabase com sucesso.");
-      onCreated({ origem: "supabase", nome: form.nome.trim() });
+      toast.success("Família cadastrada com sucesso.");
+      onCreated({ nome: form.nome.trim() });
       concluirCadastro(nova.familia_id, irParaDetalhe);
     } catch (error) {
       const message = getSupabaseErrorMessage(error);
@@ -248,38 +175,11 @@ export function NovaFamiliaDialog({
     }
   };
 
-  const salvar = async (irParaDetalhe: boolean) => {
-    if (envioRemotoEmAndamento.current || criarFamiliaSupabase.isPending) return;
-    if (!validar()) return;
-
-    if (destino === "local") {
-      salvarLocal(irParaDetalhe);
-      return;
-    }
-
-    await salvarRemoto(irParaDetalhe);
-  };
-
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen && criarFamiliaSupabase.isPending) return;
     if (!nextOpen) reset();
     onOpenChange(nextOpen);
   };
-
-  const handleDestinoChange = (value: string) => {
-    if (criarFamiliaSupabase.isPending) return;
-    setDestino(value as CadastroFamiliaDestino);
-    setErros({});
-    setErroEnvio(null);
-    criarFamiliaSupabase.reset();
-  };
-
-  const mensagemFonteDivergente =
-    destino === "supabase" && fonteLista === "local"
-      ? " Após o primeiro cadastro remoto, a listagem passará a exibir o Supabase."
-      : destino === "local" && fonteLista === "supabase"
-        ? " A família local não aparecerá enquanto a listagem estiver exibindo o Supabase; use “Salvar e abrir detalhes” para acessá-la agora."
-        : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -296,7 +196,8 @@ export function NovaFamiliaDialog({
         <DialogHeader>
           <DialogTitle>Nova família</DialogTitle>
           <DialogDescription>
-            Escolha explicitamente onde salvar e preencha os dados do cadastro.
+            Preencha os dados do cadastro institucional. A família, a pessoa responsável e o vínculo
+            principal são criados na mesma operação.
           </DialogDescription>
         </DialogHeader>
 
@@ -305,29 +206,6 @@ export function NovaFamiliaDialog({
           className="m-0 grid min-w-0 gap-4 border-0 p-0 py-2"
         >
           <legend className="sr-only">Dados da nova família</legend>
-          <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
-            <F label="Destino do cadastro">
-              <Select
-                value={destino}
-                disabled={criarFamiliaSupabase.isPending}
-                onValueChange={handleDestinoChange}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="supabase">Supabase — cadastro institucional</SelectItem>
-                  <SelectItem value="local">Somente neste navegador — temporário</SelectItem>
-                </SelectContent>
-              </Select>
-            </F>
-            <p className="text-xs text-muted-foreground">
-              {destino === "supabase"
-                ? "A RPC cria família, pessoa responsável e vínculo principal na mesma operação."
-                : "Este modo preserva o cadastro local anterior e não chama o Supabase."}
-              {mensagemFonteDivergente}
-            </p>
-          </div>
 
           {erroEnvio && (
             <Alert variant="destructive" role="alert">
@@ -342,7 +220,7 @@ export function NovaFamiliaDialog({
               className="flex items-center gap-2 text-sm text-muted-foreground"
             >
               <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Salvando no Supabase e atualizando a lista…
+              Salvando e atualizando a lista…
             </p>
           )}
 
@@ -361,26 +239,24 @@ export function NovaFamiliaDialog({
                 placeholder="Nome do responsável"
               />
             </F>
-            {destino === "supabase" && (
-              <F label="Tipo de documento *">
-                <Select
-                  value={form.tipoDocumento}
-                  onValueChange={(value) =>
-                    set("tipoDocumento", value as PessoaTipoDocumentoSupabase)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cpf">CPF</SelectItem>
-                    <SelectItem value="rg">RG</SelectItem>
-                    <SelectItem value="outro">Outro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </F>
-            )}
-            <F label={destino === "supabase" ? "Documento *" : "CPF / RG *"} erro={erros.documento}>
+            <F label="Tipo de documento *">
+              <Select
+                value={form.tipoDocumento}
+                onValueChange={(value) =>
+                  set("tipoDocumento", value as PessoaTipoDocumentoSupabase)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cpf">CPF</SelectItem>
+                  <SelectItem value="rg">RG</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </F>
+            <F label="Documento *" erro={erros.documento}>
               <Input
                 value={form.documento}
                 onChange={(event) => set("documento", event.target.value)}
@@ -432,113 +308,28 @@ export function NovaFamiliaDialog({
             </F>
           </section>
 
-          {destino === "local" ? (
-            <>
-              <section className="grid gap-3 md:grid-cols-2">
-                <F label="Tipo de cadastro">
-                  <Select
-                    value={form.tipoCadastro}
-                    onValueChange={(value) => set("tipoCadastro", value as TipoCadastro)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="extra">Avaliação</SelectItem>
-                      <SelectItem value="definitivo">Definitivo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </F>
-                <F label="Status inicial">
-                  <Select
-                    value={form.status}
-                    onValueChange={(value) => set("status", value as FamiliaStatus)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="liberado">Ativo</SelectItem>
-                      <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                      <SelectItem value="inativo">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </F>
-              </section>
-
-              <section className="grid gap-3 md:grid-cols-5">
-                <F label="Moradores">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.moradores}
-                    onChange={(event) => set("moradores", event.target.value)}
-                  />
-                </F>
-                <F label="Crianças">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.criancas}
-                    onChange={(event) => set("criancas", event.target.value)}
-                  />
-                </F>
-                <F label="Idosos">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.idosos}
-                    onChange={(event) => set("idosos", event.target.value)}
-                  />
-                </F>
-                <F label="Gestantes">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.gestantes}
-                    onChange={(event) => set("gestantes", event.target.value)}
-                  />
-                </F>
-                <F label="PCD">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.pcd}
-                    onChange={(event) => set("pcd", event.target.value)}
-                  />
-                </F>
-              </section>
-
-              <F label="Observações sociais">
-                <Textarea
-                  rows={3}
-                  value={form.observacoes}
-                  onChange={(event) => set("observacoes", event.target.value)}
-                />
-              </F>
-            </>
-          ) : (
-            <section className="grid gap-3 md:grid-cols-2">
-              <F label="Tipo de cadastro do responsável *">
-                <Select
-                  value={form.tipoCadastro}
-                  onValueChange={(value) => set("tipoCadastro", value as TipoCadastro)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="definitivo">Definitivo (Cesta Padrão)</SelectItem>
-                    <SelectItem value="extra">Extra (Avaliação)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </F>
-              <p className="self-center rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground md:col-span-1">
-                O responsável é cadastrado como <strong>assistido</strong> deste tipo, já apto ao
-                atendimento. Status e contagens da família seguem os valores iniciais do banco.
-              </p>
-            </section>
-          )}
+          <section className="grid gap-3 md:grid-cols-2">
+            <F label="Tipo de cadastro do responsável *">
+              <Select
+                value={form.tipoCadastro}
+                onValueChange={(value) =>
+                  set("tipoCadastro", value as AssistidoTipoCadastroSupabase)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="definitivo">Definitivo (Cesta Padrão)</SelectItem>
+                  <SelectItem value="extra">Extra (Avaliação)</SelectItem>
+                </SelectContent>
+              </Select>
+            </F>
+            <p className="self-center rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground md:col-span-1">
+              O responsável é cadastrado como <strong>assistido</strong> deste tipo, já apto ao
+              atendimento. Status e contagens da família seguem os valores iniciais do banco.
+            </p>
+          </section>
         </fieldset>
 
         <DialogFooter className="gap-2">
@@ -563,7 +354,7 @@ export function NovaFamiliaDialog({
             {criarFamiliaSupabase.isPending && acaoPendente === "salvar" && (
               <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
             )}
-            {destino === "supabase" ? "Salvar no Supabase" : "Salvar localmente"}
+            Salvar
           </Button>
         </DialogFooter>
       </DialogContent>
