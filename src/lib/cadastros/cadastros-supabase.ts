@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { familiasSupabaseQueryKeys } from "@/lib/familias/use-familias-supabase";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 /**
- * Cadastros auxiliares (unidades, categorias, doadores, fornecedores) no
- * Supabase — substitui os stores em localStorage do config-store. Itens e
- * benefícios seguem em itens_estoque/beneficios (fatia própria).
+ * Cadastros auxiliares no Supabase. Unidades/categorias/doadores/fornecedores
+ * têm tabelas próprias; itens e benefícios editam as tabelas reais de estoque
+ * (itens_estoque/beneficios), sem tocar no saldo (protegido por trigger).
  */
 
 export type CadastroStatus = "ativo" | "inativo";
@@ -68,19 +69,30 @@ export const cadastrosQueryKeys = {
   categorias: ["cadastros", "categorias"] as const,
   doadores: ["cadastros", "doadores"] as const,
   fornecedores: ["cadastros", "fornecedores"] as const,
+  itens: ["cadastros", "itens"] as const,
+  beneficios: ["cadastros", "beneficios"] as const,
 };
 
 function statusDeAtivo(ativo: boolean): CadastroStatus {
   return ativo ? "ativo" : "inativo";
 }
 
-function lancarErro(error: { message: string; code?: string }): never {
+function lancarErro(
+  error: { message: string; code?: string },
+  mensagemDuplicado = "Já existe um cadastro com este código.",
+): never {
   if (error.code === "23505") {
-    throw new CadastrosSupabaseError("Já existe um cadastro com este código.", error.code);
+    throw new CadastrosSupabaseError(mensagemDuplicado, error.code);
+  }
+  if (error.code === "23503") {
+    throw new CadastrosSupabaseError(
+      "Este cadastro possui vínculo com movimentações ou histórico; inative-o em vez de excluir.",
+      error.code,
+    );
   }
   if (error.code === "42501") {
     throw new CadastrosSupabaseError(
-      "Apenas administrador ativo pode alterar cadastros auxiliares.",
+      "Seu perfil não tem permissão para esta alteração de cadastro.",
       error.code,
     );
   }
@@ -330,9 +342,164 @@ async function salvarFornecedor(input: FornecedorCadastroInput & { id?: string }
   if (error) lancarErro(error);
 }
 
+/* ---------- Itens (catálogo em itens_estoque) ---------- */
+
+export interface ItemCatalogo {
+  id: string;
+  nome: string;
+  categoria: string;
+  unidade: string;
+  minimo: number;
+  valor: number;
+  saldo: number;
+  observacao: string;
+  status: CadastroStatus;
+}
+
+type ItemCatalogoRow = {
+  id: string;
+  nome: string;
+  categoria: string | null;
+  unidade: string;
+  minimo: number;
+  valor: number;
+  saldo: number;
+  observacao: string | null;
+  ativo: boolean;
+};
+
+const ITEM_COLUNAS = "id, nome, categoria, unidade, minimo, valor, saldo, observacao, ativo";
+
+function mapItem(row: ItemCatalogoRow): ItemCatalogo {
+  return {
+    id: row.id,
+    nome: row.nome,
+    categoria: row.categoria ?? "",
+    unidade: row.unidade,
+    minimo: row.minimo,
+    valor: row.valor,
+    saldo: row.saldo,
+    observacao: row.observacao ?? "",
+    status: statusDeAtivo(row.ativo),
+  };
+}
+
+export interface ItemCatalogoInput {
+  nome: string;
+  categoria: string;
+  unidade: string;
+  minimo: number;
+  valor: number;
+  observacao: string;
+  status: CadastroStatus;
+}
+
+async function listarItensCatalogo(): Promise<ItemCatalogo[]> {
+  const { data, error } = await getSupabaseClient()
+    .from("itens_estoque")
+    .select(ITEM_COLUNAS)
+    .order("nome");
+  if (error) lancarErro(error);
+  return ((data ?? []) as ItemCatalogoRow[]).map(mapItem);
+}
+
+// O payload nunca inclui saldo: alterações de saldo só via RPCs de
+// movimentação (trigger itens_estoque_saldo_protegido).
+async function salvarItem(input: ItemCatalogoInput & { id?: string }): Promise<void> {
+  const payload = {
+    nome: input.nome.trim(),
+    categoria: input.categoria.trim() || null,
+    unidade: input.unidade.trim(),
+    minimo: input.minimo,
+    valor: input.valor,
+    observacao: input.observacao.trim() || null,
+    ativo: input.status === "ativo",
+  };
+  const client = getSupabaseClient();
+  const { error } = input.id
+    ? await client.from("itens_estoque").update(payload).eq("id", input.id)
+    : await client.from("itens_estoque").insert(payload);
+  if (error) lancarErro(error, "Já existe um item com este nome.");
+}
+
+/* ---------- Benefícios (catálogo em beneficios) ---------- */
+
+export interface BeneficioCatalogo {
+  id: string;
+  nome: string;
+  tipo: string;
+  controlaEstoque: boolean;
+  saldo: number;
+  observacao: string;
+  status: CadastroStatus;
+}
+
+type BeneficioCatalogoRow = {
+  id: string;
+  nome: string;
+  tipo: string | null;
+  controla_estoque: boolean;
+  saldo: number;
+  observacao: string | null;
+  ativo: boolean;
+};
+
+const BENEFICIO_COLUNAS = "id, nome, tipo, controla_estoque, saldo, observacao, ativo";
+
+function mapBeneficio(row: BeneficioCatalogoRow): BeneficioCatalogo {
+  return {
+    id: row.id,
+    nome: row.nome,
+    tipo: row.tipo ?? "",
+    controlaEstoque: row.controla_estoque,
+    saldo: row.saldo,
+    observacao: row.observacao ?? "",
+    status: statusDeAtivo(row.ativo),
+  };
+}
+
+export interface BeneficioCatalogoInput {
+  nome: string;
+  tipo: string;
+  controlaEstoque: boolean;
+  observacao: string;
+  status: CadastroStatus;
+}
+
+async function listarBeneficiosCatalogo(): Promise<BeneficioCatalogo[]> {
+  const { data, error } = await getSupabaseClient()
+    .from("beneficios")
+    .select(BENEFICIO_COLUNAS)
+    .order("nome");
+  if (error) lancarErro(error);
+  return ((data ?? []) as BeneficioCatalogoRow[]).map(mapBeneficio);
+}
+
+// Sem saldo no payload — mesma proteção de ledger dos itens.
+async function salvarBeneficio(input: BeneficioCatalogoInput & { id?: string }): Promise<void> {
+  const payload = {
+    nome: input.nome.trim(),
+    tipo: input.tipo.trim() || null,
+    controla_estoque: input.controlaEstoque,
+    observacao: input.observacao.trim() || null,
+    ativo: input.status === "ativo",
+  };
+  const client = getSupabaseClient();
+  const { error } = input.id
+    ? await client.from("beneficios").update(payload).eq("id", input.id)
+    : await client.from("beneficios").insert(payload);
+  if (error) lancarErro(error, "Já existe um benefício com este nome.");
+}
+
 /* ---------- Operações comuns ---------- */
 
-type CadastroTabela = "unidades" | "categorias" | "doadores" | "fornecedores";
+type CadastroTabela =
+  | "unidades"
+  | "categorias"
+  | "doadores"
+  | "fornecedores"
+  | "itens_estoque"
+  | "beneficios";
 
 async function definirStatusCadastro(
   tabela: CadastroTabela,
@@ -353,16 +520,24 @@ async function excluirCadastro(tabela: CadastroTabela, id: string): Promise<void
 
 /* ---------- Hooks ---------- */
 
-const QUERY_KEY_POR_TABELA = {
-  unidades: cadastrosQueryKeys.unidades,
-  categorias: cadastrosQueryKeys.categorias,
-  doadores: cadastrosQueryKeys.doadores,
-  fornecedores: cadastrosQueryKeys.fornecedores,
-} as const;
+const QUERY_KEYS_POR_TABELA: Record<CadastroTabela, readonly (readonly string[])[]> = {
+  unidades: [cadastrosQueryKeys.unidades],
+  categorias: [cadastrosQueryKeys.categorias],
+  doadores: [cadastrosQueryKeys.doadores],
+  fornecedores: [cadastrosQueryKeys.fornecedores],
+  // Itens e benefícios também alimentam as telas de estoque/recebimentos/
+  // composição — invalida as queries correspondentes do domínio de famílias.
+  itens_estoque: [cadastrosQueryKeys.itens, familiasSupabaseQueryKeys.itensEstoque],
+  beneficios: [cadastrosQueryKeys.beneficios, familiasSupabaseQueryKeys.beneficiosEstoque],
+};
 
 function useInvalidarCadastro(tabela: CadastroTabela) {
   const queryClient = useQueryClient();
-  return () => void queryClient.invalidateQueries({ queryKey: QUERY_KEY_POR_TABELA[tabela] });
+  return () => {
+    for (const queryKey of QUERY_KEYS_POR_TABELA[tabela]) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  };
 }
 
 export function useUnidadesSupabase() {
@@ -379,6 +554,14 @@ export function useDoadoresSupabase() {
 
 export function useFornecedoresSupabase() {
   return useQuery({ queryKey: cadastrosQueryKeys.fornecedores, queryFn: listarFornecedores });
+}
+
+export function useItensCatalogo() {
+  return useQuery({ queryKey: cadastrosQueryKeys.itens, queryFn: listarItensCatalogo });
+}
+
+export function useBeneficiosCatalogo() {
+  return useQuery({ queryKey: cadastrosQueryKeys.beneficios, queryFn: listarBeneficiosCatalogo });
 }
 
 export function useSalvarUnidade() {
@@ -399,6 +582,16 @@ export function useSalvarDoador() {
 export function useSalvarFornecedor() {
   const invalidar = useInvalidarCadastro("fornecedores");
   return useMutation({ mutationFn: salvarFornecedor, onSuccess: invalidar });
+}
+
+export function useSalvarItemCatalogo() {
+  const invalidar = useInvalidarCadastro("itens_estoque");
+  return useMutation({ mutationFn: salvarItem, onSuccess: invalidar });
+}
+
+export function useSalvarBeneficioCatalogo() {
+  const invalidar = useInvalidarCadastro("beneficios");
+  return useMutation({ mutationFn: salvarBeneficio, onSuccess: invalidar });
 }
 
 export function useDefinirStatusCadastro(tabela: CadastroTabela) {

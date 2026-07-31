@@ -13,7 +13,7 @@ import {
   PowerOff,
   Power,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,13 +58,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  useItens,
-  useBeneficios,
-  type Item,
-  type Beneficio,
-  type Status,
-} from "@/lib/config-store";
-import {
   CadastrosSupabaseError,
   useCategoriasSupabase,
   useDefinirStatusCadastro,
@@ -76,7 +69,14 @@ import {
   useSalvarFornecedor,
   useSalvarUnidade,
   useUnidadesSupabase,
+  useItensCatalogo,
+  useBeneficiosCatalogo,
+  useSalvarItemCatalogo,
+  useSalvarBeneficioCatalogo,
+  type BeneficioCatalogo,
+  type CadastroStatus as Status,
   type CategoriaCadastro,
+  type ItemCatalogo,
   type DoadorCadastro,
   type DoadorTipo,
   type FornecedorCadastro,
@@ -268,6 +268,26 @@ function RowActions({
 
 /* ---------- ITENS ---------- */
 
+type ItemFormState = {
+  nome: string;
+  categoria: string;
+  unidade: string;
+  minimo: number;
+  valor: number;
+  observacao: string;
+  status: Status;
+};
+
+const ITEM_FORM_VAZIO: ItemFormState = {
+  nome: "",
+  categoria: "",
+  unidade: "",
+  minimo: 0,
+  valor: 0,
+  observacao: "",
+  status: "ativo",
+};
+
 function ItemForm({
   open,
   onOpenChange,
@@ -275,62 +295,48 @@ function ItemForm({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing: Item | null;
+  editing: ItemCatalogo | null;
 }) {
-  const upsert = useItens((s) => s.upsert);
-  const rows = useItens((s) => s.rows);
+  const salvarItem = useSalvarItemCatalogo();
+  const rows = useItensCatalogo().data ?? [];
   const categorias = useCategoriasSupabase().data ?? [];
   const unidades = useUnidadesSupabase().data ?? [];
-
-  const [form, setForm] = useState<Item>(
-    () =>
-      editing ?? {
-        codigo: "",
-        nome: "",
-        categoria: "",
-        unidade: "",
-        estoqueMinimo: 0,
-        status: "ativo",
-        observacao: "",
-      },
-  );
+  const [form, setForm] = useState<ItemFormState>(ITEM_FORM_VAZIO);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
-      setForm(
-        editing ?? {
-          codigo: "",
-          nome: "",
-          categoria: "",
-          unidade: "",
-          estoqueMinimo: 0,
-          status: "ativo",
-          observacao: "",
-        },
-      );
+      setForm(editing ?? ITEM_FORM_VAZIO);
       setErrors({});
     }
   }, [open, editing]);
 
-  function save() {
+  async function save() {
     const e: Record<string, string> = {};
-    if (!form.codigo.trim()) e.codigo = "Código obrigatório";
-    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim()))
-      e.codigo = "Código já existe";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
+    else if (rows.some((r) => r.nome === form.nome.trim() && (!editing || r.id !== editing.id)))
+      e.nome = "Já existe um item com este nome";
     if (!form.categoria) e.categoria = "Categoria obrigatória";
     if (!form.unidade) e.unidade = "Unidade obrigatória";
-    if (form.estoqueMinimo < 0) e.estoqueMinimo = "Não pode ser negativo";
+    if (form.minimo < 0) e.minimo = "Não pode ser negativo";
+    if (form.valor < 0) e.valor = "Não pode ser negativo";
     setErrors(e);
     if (Object.keys(e).length) return;
 
-    upsert({ ...form, codigo: form.codigo.trim(), nome: form.nome.trim() });
+    try {
+      await salvarItem.mutateAsync({ ...form, id: editing?.id });
+    } catch (err) {
+      const mensagem = mensagemErroCadastro(err, "Não foi possível salvar o item.");
+      if (err instanceof CadastrosSupabaseError && err.code === "23505")
+        setErrors({ nome: mensagem });
+      toast.error(mensagem);
+      return;
+    }
     registrarAuditoria({
       usuario: USUARIO_ATUAL,
       acao: editing ? "Item editado" : "Item criado",
       modulo: "Configurações › Itens",
-      registro: `${form.codigo} — ${form.nome}`,
+      registro: form.nome,
     });
     toast.success(editing ? "Item atualizado" : "Item cadastrado");
     onOpenChange(false);
@@ -341,17 +347,11 @@ function ItemForm({
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{editing ? "Editar item" : "Novo item"}</SheetTitle>
-          <SheetDescription>Item usado no estoque ou em benefícios montados.</SheetDescription>
+          <SheetDescription>
+            Item do estoque real (itens_estoque). O saldo só muda por movimentações.
+          </SheetDescription>
         </SheetHeader>
         <div className="grid gap-3 py-4">
-          <F label="Código" error={errors.codigo}>
-            <Input
-              value={form.codigo}
-              onChange={(e) => setForm({ ...form, codigo: e.target.value })}
-              disabled={!!editing}
-              placeholder="0011"
-            />
-          </F>
           <F label="Nome do item" error={errors.nome}>
             <Input
               value={form.nome}
@@ -369,9 +369,9 @@ function ItemForm({
               </SelectTrigger>
               <SelectContent>
                 {categorias
-                  .filter((c) => c.status === "ativo")
+                  .filter((c) => c.status === "ativo" || c.nome === form.categoria)
                   .map((c) => (
-                    <SelectItem key={c.codigo} value={c.codigo}>
+                    <SelectItem key={c.id} value={c.nome}>
                       {c.nome}
                     </SelectItem>
                   ))}
@@ -385,26 +385,35 @@ function ItemForm({
               </SelectTrigger>
               <SelectContent>
                 {unidades
-                  .filter((u) => u.status === "ativo")
+                  .filter((u) => u.status === "ativo" || u.nome === form.unidade)
                   .map((u) => (
-                    <SelectItem key={u.codigo} value={u.codigo}>
+                    <SelectItem key={u.id} value={u.nome}>
                       {u.nome}
                     </SelectItem>
                   ))}
               </SelectContent>
             </Select>
           </F>
-          <F label="Estoque mínimo" error={errors.estoqueMinimo}>
+          <F label="Estoque mínimo" error={errors.minimo}>
             <Input
               type="number"
               min={0}
-              value={form.estoqueMinimo}
-              onChange={(e) => setForm({ ...form, estoqueMinimo: Number(e.target.value) })}
+              value={form.minimo}
+              onChange={(e) => setForm({ ...form, minimo: Number(e.target.value) })}
+            />
+          </F>
+          <F label="Valor unitário (R$)" error={errors.valor}>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.valor}
+              onChange={(e) => setForm({ ...form, valor: Number(e.target.value) })}
             />
           </F>
           <F label="Descrição / observação">
             <Textarea
-              value={form.observacao ?? ""}
+              value={form.observacao}
               onChange={(e) => setForm({ ...form, observacao: e.target.value })}
             />
           </F>
@@ -425,7 +434,9 @@ function ItemForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={save}>Salvar</Button>
+          <Button disabled={salvarItem.isPending} onClick={() => void save()}>
+            {salvarItem.isPending ? "Salvando..." : "Salvar"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -433,30 +444,32 @@ function ItemForm({
 }
 
 function ItensTab() {
-  const rows = useItens((s) => s.rows);
-  const remove = useItens((s) => s.remove);
-  const setStatus = useItens((s) => s.setStatus);
+  const { data, isPending, isError, refetch } = useItensCatalogo();
+  const definirStatus = useDefinirStatusCadastro("itens_estoque");
+  const excluir = useExcluirCadastro("itens_estoque");
   const categorias = useCategoriasSupabase().data ?? [];
-  const unidades = useUnidadesSupabase().data ?? [];
 
   const [busca, setBusca] = useState("");
   const [filtroCat, setFiltroCat] = useState("all");
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Item | null>(null);
+  const [editing, setEditing] = useState<ItemCatalogo | null>(null);
 
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const bm =
-          !busca || r.nome.toLowerCase().includes(busca.toLowerCase()) || r.codigo.includes(busca);
-        const cm = filtroCat === "all" || r.categoria === filtroCat;
-        return bm && cm;
-      }),
-    [rows, busca, filtroCat],
-  );
+  const rows = data ?? [];
+  const filtered = rows.filter((r) => {
+    const bm = !busca || r.nome.toLowerCase().includes(busca.toLowerCase());
+    const cm = filtroCat === "all" || r.categoria === filtroCat;
+    return bm && cm;
+  });
 
-  const catName = (c: string) => categorias.find((x) => x.codigo === c)?.nome ?? c;
-  const uniName = (u: string) => unidades.find((x) => x.codigo === u)?.nome ?? u;
+  if (isPending || isError) {
+    return (
+      <CadastroEstado
+        carregando={isPending}
+        mensagemErro="Não foi possível carregar os itens."
+        onTentarNovamente={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -480,7 +493,7 @@ function ItensTab() {
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
                   {categorias.map((c) => (
-                    <SelectItem key={c.codigo} value={c.codigo}>
+                    <SelectItem key={c.id} value={c.nome}>
                       {c.nome}
                     </SelectItem>
                   ))}
@@ -501,23 +514,23 @@ function ItensTab() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Código</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Unidade padrão</TableHead>
               <TableHead>Estoque mínimo</TableHead>
+              <TableHead>Saldo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map((r) => (
-              <TableRow key={r.codigo}>
-                <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
+              <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.nome}</TableCell>
-                <TableCell>{catName(r.categoria)}</TableCell>
-                <TableCell>{uniName(r.unidade)}</TableCell>
-                <TableCell>{r.estoqueMinimo}</TableCell>
+                <TableCell>{r.categoria || "—"}</TableCell>
+                <TableCell>{r.unidade}</TableCell>
+                <TableCell>{r.minimo}</TableCell>
+                <TableCell>{r.saldo}</TableCell>
                 <TableCell>
                   <StatusBadge status={r.status} />
                 </TableCell>
@@ -531,31 +544,54 @@ function ItensTab() {
                     }}
                     onToggleStatus={() => {
                       const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                      setStatus(r.codigo, ns);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: ns === "ativo" ? "Item reativado" : "Item inativado",
-                        modulo: "Configurações › Itens",
-                        registro: `${r.codigo} — ${r.nome}`,
-                      });
-                      toast.success(ns === "ativo" ? "Item reativado" : "Item inativado");
+                      definirStatus.mutate(
+                        { id: r.id, status: ns },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: ns === "ativo" ? "Item reativado" : "Item inativado",
+                              modulo: "Configurações › Itens",
+                              registro: r.nome,
+                            });
+                            toast.success(ns === "ativo" ? "Item reativado" : "Item inativado");
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(
+                                err,
+                                "Não foi possível alterar o status do item.",
+                              ),
+                            ),
+                        },
+                      );
                     }}
                     onDelete={() => {
-                      remove(r.codigo);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: "Item excluído",
-                        modulo: "Configurações › Itens",
-                        registro: `${r.codigo} — ${r.nome}`,
-                      });
-                      toast.success("Item excluído");
+                      excluir.mutate(
+                        { id: r.id },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: "Item excluído",
+                              modulo: "Configurações › Itens",
+                              registro: r.nome,
+                            });
+                            toast.success("Item excluído");
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(err, "Não foi possível excluir o item."),
+                            ),
+                        },
+                      );
                     }}
                     onDeleteBlocked={() => {
                       registrarAuditoria({
                         usuario: USUARIO_ATUAL,
                         acao: "Tentativa de exclusão bloqueada",
                         modulo: "Configurações › Itens",
-                        registro: `${r.codigo} — ${r.nome}`,
+                        registro: r.nome,
                         observacao: "Registro possui vínculo com movimentações ou histórico",
                       });
                     }}
@@ -706,12 +742,12 @@ function UnidadesTab() {
   const { data, isPending, isError, refetch } = useUnidadesSupabase();
   const definirStatus = useDefinirStatusCadastro("unidades");
   const excluir = useExcluirCadastro("unidades");
-  const itens = useItens((s) => s.rows);
+  const itens = useItensCatalogo().data ?? [];
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<UnidadeCadastro | null>(null);
 
   const rows = data ?? [];
-  const usedIn = (codigo: string) => itens.some((i) => i.unidade === codigo);
+  const usedIn = (nome: string) => itens.some((i) => i.unidade === nome);
 
   if (isPending || isError) {
     return (
@@ -761,7 +797,7 @@ function UnidadesTab() {
                 <TableCell>
                   <RowActions
                     status={r.status}
-                    hasVinculo={usedIn(r.codigo)}
+                    hasVinculo={usedIn(r.nome)}
                     onEdit={() => {
                       setEditing(r);
                       setOpen(true);
@@ -946,12 +982,12 @@ function CategoriasTab() {
   const { data, isPending, isError, refetch } = useCategoriasSupabase();
   const definirStatus = useDefinirStatusCadastro("categorias");
   const excluir = useExcluirCadastro("categorias");
-  const itens = useItens((s) => s.rows);
+  const itens = useItensCatalogo().data ?? [];
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CategoriaCadastro | null>(null);
 
   const rows = data ?? [];
-  const usedIn = (codigo: string) => itens.some((i) => i.categoria === codigo);
+  const usedIn = (nome: string) => itens.some((i) => i.categoria === nome);
 
   if (isPending || isError) {
     return (
@@ -999,7 +1035,7 @@ function CategoriasTab() {
                 <TableCell>
                   <RowActions
                     status={r.status}
-                    hasVinculo={usedIn(r.codigo)}
+                    hasVinculo={usedIn(r.nome)}
                     onEdit={() => {
                       setEditing(r);
                       setOpen(true);
@@ -1080,6 +1116,22 @@ const TIPOS_BENEFICIO = [
   "Ação social",
 ];
 
+type BeneficioFormState = {
+  nome: string;
+  tipo: string;
+  controlaEstoque: boolean;
+  observacao: string;
+  status: Status;
+};
+
+const BENEFICIO_FORM_VAZIO: BeneficioFormState = {
+  nome: "",
+  tipo: "",
+  controlaEstoque: true,
+  observacao: "",
+  status: "ativo",
+};
+
 function BeneficioForm({
   open,
   onOpenChange,
@@ -1087,53 +1139,41 @@ function BeneficioForm({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing: Beneficio | null;
+  editing: BeneficioCatalogo | null;
 }) {
-  const upsert = useBeneficios((s) => s.upsert);
-  const rows = useBeneficios((s) => s.rows);
-  const [form, setForm] = useState<Beneficio>(
-    () =>
-      editing ?? {
-        codigo: "",
-        nome: "",
-        tipo: "",
-        controlaEstoque: true,
-        status: "ativo",
-        observacao: "",
-      },
-  );
+  const salvarBeneficio = useSalvarBeneficioCatalogo();
+  const rows = useBeneficiosCatalogo().data ?? [];
+  const [form, setForm] = useState<BeneficioFormState>(BENEFICIO_FORM_VAZIO);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (open) {
-      setForm(
-        editing ?? {
-          codigo: "",
-          nome: "",
-          tipo: "",
-          controlaEstoque: true,
-          status: "ativo",
-          observacao: "",
-        },
-      );
+      setForm(editing ?? BENEFICIO_FORM_VAZIO);
       setErrors({});
     }
   }, [open, editing]);
 
-  function save() {
+  async function save() {
     const e: Record<string, string> = {};
-    if (!form.codigo.trim()) e.codigo = "Código obrigatório";
-    else if (!editing && rows.some((r) => r.codigo === form.codigo.trim()))
-      e.codigo = "Código já existe";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
+    else if (rows.some((r) => r.nome === form.nome.trim() && (!editing || r.id !== editing.id)))
+      e.nome = "Já existe um benefício com este nome";
     if (!form.tipo) e.tipo = "Tipo obrigatório";
     setErrors(e);
     if (Object.keys(e).length) return;
-    upsert({ ...form, codigo: form.codigo.trim() });
+    try {
+      await salvarBeneficio.mutateAsync({ ...form, id: editing?.id });
+    } catch (err) {
+      const mensagem = mensagemErroCadastro(err, "Não foi possível salvar o benefício.");
+      if (err instanceof CadastrosSupabaseError && err.code === "23505")
+        setErrors({ nome: mensagem });
+      toast.error(mensagem);
+      return;
+    }
     registrarAuditoria({
       usuario: USUARIO_ATUAL,
       acao: editing ? "Benefício editado" : "Benefício criado",
       modulo: "Configurações › Benefícios",
-      registro: `${form.codigo} — ${form.nome}`,
+      registro: form.nome,
     });
     toast.success(editing ? "Benefício atualizado" : "Benefício cadastrado");
     onOpenChange(false);
@@ -1144,15 +1184,11 @@ function BeneficioForm({
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{editing ? "Editar benefício" : "Novo benefício"}</SheetTitle>
+          <SheetDescription>
+            Benefício entregável (beneficios). O saldo só muda por movimentações e entregas.
+          </SheetDescription>
         </SheetHeader>
         <div className="grid gap-3 py-4">
-          <F label="Código" error={errors.codigo}>
-            <Input
-              value={form.codigo}
-              disabled={!!editing}
-              onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
-            />
-          </F>
           <F label="Nome do benefício" error={errors.nome}>
             <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
           </F>
@@ -1181,7 +1217,7 @@ function BeneficioForm({
           </div>
           <F label="Observação">
             <Textarea
-              value={form.observacao ?? ""}
+              value={form.observacao}
               onChange={(e) => setForm({ ...form, observacao: e.target.value })}
             />
           </F>
@@ -1199,7 +1235,9 @@ function BeneficioForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={save}>Salvar</Button>
+          <Button disabled={salvarBeneficio.isPending} onClick={() => void save()}>
+            {salvarBeneficio.isPending ? "Salvando..." : "Salvar"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -1207,11 +1245,23 @@ function BeneficioForm({
 }
 
 function BeneficiosTab() {
-  const rows = useBeneficios((s) => s.rows);
-  const remove = useBeneficios((s) => s.remove);
-  const setStatus = useBeneficios((s) => s.setStatus);
+  const { data, isPending, isError, refetch } = useBeneficiosCatalogo();
+  const definirStatus = useDefinirStatusCadastro("beneficios");
+  const excluir = useExcluirCadastro("beneficios");
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Beneficio | null>(null);
+  const [editing, setEditing] = useState<BeneficioCatalogo | null>(null);
+
+  const rows = data ?? [];
+
+  if (isPending || isError) {
+    return (
+      <CadastroEstado
+        carregando={isPending}
+        mensagemErro="Não foi possível carregar os benefícios."
+        onTentarNovamente={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -1230,21 +1280,21 @@ function BeneficiosTab() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Código</TableHead>
               <TableHead>Nome do benefício</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Controla estoque</TableHead>
+              <TableHead>Saldo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((r) => (
-              <TableRow key={r.codigo}>
-                <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
+              <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.nome}</TableCell>
-                <TableCell>{r.tipo}</TableCell>
+                <TableCell>{r.tipo || "—"}</TableCell>
                 <TableCell>{r.controlaEstoque ? "Sim" : "Não"}</TableCell>
+                <TableCell>{r.saldo}</TableCell>
                 <TableCell>
                   <StatusBadge status={r.status} />
                 </TableCell>
@@ -1258,29 +1308,56 @@ function BeneficiosTab() {
                     }}
                     onToggleStatus={() => {
                       const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                      setStatus(r.codigo, ns);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: ns === "ativo" ? "Benefício reativado" : "Benefício inativado",
-                        modulo: "Configurações › Benefícios",
-                        registro: `${r.codigo} — ${r.nome}`,
-                      });
+                      definirStatus.mutate(
+                        { id: r.id, status: ns },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: ns === "ativo" ? "Benefício reativado" : "Benefício inativado",
+                              modulo: "Configurações › Benefícios",
+                              registro: r.nome,
+                            });
+                            toast.success(
+                              ns === "ativo" ? "Benefício reativado" : "Benefício inativado",
+                            );
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(
+                                err,
+                                "Não foi possível alterar o status do benefício.",
+                              ),
+                            ),
+                        },
+                      );
                     }}
                     onDelete={() => {
-                      remove(r.codigo);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: "Benefício excluído",
-                        modulo: "Configurações › Benefícios",
-                        registro: `${r.codigo} — ${r.nome}`,
-                      });
+                      excluir.mutate(
+                        { id: r.id },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: "Benefício excluído",
+                              modulo: "Configurações › Benefícios",
+                              registro: r.nome,
+                            });
+                            toast.success("Benefício excluído");
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(err, "Não foi possível excluir o benefício."),
+                            ),
+                        },
+                      );
                     }}
                     onDeleteBlocked={() => {
                       registrarAuditoria({
                         usuario: USUARIO_ATUAL,
                         acao: "Tentativa de exclusão bloqueada",
                         modulo: "Configurações › Benefícios",
-                        registro: `${r.codigo} — ${r.nome}`,
+                        registro: r.nome,
                         observacao: "Benefício possui vínculo com entregas ou estoque",
                       });
                     }}
