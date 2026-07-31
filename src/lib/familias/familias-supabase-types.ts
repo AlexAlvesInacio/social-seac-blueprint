@@ -333,7 +333,11 @@ export type FamiliasSupabaseWriteOperation =
   | "registrar_movimentacao_item"
   | "definir_composicao"
   | "montar_cesta"
-  | "criar_pre_cadastro";
+  | "criar_pre_cadastro"
+  | "aprovar_assistido"
+  | "inativar_assistido"
+  | "reativar_assistido"
+  | "atualizar_membro";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;

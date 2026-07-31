@@ -58,7 +58,9 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 - **[Resolvido — tarefa 3] Ledger burlável por `UPDATE` direto no saldo.** Trigger
   `private.impedir_alteracao_saldo_direta()` em `beneficios`/`itens_estoque` bloqueia
   alteração de `saldo` fora das RPCs (flag transacional `seac.saldo_via_rpc`).
-- **[Dívida — aberta] `src/lib/familias/familias-repository.ts` catch-all.** Continua
-  hospedando famílias + estoque + recebimentos + atendimento. O padrão-alvo é uma
-  pasta por domínio (ex.: `src/lib/auditoria/`, `src/lib/configuracoes/` já existem);
-  extrair `src/lib/estoque/` segue como dívida de organização.
+- **[Resolvido em parte — 2026-07-31] `familias-repository.ts` catch-all.** O domínio
+  de estoque foi extraído para `src/lib/estoque/` (repositório + hooks + query keys
+  próprias; benefícios, itens, movimentações, composição e montagem). O repositório
+  de famílias caiu de ~2150 para ~1660 linhas e ainda hospeda recebimentos e as
+  consultas de atendimento/painel — extrações futuras seguem o mesmo padrão. Os
+  tipos de leitura/erro continuam compartilhados em `familias-supabase-types.ts`.

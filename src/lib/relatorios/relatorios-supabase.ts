@@ -3,9 +3,9 @@
 // agnóstico em relatorios-store.ts.
 
 import { getConfiguracoes } from "@/lib/configuracoes/configuracoes-supabase";
+import { listarBeneficiosNoSupabase } from "@/lib/estoque/estoque-repository";
 import {
   listFamiliasFromSupabase,
-  listarBeneficiosNoSupabase,
   listarEntregasRecentesNoSupabase,
   listarRecebimentosNoSupabase,
   listarTentativasBloqueadasNoSupabase,

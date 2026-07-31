@@ -29,12 +29,8 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  useBeneficiosEstoque,
-  useEntregasPainel,
-  useFamiliasSupabase,
-  useMovimentacoesEstoque,
-} from "@/lib/familias/use-familias-supabase";
+import { useBeneficiosEstoque, useMovimentacoesEstoque } from "@/lib/estoque/use-estoque-supabase";
+import { useEntregasPainel, useFamiliasSupabase } from "@/lib/familias/use-familias-supabase";
 import type {
   BeneficioEstoque,
   EntregaPainel,
