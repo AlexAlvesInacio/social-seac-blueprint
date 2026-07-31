@@ -29,9 +29,15 @@ comment on column public.beneficios.tipo is
 -- 2) Normalização de categoria/unidade dos seeds para os nomes oficiais
 -- ============================================================================
 
+-- O trigger de auditoria exige auth.uid(), inexistente no contexto de
+-- migration; desabilita só durante a normalização (dados de seed).
+alter table public.itens_estoque disable trigger itens_estoque_definir_auditoria;
+
 update public.itens_estoque set categoria = 'Alimentos' where categoria = 'Alimento';
 update public.itens_estoque set unidade = 'Pacote' where unidade = 'pacote';
 update public.itens_estoque set unidade = 'Unidade' where unidade = 'unidade';
+
+alter table public.itens_estoque enable trigger itens_estoque_definir_auditoria;
 
 -- ============================================================================
 -- 3) Tipo dos benefícios semeados
