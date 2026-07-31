@@ -59,19 +59,29 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   useItens,
-  useUnidades,
-  useCategorias,
   useBeneficios,
-  useDoadores,
-  useFornecedores,
   type Item,
-  type Unidade,
-  type Categoria,
   type Beneficio,
-  type Doador,
-  type Fornecedor,
   type Status,
 } from "@/lib/config-store";
+import {
+  CadastrosSupabaseError,
+  useCategoriasSupabase,
+  useDefinirStatusCadastro,
+  useDoadoresSupabase,
+  useExcluirCadastro,
+  useFornecedoresSupabase,
+  useSalvarCategoria,
+  useSalvarDoador,
+  useSalvarFornecedor,
+  useSalvarUnidade,
+  useUnidadesSupabase,
+  type CategoriaCadastro,
+  type DoadorCadastro,
+  type DoadorTipo,
+  type FornecedorCadastro,
+  type UnidadeCadastro,
+} from "@/lib/cadastros/cadastros-supabase";
 import {
   CONFIGURACOES_PADRAO,
   useAtualizarConfiguracoes,
@@ -142,6 +152,35 @@ function validateDoc(doc?: string): string | undefined {
   if (digits.length !== 11 && digits.length !== 14)
     return "Documento deve ser CPF (11) ou CNPJ (14 dígitos)";
   return undefined;
+}
+
+function mensagemErroCadastro(error: unknown, fallback: string): string {
+  return error instanceof CadastrosSupabaseError ? error.message : fallback;
+}
+
+function CadastroEstado({
+  carregando,
+  mensagemErro,
+  onTentarNovamente,
+}: {
+  carregando: boolean;
+  mensagemErro: string;
+  onTentarNovamente: () => void;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+        <p className="text-sm text-muted-foreground">
+          {carregando ? "Carregando cadastros do Supabase..." : mensagemErro}
+        </p>
+        {!carregando && (
+          <Button type="button" size="sm" variant="outline" onClick={onTentarNovamente}>
+            Tentar novamente
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 /* ---------- generic row actions ---------- */
@@ -240,8 +279,8 @@ function ItemForm({
 }) {
   const upsert = useItens((s) => s.upsert);
   const rows = useItens((s) => s.rows);
-  const categorias = useCategorias((s) => s.rows);
-  const unidades = useUnidades((s) => s.rows);
+  const categorias = useCategoriasSupabase().data ?? [];
+  const unidades = useUnidadesSupabase().data ?? [];
 
   const [form, setForm] = useState<Item>(
     () =>
@@ -397,8 +436,8 @@ function ItensTab() {
   const rows = useItens((s) => s.rows);
   const remove = useItens((s) => s.remove);
   const setStatus = useItens((s) => s.setStatus);
-  const categorias = useCategorias((s) => s.rows);
-  const unidades = useUnidades((s) => s.rows);
+  const categorias = useCategoriasSupabase().data ?? [];
+  const unidades = useUnidadesSupabase().data ?? [];
 
   const [busca, setBusca] = useState("");
   const [filtroCat, setFiltroCat] = useState("all");
@@ -541,6 +580,22 @@ function ItensTab() {
 
 /* ---------- UNIDADES ---------- */
 
+type UnidadeFormState = {
+  codigo: string;
+  nome: string;
+  sigla: string;
+  usadaEstoque: boolean;
+  status: Status;
+};
+
+const UNIDADE_FORM_VAZIO: UnidadeFormState = {
+  codigo: "",
+  nome: "",
+  sigla: "",
+  usadaEstoque: true,
+  status: "ativo",
+};
+
 function UnidadeForm({
   open,
   onOpenChange,
@@ -548,22 +603,20 @@ function UnidadeForm({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing: Unidade | null;
+  editing: UnidadeCadastro | null;
 }) {
-  const upsert = useUnidades((s) => s.upsert);
-  const rows = useUnidades((s) => s.rows);
-  const [form, setForm] = useState<Unidade>(
-    () => editing ?? { codigo: "", nome: "", sigla: "", usadaEstoque: true, status: "ativo" },
-  );
+  const salvarUnidade = useSalvarUnidade();
+  const rows = useUnidadesSupabase().data ?? [];
+  const [form, setForm] = useState<UnidadeFormState>(UNIDADE_FORM_VAZIO);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (open) {
-      setForm(editing ?? { codigo: "", nome: "", sigla: "", usadaEstoque: true, status: "ativo" });
+      setForm(editing ?? UNIDADE_FORM_VAZIO);
       setErrors({});
     }
   }, [open, editing]);
 
-  function save() {
+  async function save() {
     const e: Record<string, string> = {};
     if (!form.codigo.trim()) e.codigo = "Código obrigatório";
     else if (!editing && rows.some((r) => r.codigo === form.codigo.trim()))
@@ -572,7 +625,15 @@ function UnidadeForm({
     if (!form.sigla.trim()) e.sigla = "Sigla obrigatória";
     setErrors(e);
     if (Object.keys(e).length) return;
-    upsert({ ...form, codigo: form.codigo.trim() });
+    try {
+      await salvarUnidade.mutateAsync({ ...form, id: editing?.id });
+    } catch (err) {
+      const mensagem = mensagemErroCadastro(err, "Não foi possível salvar a unidade.");
+      if (err instanceof CadastrosSupabaseError && err.code === "23505")
+        setErrors({ codigo: mensagem });
+      toast.error(mensagem);
+      return;
+    }
     registrarAuditoria({
       usuario: USUARIO_ATUAL,
       acao: editing ? "Unidade editada" : "Unidade criada",
@@ -632,7 +693,9 @@ function UnidadeForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={save}>Salvar</Button>
+          <Button disabled={salvarUnidade.isPending} onClick={() => void save()}>
+            {salvarUnidade.isPending ? "Salvando..." : "Salvar"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -640,14 +703,25 @@ function UnidadeForm({
 }
 
 function UnidadesTab() {
-  const rows = useUnidades((s) => s.rows);
-  const remove = useUnidades((s) => s.remove);
-  const setStatus = useUnidades((s) => s.setStatus);
+  const { data, isPending, isError, refetch } = useUnidadesSupabase();
+  const definirStatus = useDefinirStatusCadastro("unidades");
+  const excluir = useExcluirCadastro("unidades");
   const itens = useItens((s) => s.rows);
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Unidade | null>(null);
+  const [editing, setEditing] = useState<UnidadeCadastro | null>(null);
 
+  const rows = data ?? [];
   const usedIn = (codigo: string) => itens.some((i) => i.unidade === codigo);
+
+  if (isPending || isError) {
+    return (
+      <CadastroEstado
+        carregando={isPending}
+        mensagemErro="Não foi possível carregar as unidades."
+        onTentarNovamente={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -676,7 +750,7 @@ function UnidadesTab() {
           </TableHeader>
           <TableBody>
             {rows.map((r) => (
-              <TableRow key={r.codigo}>
+              <TableRow key={r.id}>
                 <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
                 <TableCell className="font-medium">{r.nome}</TableCell>
                 <TableCell>{r.sigla}</TableCell>
@@ -694,24 +768,49 @@ function UnidadesTab() {
                     }}
                     onToggleStatus={() => {
                       const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                      setStatus(r.codigo, ns);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: ns === "ativo" ? "Unidade reativada" : "Unidade inativada",
-                        modulo: "Configurações › Unidades",
-                        registro: `${r.codigo} — ${r.nome}`,
-                      });
-                      toast.success(ns === "ativo" ? "Unidade reativada" : "Unidade inativada");
+                      definirStatus.mutate(
+                        { id: r.id, status: ns },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: ns === "ativo" ? "Unidade reativada" : "Unidade inativada",
+                              modulo: "Configurações › Unidades",
+                              registro: `${r.codigo} — ${r.nome}`,
+                            });
+                            toast.success(
+                              ns === "ativo" ? "Unidade reativada" : "Unidade inativada",
+                            );
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(
+                                err,
+                                "Não foi possível alterar o status da unidade.",
+                              ),
+                            ),
+                        },
+                      );
                     }}
                     onDelete={() => {
-                      remove(r.codigo);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: "Unidade excluída",
-                        modulo: "Configurações › Unidades",
-                        registro: `${r.codigo} — ${r.nome}`,
-                      });
-                      toast.success("Unidade excluída");
+                      excluir.mutate(
+                        { id: r.id },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: "Unidade excluída",
+                              modulo: "Configurações › Unidades",
+                              registro: `${r.codigo} — ${r.nome}`,
+                            });
+                            toast.success("Unidade excluída");
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(err, "Não foi possível excluir a unidade."),
+                            ),
+                        },
+                      );
                     }}
                     onDeleteBlocked={() => {
                       registrarAuditoria({
@@ -736,6 +835,20 @@ function UnidadesTab() {
 
 /* ---------- CATEGORIAS ---------- */
 
+type CategoriaFormState = {
+  codigo: string;
+  nome: string;
+  descricao: string;
+  status: Status;
+};
+
+const CATEGORIA_FORM_VAZIO: CategoriaFormState = {
+  codigo: "",
+  nome: "",
+  descricao: "",
+  status: "ativo",
+};
+
 function CategoriaForm({
   open,
   onOpenChange,
@@ -743,22 +856,20 @@ function CategoriaForm({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing: Categoria | null;
+  editing: CategoriaCadastro | null;
 }) {
-  const upsert = useCategorias((s) => s.upsert);
-  const rows = useCategorias((s) => s.rows);
-  const [form, setForm] = useState<Categoria>(
-    () => editing ?? { codigo: "", nome: "", descricao: "", status: "ativo" },
-  );
+  const salvarCategoria = useSalvarCategoria();
+  const rows = useCategoriasSupabase().data ?? [];
+  const [form, setForm] = useState<CategoriaFormState>(CATEGORIA_FORM_VAZIO);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (open) {
-      setForm(editing ?? { codigo: "", nome: "", descricao: "", status: "ativo" });
+      setForm(editing ?? CATEGORIA_FORM_VAZIO);
       setErrors({});
     }
   }, [open, editing]);
 
-  function save() {
+  async function save() {
     const e: Record<string, string> = {};
     if (!form.codigo.trim()) e.codigo = "Código obrigatório";
     else if (!editing && rows.some((r) => r.codigo === form.codigo.trim()))
@@ -766,7 +877,15 @@ function CategoriaForm({
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
     setErrors(e);
     if (Object.keys(e).length) return;
-    upsert({ ...form, codigo: form.codigo.trim() });
+    try {
+      await salvarCategoria.mutateAsync({ ...form, id: editing?.id });
+    } catch (err) {
+      const mensagem = mensagemErroCadastro(err, "Não foi possível salvar a categoria.");
+      if (err instanceof CadastrosSupabaseError && err.code === "23505")
+        setErrors({ codigo: mensagem });
+      toast.error(mensagem);
+      return;
+    }
     registrarAuditoria({
       usuario: USUARIO_ATUAL,
       acao: editing ? "Categoria editada" : "Categoria criada",
@@ -814,7 +933,9 @@ function CategoriaForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={save}>Salvar</Button>
+          <Button disabled={salvarCategoria.isPending} onClick={() => void save()}>
+            {salvarCategoria.isPending ? "Salvando..." : "Salvar"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -822,13 +943,25 @@ function CategoriaForm({
 }
 
 function CategoriasTab() {
-  const rows = useCategorias((s) => s.rows);
-  const remove = useCategorias((s) => s.remove);
-  const setStatus = useCategorias((s) => s.setStatus);
+  const { data, isPending, isError, refetch } = useCategoriasSupabase();
+  const definirStatus = useDefinirStatusCadastro("categorias");
+  const excluir = useExcluirCadastro("categorias");
   const itens = useItens((s) => s.rows);
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Categoria | null>(null);
+  const [editing, setEditing] = useState<CategoriaCadastro | null>(null);
+
+  const rows = data ?? [];
   const usedIn = (codigo: string) => itens.some((i) => i.categoria === codigo);
+
+  if (isPending || isError) {
+    return (
+      <CadastroEstado
+        carregando={isPending}
+        mensagemErro="Não foi possível carregar as categorias."
+        onTentarNovamente={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -856,7 +989,7 @@ function CategoriasTab() {
           </TableHeader>
           <TableBody>
             {rows.map((r) => (
-              <TableRow key={r.codigo}>
+              <TableRow key={r.id}>
                 <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
                 <TableCell className="font-medium">{r.nome}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{r.descricao}</TableCell>
@@ -873,22 +1006,49 @@ function CategoriasTab() {
                     }}
                     onToggleStatus={() => {
                       const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                      setStatus(r.codigo, ns);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: ns === "ativo" ? "Categoria reativada" : "Categoria inativada",
-                        modulo: "Configurações › Categorias",
-                        registro: `${r.codigo} — ${r.nome}`,
-                      });
+                      definirStatus.mutate(
+                        { id: r.id, status: ns },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: ns === "ativo" ? "Categoria reativada" : "Categoria inativada",
+                              modulo: "Configurações › Categorias",
+                              registro: `${r.codigo} — ${r.nome}`,
+                            });
+                            toast.success(
+                              ns === "ativo" ? "Categoria reativada" : "Categoria inativada",
+                            );
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(
+                                err,
+                                "Não foi possível alterar o status da categoria.",
+                              ),
+                            ),
+                        },
+                      );
                     }}
                     onDelete={() => {
-                      remove(r.codigo);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: "Categoria excluída",
-                        modulo: "Configurações › Categorias",
-                        registro: `${r.codigo} — ${r.nome}`,
-                      });
+                      excluir.mutate(
+                        { id: r.id },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: "Categoria excluída",
+                              modulo: "Configurações › Categorias",
+                              registro: `${r.codigo} — ${r.nome}`,
+                            });
+                            toast.success("Categoria excluída");
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(err, "Não foi possível excluir a categoria."),
+                            ),
+                        },
+                      );
                     }}
                     onDeleteBlocked={() => {
                       registrarAuditoria({
@@ -1138,6 +1298,28 @@ function BeneficiosTab() {
 
 /* ---------- DOADORES ---------- */
 
+type DoadorFormState = {
+  nome: string;
+  tipo: DoadorTipo;
+  documento: string;
+  telefone: string;
+  email: string;
+  endereco: string;
+  observacao: string;
+  status: Status;
+};
+
+const DOADOR_FORM_VAZIO: DoadorFormState = {
+  nome: "",
+  tipo: "Empresa",
+  documento: "",
+  telefone: "",
+  email: "",
+  endereco: "",
+  observacao: "",
+  status: "ativo",
+};
+
 function DoadorForm({
   open,
   onOpenChange,
@@ -1145,47 +1327,19 @@ function DoadorForm({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing: Doador | null;
+  editing: DoadorCadastro | null;
 }) {
-  const upsert = useDoadores((s) => s.upsert);
-  const rows = useDoadores((s) => s.rows);
-  const nextCode = () => `DOA${String(rows.length + 1).padStart(3, "0")}`;
-  const [form, setForm] = useState<Doador>(
-    () =>
-      editing ?? {
-        codigo: nextCode(),
-        nome: "",
-        tipo: "Empresa",
-        documento: "",
-        telefone: "",
-        email: "",
-        endereco: "",
-        status: "ativo",
-        observacao: "",
-      },
-  );
+  const salvarDoador = useSalvarDoador();
+  const [form, setForm] = useState<DoadorFormState>(DOADOR_FORM_VAZIO);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (open) {
-      setForm(
-        editing ?? {
-          codigo: nextCode(),
-          nome: "",
-          tipo: "Empresa",
-          documento: "",
-          telefone: "",
-          email: "",
-          endereco: "",
-          status: "ativo",
-          observacao: "",
-        },
-      );
+      setForm(editing ?? DOADOR_FORM_VAZIO);
       setErrors({});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
-  function save() {
+  async function save() {
     const e: Record<string, string> = {};
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
     const de =
@@ -1195,7 +1349,12 @@ function DoadorForm({
     if (de) e.documento = de;
     setErrors(e);
     if (Object.keys(e).length) return;
-    upsert(form);
+    try {
+      await salvarDoador.mutateAsync({ ...form, id: editing?.id });
+    } catch (err) {
+      toast.error(mensagemErroCadastro(err, "Não foi possível salvar o doador."));
+      return;
+    }
     registrarAuditoria({
       usuario: USUARIO_ATUAL,
       acao: editing ? "Doador editado" : "Doador criado",
@@ -1219,7 +1378,7 @@ function DoadorForm({
           <F label="Tipo">
             <Select
               value={form.tipo}
-              onValueChange={(v) => setForm({ ...form, tipo: v as Doador["tipo"] })}
+              onValueChange={(v) => setForm({ ...form, tipo: v as DoadorTipo })}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -1233,32 +1392,32 @@ function DoadorForm({
           </F>
           <F label="Documento (CPF ou CNPJ)" error={errors.documento}>
             <Input
-              value={form.documento ?? ""}
+              value={form.documento}
               onChange={(e) => setForm({ ...form, documento: e.target.value })}
             />
           </F>
           <F label="Telefone">
             <Input
-              value={form.telefone ?? ""}
+              value={form.telefone}
               onChange={(e) => setForm({ ...form, telefone: e.target.value })}
             />
           </F>
           <F label="E-mail">
             <Input
               type="email"
-              value={form.email ?? ""}
+              value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
           </F>
           <F label="Endereço">
             <Input
-              value={form.endereco ?? ""}
+              value={form.endereco}
               onChange={(e) => setForm({ ...form, endereco: e.target.value })}
             />
           </F>
           <F label="Observação">
             <Textarea
-              value={form.observacao ?? ""}
+              value={form.observacao}
               onChange={(e) => setForm({ ...form, observacao: e.target.value })}
             />
           </F>
@@ -1276,7 +1435,9 @@ function DoadorForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={save}>Salvar</Button>
+          <Button disabled={salvarDoador.isPending} onClick={() => void save()}>
+            {salvarDoador.isPending ? "Salvando..." : "Salvar"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -1284,13 +1445,25 @@ function DoadorForm({
 }
 
 function DoadoresTab() {
-  const rows = useDoadores((s) => s.rows);
-  const remove = useDoadores((s) => s.remove);
-  const setStatus = useDoadores((s) => s.setStatus);
+  const { data, isPending, isError, refetch } = useDoadoresSupabase();
+  const definirStatus = useDefinirStatusCadastro("doadores");
+  const excluir = useExcluirCadastro("doadores");
   const [busca, setBusca] = useState("");
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Doador | null>(null);
+  const [editing, setEditing] = useState<DoadorCadastro | null>(null);
+
+  const rows = data ?? [];
   const filtered = rows.filter((r) => !busca || r.nome.toLowerCase().includes(busca.toLowerCase()));
+
+  if (isPending || isError) {
+    return (
+      <CadastroEstado
+        carregando={isPending}
+        mensagemErro="Não foi possível carregar os doadores."
+        onTentarNovamente={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -1324,7 +1497,7 @@ function DoadoresTab() {
           </TableHeader>
           <TableBody>
             {filtered.map((r) => (
-              <TableRow key={r.codigo}>
+              <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.nome}</TableCell>
                 <TableCell>{r.tipo}</TableCell>
                 <TableCell className="font-mono text-xs">{r.documento || "—"}</TableCell>
@@ -1345,22 +1518,47 @@ function DoadoresTab() {
                     }}
                     onToggleStatus={() => {
                       const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                      setStatus(r.codigo, ns);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: ns === "ativo" ? "Doador reativado" : "Doador inativado",
-                        modulo: "Configurações › Doadores",
-                        registro: r.nome,
-                      });
+                      definirStatus.mutate(
+                        { id: r.id, status: ns },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: ns === "ativo" ? "Doador reativado" : "Doador inativado",
+                              modulo: "Configurações › Doadores",
+                              registro: r.nome,
+                            });
+                            toast.success(ns === "ativo" ? "Doador reativado" : "Doador inativado");
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(
+                                err,
+                                "Não foi possível alterar o status do doador.",
+                              ),
+                            ),
+                        },
+                      );
                     }}
                     onDelete={() => {
-                      remove(r.codigo);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: "Doador excluído",
-                        modulo: "Configurações › Doadores",
-                        registro: r.nome,
-                      });
+                      excluir.mutate(
+                        { id: r.id },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: "Doador excluído",
+                              modulo: "Configurações › Doadores",
+                              registro: r.nome,
+                            });
+                            toast.success("Doador excluído");
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(err, "Não foi possível excluir o doador."),
+                            ),
+                        },
+                      );
                     }}
                     onDeleteBlocked={() => {
                       registrarAuditoria({
@@ -1385,6 +1583,26 @@ function DoadoresTab() {
 
 /* ---------- FORNECEDORES ---------- */
 
+type FornecedorFormState = {
+  nome: string;
+  documento: string;
+  telefone: string;
+  email: string;
+  categoria: string;
+  observacao: string;
+  status: Status;
+};
+
+const FORNECEDOR_FORM_VAZIO: FornecedorFormState = {
+  nome: "",
+  documento: "",
+  telefone: "",
+  email: "",
+  categoria: "Alimentos",
+  observacao: "",
+  status: "ativo",
+};
+
 function FornecedorForm({
   open,
   onOpenChange,
@@ -1392,45 +1610,19 @@ function FornecedorForm({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing: Fornecedor | null;
+  editing: FornecedorCadastro | null;
 }) {
-  const upsert = useFornecedores((s) => s.upsert);
-  const rows = useFornecedores((s) => s.rows);
-  const nextCode = () => `FOR${String(rows.length + 1).padStart(3, "0")}`;
-  const [form, setForm] = useState<Fornecedor>(
-    () =>
-      editing ?? {
-        codigo: nextCode(),
-        nome: "",
-        documento: "",
-        telefone: "",
-        email: "",
-        categoria: "Alimentos",
-        status: "ativo",
-        observacao: "",
-      },
-  );
+  const salvarFornecedor = useSalvarFornecedor();
+  const [form, setForm] = useState<FornecedorFormState>(FORNECEDOR_FORM_VAZIO);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (open) {
-      setForm(
-        editing ?? {
-          codigo: nextCode(),
-          nome: "",
-          documento: "",
-          telefone: "",
-          email: "",
-          categoria: "Alimentos",
-          status: "ativo",
-          observacao: "",
-        },
-      );
+      setForm(editing ?? FORNECEDOR_FORM_VAZIO);
       setErrors({});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
-  function save() {
+  async function save() {
     const e: Record<string, string> = {};
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
     const de = validateDoc(form.documento);
@@ -1438,7 +1630,12 @@ function FornecedorForm({
     if (!form.categoria.trim()) e.categoria = "Categoria obrigatória";
     setErrors(e);
     if (Object.keys(e).length) return;
-    upsert(form);
+    try {
+      await salvarFornecedor.mutateAsync({ ...form, id: editing?.id });
+    } catch (err) {
+      toast.error(mensagemErroCadastro(err, "Não foi possível salvar o fornecedor."));
+      return;
+    }
     registrarAuditoria({
       usuario: USUARIO_ATUAL,
       acao: editing ? "Fornecedor editado" : "Fornecedor criado",
@@ -1461,20 +1658,20 @@ function FornecedorForm({
           </F>
           <F label="CNPJ / Documento" error={errors.documento}>
             <Input
-              value={form.documento ?? ""}
+              value={form.documento}
               onChange={(e) => setForm({ ...form, documento: e.target.value })}
             />
           </F>
           <F label="Telefone">
             <Input
-              value={form.telefone ?? ""}
+              value={form.telefone}
               onChange={(e) => setForm({ ...form, telefone: e.target.value })}
             />
           </F>
           <F label="E-mail">
             <Input
               type="email"
-              value={form.email ?? ""}
+              value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
           </F>
@@ -1486,7 +1683,7 @@ function FornecedorForm({
           </F>
           <F label="Observação">
             <Textarea
-              value={form.observacao ?? ""}
+              value={form.observacao}
               onChange={(e) => setForm({ ...form, observacao: e.target.value })}
             />
           </F>
@@ -1504,7 +1701,9 @@ function FornecedorForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={save}>Salvar</Button>
+          <Button disabled={salvarFornecedor.isPending} onClick={() => void save()}>
+            {salvarFornecedor.isPending ? "Salvando..." : "Salvar"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -1512,13 +1711,25 @@ function FornecedorForm({
 }
 
 function FornecedoresTab() {
-  const rows = useFornecedores((s) => s.rows);
-  const remove = useFornecedores((s) => s.remove);
-  const setStatus = useFornecedores((s) => s.setStatus);
+  const { data, isPending, isError, refetch } = useFornecedoresSupabase();
+  const definirStatus = useDefinirStatusCadastro("fornecedores");
+  const excluir = useExcluirCadastro("fornecedores");
   const [busca, setBusca] = useState("");
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Fornecedor | null>(null);
+  const [editing, setEditing] = useState<FornecedorCadastro | null>(null);
+
+  const rows = data ?? [];
   const filtered = rows.filter((r) => !busca || r.nome.toLowerCase().includes(busca.toLowerCase()));
+
+  if (isPending || isError) {
+    return (
+      <CadastroEstado
+        carregando={isPending}
+        mensagemErro="Não foi possível carregar os fornecedores."
+        onTentarNovamente={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -1551,7 +1762,7 @@ function FornecedoresTab() {
           </TableHeader>
           <TableBody>
             {filtered.map((r) => (
-              <TableRow key={r.codigo}>
+              <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.nome}</TableCell>
                 <TableCell className="font-mono text-xs">{r.documento || "—"}</TableCell>
                 <TableCell>{r.telefone || "—"}</TableCell>
@@ -1569,22 +1780,50 @@ function FornecedoresTab() {
                     }}
                     onToggleStatus={() => {
                       const ns: Status = r.status === "ativo" ? "inativo" : "ativo";
-                      setStatus(r.codigo, ns);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: ns === "ativo" ? "Fornecedor reativado" : "Fornecedor inativado",
-                        modulo: "Configurações › Fornecedores",
-                        registro: r.nome,
-                      });
+                      definirStatus.mutate(
+                        { id: r.id, status: ns },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao:
+                                ns === "ativo" ? "Fornecedor reativado" : "Fornecedor inativado",
+                              modulo: "Configurações › Fornecedores",
+                              registro: r.nome,
+                            });
+                            toast.success(
+                              ns === "ativo" ? "Fornecedor reativado" : "Fornecedor inativado",
+                            );
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(
+                                err,
+                                "Não foi possível alterar o status do fornecedor.",
+                              ),
+                            ),
+                        },
+                      );
                     }}
                     onDelete={() => {
-                      remove(r.codigo);
-                      registrarAuditoria({
-                        usuario: USUARIO_ATUAL,
-                        acao: "Fornecedor excluído",
-                        modulo: "Configurações › Fornecedores",
-                        registro: r.nome,
-                      });
+                      excluir.mutate(
+                        { id: r.id },
+                        {
+                          onSuccess: () => {
+                            registrarAuditoria({
+                              usuario: USUARIO_ATUAL,
+                              acao: "Fornecedor excluído",
+                              modulo: "Configurações › Fornecedores",
+                              registro: r.nome,
+                            });
+                            toast.success("Fornecedor excluído");
+                          },
+                          onError: (err) =>
+                            toast.error(
+                              mensagemErroCadastro(err, "Não foi possível excluir o fornecedor."),
+                            ),
+                        },
+                      );
                     }}
                     onDeleteBlocked={() => {
                       registrarAuditoria({
@@ -1685,7 +1924,10 @@ function ParametrosTab() {
             <Select
               value={form.liberacaoExcepcional}
               onValueChange={(v) =>
-                setForm({ ...form, liberacaoExcepcional: v as Parametros["liberacaoExcepcional"] })
+                setForm({
+                  ...form,
+                  liberacaoExcepcional: v as Configuracoes["liberacaoExcepcional"],
+                })
               }
             >
               <SelectTrigger className="w-56">
