@@ -61,6 +61,24 @@ where grantee = 'anon'
 order by table_name, privilege_type;
 
 -- ============================================================================
+-- 3b) Privilégios de authenticated — DEVE ter linhas
+-- ============================================================================
+-- O espelho do bloco anterior, e o que pega o erro oposto: um dump gerado com
+-- `--no-privileges` restaura sem nenhum GRANT. O banco sobe, as policies estão
+-- lá, e a aplicação não lê nada. Se este bloco vier vazio, o backup estava
+-- incompleto — não é um problema do banco restaurado, é do arquivo.
+
+\echo ''
+\echo '=== 3b) Grants para authenticated por tabela (esperado: muitas linhas) ==='
+select table_name as tabela,
+       string_agg(distinct privilege_type, ',' order by privilege_type) as privilegios
+from information_schema.role_table_grants
+where grantee = 'authenticated'
+  and table_schema = 'public'
+group by table_name
+order by table_name;
+
+-- ============================================================================
 -- 4) Funções e seu modo de segurança
 -- ============================================================================
 -- Uma função que volta como SECURITY DEFINER sem `search_path` fixo é um vetor

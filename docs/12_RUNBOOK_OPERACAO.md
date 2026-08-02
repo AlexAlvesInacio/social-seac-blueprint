@@ -130,11 +130,24 @@ bunx supabase db dump --data-only -f backup_dados_$(date +%Y%m%d).sql
 Sem Docker (`pg_dump` direto):
 
 ```sh
-pg_dump "$CONNECTION_STRING" --schema-only --no-owner --no-privileges \
+pg_dump "$CONNECTION_STRING" --schema-only --no-owner \
+  --schema=public --schema=private \
   -f backup_schema_$(date +%Y%m%d).sql
 pg_dump "$CONNECTION_STRING" --data-only --no-owner \
+  --schema=public \
   -f backup_dados_$(date +%Y%m%d).sql
 ```
+
+**Nunca usar `--no-privileges` aqui.** A flag remove todos os `GRANT` e
+`REVOKE` do dump — e é neles que mora metade do modelo de autorização
+deste projeto (a outra metade são as policies). Medido em 2026-08-02 no
+banco de produção: com a flag, 0 grants e 0 revokes no arquivo; sem ela,
+98 grants e 34 revokes. Restaurar o primeiro produz um banco que parece
+íntegro e onde a aplicação não consegue ler nada.
+
+O `--schema=private` também é obrigatório: os predicados de autorização
+(`private.usuario_atual_pode_gerir_familias()` e companhia) vivem nesse
+schema, e sem eles as policies não funcionam.
 
 - Executar antes de qualquer migration destrutiva e antes da publicação.
 - Guardar os arquivos fora da máquina de desenvolvimento (drive
