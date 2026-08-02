@@ -75,6 +75,12 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
   `private.impedir_registro_atendimento_direto()` (flag `seac.atendimento_via_rpc`),
   ligado nas três RPCs de atendimento por `alter function ... set`. Toda RPC nova
   que grave nessas tabelas precisa do mesmo `alter function`.
+- **[Resolvido — 2026-08-02, issue #80] CSV de relatórios não neutralizava
+  fórmulas.** `csvEscape` tratava só `;`, aspas e quebras de linha, então uma
+  célula começando com `=`, `+`, `-`, `@` ou tab era avaliada pelo Excel/Calc
+  (CWE-1236) — um nome de família ou observação virava fórmula na máquina de
+  quem exporta. Agora essas células recebem apóstrofo antes do envelopamento;
+  números seguem numéricos.
 - **[Resolvido em parte — 2026-07-31] `familias-repository.ts` catch-all.** O domínio
   de estoque foi extraído para `src/lib/estoque/` (repositório + hooks + query keys
   próprias; benefícios, itens, movimentações, composição e montagem). O repositório
