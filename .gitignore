@@ -29,6 +29,7 @@ dist-ssr
 .venv/
 __pycache__/
 .ipynb_checkpoints/
+*.ipynb
 
 # Editor directories and files
 .vscode/*
