@@ -25,6 +25,11 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Python (notebooks locais)
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
