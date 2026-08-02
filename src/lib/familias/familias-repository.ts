@@ -358,6 +358,8 @@ export interface CriarObservacaoInput {
   familiaId: string;
   tipo: ObservacaoSocialTipoSupabase;
   texto: string;
+  /** Vazio/ausente = observação da família inteira (comportamento anterior). */
+  pessoaId?: string;
 }
 
 export interface AtualizarResponsavelInput {
@@ -794,6 +796,7 @@ async function criarObservacao(
       familia_id: input.familiaId,
       tipo: input.tipo,
       texto: input.texto.trim(),
+      pessoa_id: nullableParam(input.pessoaId),
     })
     .select("id")
     .single();
