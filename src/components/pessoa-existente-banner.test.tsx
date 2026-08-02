@@ -10,7 +10,13 @@ let pessoa: PessoaExistente | undefined;
 let papel: string;
 const transferirMutate = mock((_input: TransferirPessoaInput) => {});
 
+// Espalha o módulo real antes de sobrepor: `mock.module` é global no processo
+// do bun test, e substituir o módulo inteiro removeria os hooks que outros
+// arquivos de teste importam.
+const hooksReais = await import("@/lib/familias/use-familias-supabase");
+
 mock.module("@/lib/familias/use-familias-supabase", () => ({
+  ...hooksReais,
   usePessoaPorDocumento: () => ({ data: pessoa }),
   useTransferirPessoa: () => ({
     mutate: transferirMutate,

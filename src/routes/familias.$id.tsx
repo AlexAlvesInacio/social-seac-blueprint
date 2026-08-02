@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -98,6 +98,13 @@ function FamiliaSupabaseDetail({ id }: { id: string }) {
 
 function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadModel }) {
   const contagens = calcularContagensFamiliaSupabase(familia);
+  // Resolve o nome de quem a observação cita. Inclui membros inativos: uma
+  // observação antiga sobre alguém que saiu da família não pode virar "Toda a
+  // família" só porque o vínculo foi encerrado.
+  const nomePorPessoaId = useMemo(
+    () => new Map(familia.membros.map((m) => [m.pessoaId, m.nome])),
+    [familia.membros],
+  );
   const statusLabel = rotuloStatusFamiliaSupabase(familia.status);
   const endereco = [familia.endereco, familia.numero, familia.complemento]
     .filter(Boolean)
@@ -193,6 +200,9 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
         onOpenChange={setObsOpen}
         familiaId={familia.id}
         familiaNome={familia.nome || "família"}
+        membros={familia.membros
+          .filter((m) => m.status === "ativo")
+          .map((m) => ({ pessoaId: m.pessoaId, nome: m.nome }))}
       />
       <RegistrarEntregaSupabaseDialog
         open={entregaAssistido !== null}
@@ -448,7 +458,12 @@ function FamiliaSupabaseReadOnly({ familia }: { familia: FamiliaSupabaseReadMode
                   {familia.observacoes.map((observacao) => (
                     <div key={observacao.id} className="rounded-md border p-3">
                       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                        <Badge variant="outline">{observacao.tipo}</Badge>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">{observacao.tipo}</Badge>
+                          <Badge variant="secondary">
+                            {nomePorPessoaId.get(observacao.pessoaId ?? "") ?? "Toda a família"}
+                          </Badge>
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {formatarDataHora(observacao.data)} · Autor {observacao.usuario}
                         </span>

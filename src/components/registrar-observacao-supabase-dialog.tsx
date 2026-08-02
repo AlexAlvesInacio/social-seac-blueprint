@@ -21,12 +21,19 @@ import {
 import { useCriarObservacaoSupabase } from "@/lib/familias/use-familias-supabase";
 import type { ObservacaoSocialTipoSupabase } from "@/lib/familias/familias-supabase-types";
 
+type MembroOpcao = { pessoaId: string; nome: string };
+
 type Props = {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   familiaId: string;
   familiaNome: string;
+  /** Membros ativos, para vincular a observação a alguém específico. */
+  membros?: MembroOpcao[];
 };
+
+/** Valor do select quando a observação é da família toda. */
+const FAMILIA_TODA = "__familia__";
 
 const tiposObservacao: { value: ObservacaoSocialTipoSupabase; label: string }[] = [
   { value: "social", label: "Social" },
@@ -39,16 +46,18 @@ const tiposObservacao: { value: ObservacaoSocialTipoSupabase; label: string }[] 
 
 /**
  * Registra uma observação social em família remota (INSERT de tabela única,
- * gravado pela camada de serviço; autoria e data via trigger). É uma observação
- * no nível da família — pessoa/assistido específicos ficam para etapa futura.
+ * gravado pela camada de serviço; autoria e data via trigger). Pode ser da
+ * família inteira (padrão) ou de um membro específico.
  */
 export function RegistrarObservacaoSupabaseDialog({
   open,
   onOpenChange,
   familiaId,
   familiaNome,
+  membros = [],
 }: Props) {
   const [tipo, setTipo] = useState<ObservacaoSocialTipoSupabase>("social");
+  const [pessoaId, setPessoaId] = useState<string>(FAMILIA_TODA);
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const criarObservacao = useCriarObservacaoSupabase();
@@ -56,6 +65,7 @@ export function RegistrarObservacaoSupabaseDialog({
   useEffect(() => {
     if (open) {
       setTipo("social");
+      setPessoaId(FAMILIA_TODA);
       setTexto("");
       setErro(null);
     }
@@ -68,7 +78,12 @@ export function RegistrarObservacaoSupabaseDialog({
     }
     setErro(null);
     try {
-      await criarObservacao.mutateAsync({ familiaId, tipo, texto });
+      await criarObservacao.mutateAsync({
+        familiaId,
+        tipo,
+        texto,
+        pessoaId: pessoaId === FAMILIA_TODA ? undefined : pessoaId,
+      });
       toast.success("Observação registrada.");
       onOpenChange(false);
     } catch (err) {
@@ -99,6 +114,24 @@ export function RegistrarObservacaoSupabaseDialog({
               </SelectContent>
             </Select>
           </div>
+          {membros.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Refere-se a</Label>
+              <Select value={pessoaId} onValueChange={setPessoaId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FAMILIA_TODA}>Toda a família</SelectItem>
+                  {membros.map((m) => (
+                    <SelectItem key={m.pessoaId} value={m.pessoaId}>
+                      {m.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Observação</Label>
             <Textarea rows={5} value={texto} onChange={(e) => setTexto(e.target.value)} />
