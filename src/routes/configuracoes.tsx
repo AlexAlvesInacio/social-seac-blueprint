@@ -19,6 +19,7 @@ import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ParamNum } from "@/components/param-num";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -1968,12 +1969,15 @@ function ParametrosTab() {
             value={form.intervaloMinimoDias}
             onChange={(v) => setForm({ ...form, intervaloMinimoDias: v })}
             descricao="Antes desse prazo, a entrega fica bloqueada, exceto liberação excepcional por Administrador."
+            recomendado={25}
+            avisoAoZerar="Com 0, o prazo mínimo deixa de existir: qualquer assistido pode retirar quantas vezes quiser, no mesmo dia."
           />
           <ParamNum
             label="Alerta após liberação sem retirada"
             unidade="dias"
             value={form.alertaLiberadoSemRetiradaDias}
             onChange={(v) => setForm({ ...form, alertaLiberadoSemRetiradaDias: v })}
+            recomendado={45}
             descricao="A partir desse prazo, o cadastro continua liberado, mas aparece como atenção/acompanhamento."
           />
           <ParamNum
@@ -1981,12 +1985,15 @@ function ParametrosTab() {
             unidade="dias"
             value={form.inatividadeContatoDias}
             onChange={(v) => setForm({ ...form, inatividadeContatoDias: v })}
+            recomendado={90}
             descricao="A partir desse prazo, sinalizar contato necessário. Não bloquear automaticamente e não tornar inativo automaticamente."
           />
           <ParamNum
             label="Limite de Cesta Extra (retiradas)"
             value={form.limiteExtra}
             onChange={(v) => setForm({ ...form, limiteExtra: v })}
+            recomendado={3}
+            avisoAoZerar="Com 0, nenhum cadastro em avaliação consegue retirar Cesta Extra."
           />
           <ParamText
             label="Após limite de retiradas extras"
@@ -2047,38 +2054,6 @@ function ParametrosTab() {
   );
 }
 
-function ParamNum({
-  label,
-  value,
-  onChange,
-  unidade,
-  descricao,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  unidade?: string;
-  descricao?: string;
-}) {
-  return (
-    <div className="rounded-md border border-border bg-card p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="pr-3 text-sm font-medium">{label}</div>
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            min={0}
-            className="w-24"
-            value={value}
-            onChange={(e) => onChange(Number(e.target.value))}
-          />
-          {unidade && <span className="text-xs text-muted-foreground">{unidade}</span>}
-        </div>
-      </div>
-      {descricao && <p className="mt-2 text-xs text-muted-foreground">{descricao}</p>}
-    </div>
-  );
-}
 function ParamText({
   label,
   value,
