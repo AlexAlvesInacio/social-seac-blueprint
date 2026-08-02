@@ -18,6 +18,7 @@ import {
   criarAssistidoEmFamiliaNoSupabase,
   criarFamiliaComResponsavelNoSupabase,
   criarMembroEmFamiliaNoSupabase,
+  transferirPessoaEntreFamiliasNoSupabase,
   criarObservacaoSocialNoSupabase,
   criarPreCadastroNoSupabase,
   getFamiliaFromSupabaseById,
@@ -31,6 +32,7 @@ import {
   type CriarAssistidoInput,
   type CriarFamiliaInput,
   type CriarMembroInput,
+  type TransferirPessoaInput,
   type CriarObservacaoInput,
   type CriarPreCadastroInput,
   type RegistrarEntregaInput,
@@ -216,6 +218,39 @@ export function useCriarMembroSupabase() {
       void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
       void queryClient.invalidateQueries({
         queryKey: familiasSupabaseQueryKeys.detail(variables.familiaId),
+      });
+    },
+  });
+}
+
+/**
+ * Transfere a pessoa para a família de destino. Invalida o detalhe das DUAS
+ * famílias: a de origem perde o vínculo (e possivelmente o assistido) e
+ * continuaria exibindo dados velhos se só o destino fosse atualizado.
+ */
+export function useTransferirPessoa() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: TransferirPessoaInput) => {
+      const result = await transferirPessoaEntreFamiliasNoSupabase(input);
+      if (result.error) throw new FamiliasSupabaseWriteQueryError(result.error);
+      return result.data;
+    },
+    onSuccess: (data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.all });
+      void queryClient.invalidateQueries({
+        queryKey: familiasSupabaseQueryKeys.detail(variables.familiaDestinoId),
+      });
+      if (data) {
+        void queryClient.invalidateQueries({
+          queryKey: familiasSupabaseQueryKeys.detail(data.familia_origem_id),
+        });
+      }
+      // A busca por documento alimenta o banner: sem invalidar, ele continuaria
+      // dizendo que a pessoa está ativa na família antiga.
+      void queryClient.invalidateQueries({
+        queryKey: ["familias", "supabase", "pessoa-documento"],
       });
     },
   });

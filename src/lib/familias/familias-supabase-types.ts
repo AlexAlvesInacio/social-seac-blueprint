@@ -337,7 +337,8 @@ export type FamiliasSupabaseWriteOperation =
   | "aprovar_assistido"
   | "inativar_assistido"
   | "reativar_assistido"
-  | "atualizar_membro";
+  | "atualizar_membro"
+  | "transferir_pessoa";
 
 export interface FamiliasSupabaseWriteError {
   operation: FamiliasSupabaseWriteOperation;
@@ -610,6 +611,16 @@ export interface PessoaExistente {
   /** Preenchidos quando a pessoa é membro ativo de alguma família. */
   familiaAtivaId?: string;
   familiaAtivaNome?: string;
+}
+
+/** Retorno de `public.transferir_pessoa_entre_familias`. */
+export interface TransferirPessoaResult {
+  membro_id: MembroFamiliarSupabaseId;
+  familia_origem_id: FamiliaSupabaseId;
+  familia_origem_nome: string;
+  familia_destino_nome: string;
+  /** True quando a pessoa recebia benefício na origem e o vínculo foi encerrado. */
+  assistido_inativado: boolean;
 }
 
 /** Resultado da busca de assistidos ativos para atendimento. */

@@ -144,6 +144,7 @@ export function AdicionarMembroSupabaseDialog({
                 pessoaIdSelecionado={form.pessoaId}
                 onReutilizar={(p) => setForm((f) => ({ ...f, pessoaId: p.pessoaId, nome: p.nome }))}
                 onLimpar={() => set("pessoaId", "")}
+                familiaDestinoId={familiaId}
               />
             </F>
             <F label="Telefone">
