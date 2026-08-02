@@ -22,8 +22,9 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 | Auditoria | Migrado ao Supabase (imutável) | Tabela `auditoria_eventos` append-only (só SELECT/INSERT; sem UPDATE/DELETE). A tela lê do banco, resolve o autor e não permite limpar o histórico. |
 | Configurações | Migrado ao Supabase | Os **parâmetros de regra** (`configuracoes`: 25 dias, limite extra, etc.) estão no banco e são autoritativos no atendimento (admin edita). Em 2026-07-30, os cadastros auxiliares migraram por completo: unidades/categorias/doadores/fornecedores em tabelas próprias (migration `20260731004140`; RLS: equipe de estoque consulta, só admin altera) e as abas Itens/Benefícios religadas às tabelas reais `itens_estoque`/`beneficios` (migration `20260731005549`: campos de cadastro tipo/observacao, normalização de categoria/unidade e policies de insert/delete). Camada em `src/lib/cadastros/`; `config-store` foi removido. |
 | Supabase | Implementado nos domínios ativos | Cliente, migrations versionadas, RLS e RPCs cobrindo profiles, famílias/pessoas/membros/assistidos/observações, atendimento/entregas/tentativas, benefícios+itens+composição+movimentações, recebimentos, configurações e auditoria. |
-| Segurança | Boa, com pendências | RLS em todas as tabelas expostas; RPCs de escrita `SECURITY INVOKER` com `search_path=''`; autoria/timestamps por trigger; enforcement das regras de atendimento no banco; ledger de saldo não-burlável (trigger + flag transacional); papel `estoque` habilitado no domínio de estoque. Faltam: backup testado e suíte de testes. |
-| Testes | Parcial (lógica pura) | `bun test` cobre as regras de atendimento, a lógica de relatórios, as faixas etárias oficiais e o mapper de famílias (36 testes em 2026-07-30). Sem testes de componentes/hooks/Supabase; validação de UI segue por `bun run lint` + `bun run build` e homologação manual. |
+| Segurança | Revisada e endurecida (2026-08-02) | RLS em todas as tabelas expostas; RPCs de escrita `SECURITY INVOKER` com `search_path=''`; autoria/timestamps por trigger. A security review geral (#45) achou e corrigiu quatro pontos, **todos verificados no banco de produção e não apenas no código**: saldo não pode nascer inflado no INSERT (#78), entregas/tentativas só nascem nas RPCs de atendimento (#79), CSV de relatórios neutraliza fórmulas (#80) e os grants padrão do Supabase foram revogados de `authenticated` em 15 tabelas (#86). Faltam: restauração testada (#44) e suíte de testes de componentes. |
+| Testes | Parcial (lógica pura) | `bun test` cobre as regras de atendimento, a lógica de relatórios (incluindo a neutralização de fórmula no CSV), as faixas etárias oficiais e o mapper de famílias (48 testes em 2026-08-02). Sem testes de componentes/hooks/Supabase; validação de UI segue por `bun run lint` + `bun run build` e homologação manual. |
+| Dados | Zerado para produção (2026-08-02) | Os dados de homologação (13 famílias, 22 pessoas, 12 entregas, 22 movimentações, 2 recebimentos, 11 eventos de auditoria) foram apagados e os saldos zerados, com backup prévio. Preservados: catálogo de itens e benefícios, composições, unidades, categorias e os perfis de usuário. **Falta a carga inicial com os números reais da SEAC** (#46) — procedimento em `12_RUNBOOK_OPERACAO.md`. |
 
 ## Divergências e riscos relevantes
 
@@ -47,6 +48,17 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
   normalizados na migration `20260731005549`.
 - **Papéis vs. status.** Perfis usam papéis `administrador/atendente/estoque`
   separados dos status `pendente/ativo/inativo` (não confundir as duas colunas).
+- **[2026-08-02] Saldo só entra por movimentação, nunca por `update`.** Depois
+  da migration `20260802143000`, `update ... set saldo` é recusado com `SEAS1` e
+  item novo nasce obrigatoriamente com saldo 0. Isso muda o procedimento de
+  carga de estoque: não existe mais "corrigir o saldo no banco", existe lançar
+  um **Ajuste** (que define o saldo alvo absoluto e grava o delta no ledger).
+  Vale para a carga inicial e para qualquer inventário posterior.
+- **[2026-08-02] Tabela nova nasce sem grant.** A `20260802170000` removeu o
+  `alter default privileges` que concedia tudo a `anon` e `authenticated`. Toda
+  migration que criar tabela precisa conceder explicitamente o que aquela tabela
+  usa, senão a aplicação falha no primeiro acesso. É intencional: o modo de
+  falha passou de silencioso (tabela aberta) para barulhento (tabela fechada).
 
 ## Achados da revisão da PR #27 (itens/composição/montagem) — situação atual
 
