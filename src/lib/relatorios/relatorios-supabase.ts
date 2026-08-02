@@ -23,6 +23,8 @@ import type { FamiliasSupabaseReadResult } from "@/lib/familias/familias-supabas
 import {
   fmtBRDate,
   fmtBRDateTime,
+  fmtDocumento,
+  fmtTelefone,
   fmtBRL,
   type FiltrosRelatorio,
   type ResultadoRelatorio,
@@ -156,8 +158,8 @@ async function familiasBloco(f: FiltrosRelatorio): Promise<Bloco> {
       return [
         fam.nome,
         fam.responsavel,
-        fam.documento,
-        fam.telefone,
+        fmtDocumento(fam.documento),
+        fmtTelefone(fam.telefone),
         fam.bairro,
         fam.cidade ?? "",
         fam.uf ?? "",
@@ -207,8 +209,8 @@ async function assistidosBloco(f: FiltrosRelatorio): Promise<Bloco> {
       const extras = idx.extrasPorAssistido.get(a.id) ?? 0;
       linhas.push([
         a.nome,
-        a.documento,
-        a.telefone ?? "",
+        fmtDocumento(a.documento),
+        fmtTelefone(a.telefone ?? ""),
         fam.nome,
         fam.responsavel,
         a.tipoCadastro === "definitivo" ? "Definitivo" : "Extra",
@@ -239,7 +241,7 @@ async function entregasBloco(f: FiltrosRelatorio, somenteExcepcionais: boolean):
       linhas: filtradas.map((e) => [
         fmtBRDateTime(e.criadoEm),
         e.assistidoNome,
-        e.documento ?? "",
+        fmtDocumento(e.documento ?? ""),
         e.familiaNome,
         e.beneficioNome,
         e.observacao ?? "",
@@ -251,7 +253,7 @@ async function entregasBloco(f: FiltrosRelatorio, somenteExcepcionais: boolean):
     linhas: filtradas.map((e) => [
       fmtBRDateTime(e.criadoEm),
       e.assistidoNome,
-      e.documento ?? "",
+      fmtDocumento(e.documento ?? ""),
       e.familiaNome,
       e.beneficioNome,
       e.excepcional ? "Liberação excepcional" : "Padrão",
@@ -269,7 +271,7 @@ async function tentativasBloco(
     .map((t) => [
       fmtBRDateTime(t.criadoEm),
       t.assistidoNome,
-      t.documento ?? "",
+      fmtDocumento(t.documento ?? ""),
       t.familiaNome,
       t.beneficioNome,
       t.observacao ?? "",
@@ -305,8 +307,8 @@ async function acompanhamentoBloco(f: FiltrosRelatorio, chaves: string[]): Promi
       return [
         fam.nome,
         fam.responsavel,
-        fam.documento,
-        fam.telefone,
+        fmtDocumento(fam.documento),
+        fmtTelefone(fam.telefone),
         fam.bairro,
         ultima ? fmtBRDate(ultima.toISOString()) : "—",
         dias !== null ? dias : "—",
@@ -337,7 +339,7 @@ async function recebimentosBloco(f: FiltrosRelatorio): Promise<Bloco> {
       fmtBRDate(r.data),
       ORIGEM_LABEL[r.origem],
       r.parte,
-      r.documento ?? "",
+      fmtDocumento(r.documento ?? ""),
       r.itensCount,
       fmtBRL(r.valor),
       STATUS_RECEB_LABEL[r.status],

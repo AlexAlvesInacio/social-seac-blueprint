@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  fmtDocumento,
+  fmtTelefone,
   relatorioParaCSV,
   type ResultadoRelatorio,
   type TipoRelatorio,
@@ -44,5 +46,40 @@ describe("relatorioParaCSV", () => {
   test("campos simples não são escapados", () => {
     const csv = relatorioParaCSV(resultado(["A", "B"], [["x", "y"]]));
     expect(csv).toBe(`${BOM}A;B\r\nx;y`);
+  });
+});
+
+describe("fmtDocumento", () => {
+  test("CPF de 11 dígitos ganha máscara (preserva zeros à esquerda no Excel)", () => {
+    expect(fmtDocumento("00011122258")).toBe("000.111.222-58");
+  });
+
+  test("CNPJ de 14 dígitos ganha máscara", () => {
+    expect(fmtDocumento("12345678000199")).toBe("12.345.678/0001-99");
+  });
+
+  test("valor já formatado fica intacto", () => {
+    expect(fmtDocumento("000.111.222-58")).toBe("000.111.222-58");
+  });
+
+  test("outros tamanhos e vazio ficam como estão", () => {
+    expect(fmtDocumento("123456")).toBe("123456");
+    expect(fmtDocumento("")).toBe("");
+  });
+});
+
+describe("fmtTelefone", () => {
+  test("celular de 11 dígitos ganha máscara com DDD", () => {
+    expect(fmtTelefone("11947445989")).toBe("(11) 94744-5989");
+  });
+
+  test("fixo de 10 dígitos ganha máscara com DDD", () => {
+    expect(fmtTelefone("1136225989")).toBe("(11) 3622-5989");
+  });
+
+  test("valor já formatado ou de outro tamanho fica como está", () => {
+    expect(fmtTelefone("(11) 94744-5989")).toBe("(11) 94744-5989");
+    expect(fmtTelefone("947445989")).toBe("947445989");
+    expect(fmtTelefone("")).toBe("");
   });
 });

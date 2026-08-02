@@ -68,6 +68,29 @@ export function fmtBRL(v: number): string {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/**
+ * CPF/CNPJ com máscara quando o valor é só dígitos (11/14). A máscara também
+ * evita que o Excel converta o documento em número no CSV (notação científica
+ * e perda de zeros à esquerda). Valores já formatados ou de outro tamanho
+ * ficam como estão.
+ */
+export function fmtDocumento(doc: string): string {
+  const d = doc.replace(/\D/g, "");
+  if (d !== doc) return doc;
+  if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  return doc;
+}
+
+/** Telefone com máscara quando o valor é só dígitos (10/11 com DDD). */
+export function fmtTelefone(tel: string): string {
+  const d = tel.replace(/\D/g, "");
+  if (d !== tel) return tel;
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return tel;
+}
+
 function csvEscape(v: string | number): string {
   const s = String(v ?? "");
   if (/[;\n"\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
