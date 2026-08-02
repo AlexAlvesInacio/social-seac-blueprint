@@ -89,7 +89,16 @@ painel e não exige mudança no frontend — só reiniciar as Edge Functions.
 ## Publicação
 
 1. Garantir `main` verde: `bun run lint`, `bun run build`, `bun run test`.
-2. Aplicar migrations pendentes: `bunx supabase db push`.
+2. Aplicar migrations pendentes — **no WSL, sempre com `--db-url`**
+   apontando para o pooler (ver "Incidentes comuns"):
+
+```sh
+bunx supabase db push \
+  --db-url "postgresql://postgres.<project-ref>@aws-1-sa-east-1.pooler.supabase.com:5432/postgres"
+```
+
+   Conferir depois com `bunx supabase migration list --db-url "…"`: toda
+   migration precisa ter `local` **e** `remote` preenchidos.
 3. Validar o checklist manual (`CHECKLIST_PUBLICACAO_SEAC_SOCIAL.md`)
    no ambiente de homologação.
 4. Publicar (Lovable Publish ou `npx nitro deploy --prebuilt`). **[validar]**
@@ -200,8 +209,31 @@ aberto. Conferir só se "os dados voltaram" não detecta isso.
 - **Tela mostra "Não foi possível consultar o Supabase":** verificar
   `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` no ambiente publicado e
   o status do projeto Supabase; as telas têm "Tentar novamente".
+- **`db push` "roda" mas nada chega ao banco (WSL).** Sintoma: o comando
+  termina, aparentemente sem aplicar nada, ou falha com
+  `LegacyDbConnectError: failed to connect to postgres`. Diagnosticado em
+  2026-08-02: o host direto `db.<ref>.supabase.co` resolve **somente em
+  IPv6** (`2600:1f1e:…`), e o WSL não tem rota IPv6 para a internet. O
+  pooler (`aws-1-sa-east-1.pooler.supabase.com`) tem IPv4, então a
+  solução é forçar a conexão por ele:
+
+```sh
+bunx supabase db push \
+  --db-url "postgresql://postgres.<project-ref>@aws-1-sa-east-1.pooler.supabase.com:5432/postgres"
+```
+
+  A senha é lida do `~/.pgpass`, então não precisa ir na URL. Para
+  confirmar o diagnóstico numa máquina nova:
+  `getent ahostsv4 db.<ref>.supabase.co` — se vier vazio, é este caso.
+
+  **Este modo de falha é perigoso porque é silencioso**: em 2026-08-02
+  duas migrations de segurança ficaram só no repositório enquanto a
+  produção seguia vulnerável, e a suposição de que tinham sido aplicadas
+  durou até alguém consultar o banco. Depois de todo push, confira o
+  estado real com `migration list` ou pelo próprio banco.
 - **Migration aplicada só em parte dos ambientes:** `bunx supabase
-  migration list` mostra o estado; `db push` aplica as pendentes.
+  migration list --db-url "…"` mostra o estado; `db push` aplica as
+  pendentes.
 - **Regressão após publicação:** o repositório é Lovable-connected —
   nunca force-push; reverter via PR de revert no GitHub.
 
