@@ -37,6 +37,7 @@ import type {
   RegistrarEntregaResult,
   RegistrarTentativaResult,
   ResumoAtendimentoAssistido,
+  TransferirPessoaResult,
 } from "@/lib/familias/familias-supabase-types";
 import {
   toFamiliasSupabaseReadError,
@@ -307,6 +308,13 @@ export interface CriarAssistidoInput {
   gestante?: boolean;
   /** Reutiliza uma pessoa existente em vez de criar nova. */
   pessoaId?: string;
+}
+
+export interface TransferirPessoaInput {
+  pessoaId: string;
+  familiaDestinoId: FamiliaSupabaseId;
+  motivo: string;
+  parentesco?: string;
 }
 
 export interface CriarMembroInput {
@@ -677,6 +685,50 @@ export async function criarMembroEmFamiliaNoSupabase(
     return await criarMembro(input);
   } catch (error) {
     return { data: null, error: toUnexpectedFamiliasSupabaseWriteError("criar_membro", error) };
+  }
+}
+
+async function transferirPessoa(
+  input: TransferirPessoaInput,
+): Promise<FamiliasSupabaseWriteResult<TransferirPessoaResult>> {
+  const { data, error } = await getSupabaseClient().rpc("transferir_pessoa_entre_familias", {
+    p_pessoa_id: input.pessoaId,
+    p_familia_destino_id: input.familiaDestinoId,
+    p_motivo: input.motivo.trim(),
+    p_parentesco: nullableParam(input.parentesco),
+  });
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseWriteError("transferir_pessoa", error) };
+  }
+
+  const row = firstRow<TransferirPessoaResult>(data);
+  if (!row) {
+    return {
+      data: null,
+      error: {
+        operation: "transferir_pessoa",
+        code: "EMPTY_RESULT",
+        message: "A transferência não retornou identificadores.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
+  return { data: row, error: null };
+}
+
+export async function transferirPessoaEntreFamiliasNoSupabase(
+  input: TransferirPessoaInput,
+): Promise<FamiliasSupabaseWriteResult<TransferirPessoaResult>> {
+  try {
+    return await transferirPessoa(input);
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseWriteError("transferir_pessoa", error),
+    };
   }
 }
 
