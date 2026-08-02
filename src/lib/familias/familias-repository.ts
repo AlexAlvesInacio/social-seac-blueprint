@@ -1035,13 +1035,43 @@ async function getResumoAtendimento(
 ): Promise<FamiliasSupabaseReadResult<ResumoAtendimentoAssistido>> {
   const client = getSupabaseClient();
 
+  // O prazo e o limite de extras contam por pessoa, não pelo vínculo de
+  // assistido — é o que `registrar_entrega_atendimento` aplica no servidor.
+  // Resolver a pessoa aqui mantém a tela e o enforcement mostrando o mesmo
+  // cenário depois de uma transferência entre famílias.
+  const pessoaResult = await client
+    .from("assistidos")
+    .select("pessoa_id")
+    .eq("id", assistidoId)
+    .maybeSingle();
+
+  if (pessoaResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("resumo_atendimento", pessoaResult.error),
+    };
+  }
+  const pessoaId = (pessoaResult.data as { pessoa_id: string } | null)?.pessoa_id;
+  if (!pessoaId) {
+    return {
+      data: null,
+      error: {
+        operation: "resumo_atendimento",
+        code: "P0002",
+        message: "Assistido não encontrado.",
+        details: null,
+        hint: null,
+      },
+    };
+  }
+
   // Sem join embutido do PostgREST: buscamos beneficio_id nas entregas e
   // mapeamos pelo id via a consulta de benefícios (mais previsível e tipado).
   const [entregasResult, beneficiosResult] = await Promise.all([
     client
       .from("entregas")
       .select("criado_em, beneficio_id")
-      .eq("assistido_id", assistidoId)
+      .eq("pessoa_id", pessoaId)
       .order("criado_em", { ascending: false }),
     client
       .from("beneficios")
