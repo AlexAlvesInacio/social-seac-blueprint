@@ -152,6 +152,44 @@ registrando total e última data, sem virar entrega. Fica visível para quem
 atende, mas **não alimenta a regra de prazo** — o bloqueio dependeria de alguém
 ler a observação e decidir na mão.
 
+## As duas fontes batem (não havia divergência)
+
+O `COMPILADO` separa cesta comum de cesta diferenciada; o `CONTROLE` lista as
+duas na mesma tabela, com um `X` marcando as diferenciadas. Somando as duas
+colunas do `COMPILADO`, o número bate com o total do `CONTROLE` **em 29 de 29
+dias**, e as 340 marcações `X` correspondem exatamente à soma da coluna de
+diferenciadas.
+
+| Data | CONTROLE | COMPILADO comum | + diferenciada | = |
+| --- | --- | --- | --- | --- |
+| 11/01/2026 | 196 | 185 | 11 | 196 |
+| 18/01/2026 | 213 | 202 | 11 | 213 |
+| 22/02/2026 | 237 | 219 | 18 | 237 |
+
+Total de 2026: **3.912 cestas comuns + 340 diferenciadas = 4.252**. Enxoval está
+zerado em 2026 (a aba `GESTANTES` cobre 2024).
+
+Isso dá a contagem por tipo, mas não o de-para. A coluna do `CONTROLE` se chama
+"Pessoas sem cadastro / Cesta diferenciada", o que sugeria que os dois conceitos
+fossem o mesmo. **Não são:**
+
+| | no cadastro | fora do cadastro |
+| --- | --- | --- |
+| Cesta diferenciada | 182 | 158 |
+| Cesta comum | 3.780 | 132 |
+
+As 158 diferenciadas de gente fora do cadastro são exatamente as marcadas
+"Primeira Vez" — quem chega sem cadastro leva diferenciada. Mas **182
+diferenciadas foram para pessoas já cadastradas**, então o tipo não é só uma
+consequência da falta de cadastro.
+
+Falta a informação de negócio: **o que é uma cesta diferenciada para a SEAC?**
+Isso importa porque, no sistema, o benefício não é escolhido na entrega — ele
+decorre do tipo de cadastro do assistido (definitivo → Cesta Padrão, extra →
+Cesta Extra). Se "diferenciada" for o que hoje se entrega a quem está em
+avaliação, o de-para é direto. Se for outra composição, pode ser um benefício
+novo no catálogo.
+
 ## Nota sobre o estoque
 
 A planilha **não tem inventário** — nada de itens, quantidades ou saldos. A
