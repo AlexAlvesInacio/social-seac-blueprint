@@ -113,13 +113,26 @@ com ela o bloqueio de prazo.
 - Cadastros por ano de inserção: 2022 (575), 2023 (39), 2024 (194), 2025 (227),
   2026 (145).
 
-## Perguntas que precisam de resposta antes de importar
+## Desenho da importação
 
-1. **Qual é a fonte?** `BANCO DE DADOS` tem 1.180 pessoas e `Cópia de BANCO DE
-   DADOS` tem 2.452. Qual é a atual?
-2. **Quem entra?** Importar as 1.180, só as 230 marcadas como ativas, ou só as
-   372 inseridas em 2025–2026? As 397 sem marcação precisam de critério.
-3. **O RG é o documento oficial?** O sistema aceita `cpf | rg | outro`; se a
+Com o de-para fechado, o `CONTROLE` passa a ser a **fonte primária**: ele diz
+quem foi efetivamente atendido em 2026. O `BANCO DE DADOS` vira fonte de
+enriquecimento (CPF e data de inserção, quando existirem).
+
+Isso resolve sozinho o critério de quem entra — as **1.038 pessoas atendidas
+este ano**, em vez de escolher entre 1.180 cadastros de 2022 em diante ou as 230
+marcadas como ativas.
+
+| Etapa | O que entra |
+| --- | --- |
+| Pessoas | 1.038, com nome e RG do `CONTROLE`; CPF do `BANCO DE DADOS` quando houver |
+| Famílias | uma por pessoa — não há endereço para agrupar |
+| Tipo de cadastro | pela última retirada: 894 definitivo, 144 extra |
+| Entregas | 4.252, com data real; comum → Cesta Padrão, diferenciada → Cesta Extra |
+
+## Perguntas que ainda precisam de resposta
+
+1. **O RG é o documento oficial?** O sistema aceita `cpf | rg | outro`; se a
    SEAC identifica por RG, o cadastro entra com `tipo_documento = 'rg'`.
 4. **Que benefício cada retirada representa?** A planilha marca "CESTA
    DIFERENCIADA" em algumas linhas e o `COMPILADO` separa cesta comum,
@@ -183,12 +196,41 @@ As 158 diferenciadas de gente fora do cadastro são exatamente as marcadas
 diferenciadas foram para pessoas já cadastradas**, então o tipo não é só uma
 consequência da falta de cadastro.
 
-Falta a informação de negócio: **o que é uma cesta diferenciada para a SEAC?**
-Isso importa porque, no sistema, o benefício não é escolhido na entrega — ele
-decorre do tipo de cadastro do assistido (definitivo → Cesta Padrão, extra →
-Cesta Extra). Se "diferenciada" for o que hoje se entrega a quem está em
-avaliação, o de-para é direto. Se for outra composição, pode ser um benefício
-novo no catálogo.
+**De-para confirmado pelo usuário em 2026-08-02:** cesta diferenciada **é** a
+Cesta Extra. Logo, cesta comum → Cesta Padrão.
+
+## O de-para se sustenta nos dados
+
+No sistema o benefício não é escolhido na entrega: decorre do tipo de cadastro
+do assistido. Então a pergunta vira "que tipo de cadastro cada pessoa tem?", e a
+planilha responde sozinha:
+
+| | pessoas |
+| --- | --- |
+| Só cesta comum | 835 |
+| Só diferenciada | 142 |
+| Receberam os dois tipos | 61 |
+
+Os 61 pareciam um problema — no sistema ninguém recebe os dois. Mas a ordem
+cronológica mostra que não são exceção, e sim o fluxo normal:
+
+| | |
+| --- | --- |
+| Extras primeiro, depois comuns (avaliação → definitivo) | **58** |
+| Comuns primeiro, depois extras | 2 |
+| Alternando | 1 |
+
+É exatamente `aprovar_assistido_definitivo` acontecendo no papel. **Regra de
+importação: o tipo de cadastro é o da última retirada** — 894 definitivos e 144
+extras. Os 3 casos fora do padrão seguem a mesma regra e entram no relatório de
+conferência.
+
+Dois números que validam a migração antes de ela acontecer:
+
+- **Ninguém passou de 3 Cestas Extra.** O máximo é exatamente 3 (44 pessoas), o
+  que confirma que a SEAC já pratica o limite que o sistema aplica.
+- **657 pessoas retiraram nos últimos 25 dias** e ficariam corretamente
+  bloqueadas por prazo no dia seguinte à importação.
 
 ## Nota sobre o estoque
 
