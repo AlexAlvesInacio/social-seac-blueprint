@@ -31,7 +31,10 @@ Before finishing a code change, run `bun run lint`, `bun run build` and `bunx ts
 (the typecheck is clean as of 2026-07-31 — keep it at 0 errors). There is a test suite
 (`bun run test`, via the native `bun test` runner) covering pure logic: atendimento rules,
 relatórios logic, faixa etária, and the famílias mapper (`src/lib/**/*.test.ts`) — run it when you
-touch that logic. Component/hook/Supabase tests are not set up yet; don't claim those were run.
+touch that logic. **Component tests** run in the same command: happy-dom is registered globally by
+`src/test-setup.ts` (wired through `[test] preload` in `bunfig.toml`), with `@testing-library/react`
+and `user-event`. Write them as `*.test.tsx` beside the component and mock its hooks with
+`mock.module`. Supabase/integration tests are still not set up; don't claim those were run.
 
 Supabase (local dev CLI available via `bunx supabase`):
 ```sh
