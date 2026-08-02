@@ -99,13 +99,55 @@ painel e não exige mudança no frontend — só reiniciar as Edge Functions.
 O que precisa de backup é somente o banco (o código vive no GitHub e o
 frontend é reconstruível a partir dele).
 
-### Backup lógico manual (Supabase CLI)
+### Pré-requisito — leia antes de tentar
+
+`bunx supabase db dump` **não roda sem Docker**: a CLI executa o
+`pg_dump` dentro de um contêiner. Numa máquina sem Docker o comando
+falha com `LegacyDockerRunError`, verificado em 2026-08-02 neste
+ambiente WSL. O runbook anterior apresentava o comando como pronto para
+uso; não estava.
+
+Há dois caminhos, e basta um:
+
+- **Docker Desktop instalado** → a CLI funciona como documentado abaixo.
+- **`postgresql-client` instalado** → usar `pg_dump` direto, sem Docker.
+  A versão do cliente precisa ser **>= a do servidor** (hoje PostgreSQL
+  17.6 no Supabase). Um `pg_dump` 16 recusa dumpar um servidor 17 —
+  conferir com `pg_dump --version` antes de confiar no backup.
+
+A string de conexão está no painel do Supabase em Settings → Database.
+Ela contém a senha do banco: nunca colar em commit, issue ou log.
+
+### Backup lógico manual
+
+Com Docker (Supabase CLI):
 
 ```sh
-# Schema + dados (roles/policies incluídos no schema do projeto)
 bunx supabase db dump -f backup_schema_$(date +%Y%m%d).sql
 bunx supabase db dump --data-only -f backup_dados_$(date +%Y%m%d).sql
 ```
+
+Sem Docker (`pg_dump` direto):
+
+```sh
+pg_dump "$CONNECTION_STRING" --schema-only --no-owner \
+  --schema=public --schema=private \
+  -f backup_schema_$(date +%Y%m%d).sql
+pg_dump "$CONNECTION_STRING" --data-only --no-owner \
+  --schema=public \
+  -f backup_dados_$(date +%Y%m%d).sql
+```
+
+**Nunca usar `--no-privileges` aqui.** A flag remove todos os `GRANT` e
+`REVOKE` do dump — e é neles que mora metade do modelo de autorização
+deste projeto (a outra metade são as policies). Medido em 2026-08-02 no
+banco de produção: com a flag, 0 grants e 0 revokes no arquivo; sem ela,
+98 grants e 34 revokes. Restaurar o primeiro produz um banco que parece
+íntegro e onde a aplicação não consegue ler nada.
+
+O `--schema=private` também é obrigatório: os predicados de autorização
+(`private.usuario_atual_pode_gerir_familias()` e companhia) vivem nesse
+schema, e sem eles as policies não funcionam.
 
 - Executar antes de qualquer migration destrutiva e antes da publicação.
 - Guardar os arquivos fora da máquina de desenvolvimento (drive
@@ -116,6 +158,9 @@ bunx supabase db dump --data-only -f backup_dados_$(date +%Y%m%d).sql
 
 - Conferir no painel do projeto (Database → Backups) a política de
   backups automáticos do plano contratado e a retenção. **[validar]**
+- Esta é a rede de proteção principal enquanto o backup manual não
+  estiver rodando com regularidade: o backup automático do provedor não
+  depende de ninguém lembrar de executá-lo.
 
 ## Restauração
 
@@ -128,9 +173,26 @@ psql "$DATABASE_URL_DE_TESTE" -f backup_schema_YYYYMMDD.sql
 psql "$DATABASE_URL_DE_TESTE" -f backup_dados_YYYYMMDD.sql
 ```
 
-3. Apontar um `.env.local` de teste para o banco restaurado e validar
+3. **Verificar os objetos de segurança** — este é o passo que decide se
+   a restauração passou:
+
+```sh
+psql "$CONNECTION_STRING_ORIGEM"    -f supabase/verificacao_restauracao.sql > origem.txt
+psql "$DATABASE_URL_DE_TESTE"       -f supabase/verificacao_restauracao.sql > restaurado.txt
+diff origem.txt restaurado.txt
+```
+
+O script compara tabelas sem RLS, políticas por tabela, grants para
+`anon`, funções com seu modo de segurança, triggers, constraints e
+volume por tabela. **Qualquer diferença reprova a restauração.**
+
+O modo de falha que isso pega: um dump que restaura as tabelas mas perde
+as políticas de RLS deixa o banco aparentemente íntegro e completamente
+aberto. Conferir só se "os dados voltaram" não detecta isso.
+
+4. Apontar um `.env.local` de teste para o banco restaurado e validar
    os fluxos críticos (login, detalhe de família, atendimento).
-4. Registrar a data do teste de restauração aqui. **[validar — o
+5. Registrar a data do teste de restauração aqui. **[validar — o
    aceite do Sprint 6 exige restauração testada]**
 
 ## Incidentes comuns
