@@ -91,10 +91,25 @@ export function fmtTelefone(tel: string): string {
   return tel;
 }
 
+/**
+ * Prefixos que fazem Excel/Calc avaliar a célula como fórmula em vez de texto
+ * (CWE-1236). Um nome de família ou observação começando com um deles é
+ * inserido por quem cadastra e executado na máquina de quem exporta.
+ */
+const PREFIXO_FORMULA = /^[=+\-@\t\r]/;
+
 function csvEscape(v: string | number): string {
+  // Números vêm do próprio sistema (saldos, contagens, dias) e devem continuar
+  // numéricos na planilha — inclusive os negativos.
+  if (typeof v === "number") return String(v);
+
   const s = String(v ?? "");
-  if (/[;\n"\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+  // O apóstrofo força a planilha a tratar a célula como texto. Só entra nas
+  // células que começariam uma fórmula, então nenhum dado legítimo do sistema
+  // (nomes, datas, "R$ …", o travessão de vazio) é afetado.
+  const seguro = PREFIXO_FORMULA.test(s) ? `'${s}` : s;
+  if (/[;\n"\r]/.test(seguro)) return `"${seguro.replace(/"/g, '""')}"`;
+  return seguro;
 }
 
 export function relatorioParaCSV(res: ResultadoRelatorio): string {
