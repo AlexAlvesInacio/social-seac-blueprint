@@ -58,6 +58,14 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 - **[Resolvido — tarefa 3] Ledger burlável por `UPDATE` direto no saldo.** Trigger
   `private.impedir_alteracao_saldo_direta()` em `beneficios`/`itens_estoque` bloqueia
   alteração de `saldo` fora das RPCs (flag transacional `seac.saldo_via_rpc`).
+- **[Resolvido — 2026-08-02, issue #79] Motor de regras do atendimento era
+  opcional.** A security review geral achou que `entregas`/`tentativas_bloqueadas`
+  aceitavam INSERT direto pelo PostgREST, contornando prazo de 25 dias, limite de
+  extras, bloqueio por estoque e a exigência de administrador+motivo na liberação
+  excepcional. A migration `20260802150000` cria o trigger
+  `private.impedir_registro_atendimento_direto()` (flag `seac.atendimento_via_rpc`),
+  ligado nas três RPCs de atendimento por `alter function ... set`. Toda RPC nova
+  que grave nessas tabelas precisa do mesmo `alter function`.
 - **[Resolvido em parte — 2026-07-31] `familias-repository.ts` catch-all.** O domínio
   de estoque foi extraído para `src/lib/estoque/` (repositório + hooks + query keys
   próprias; benefícios, itens, movimentações, composição e montagem). O repositório
