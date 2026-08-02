@@ -1,0 +1,12 @@
+# Cabeçalhos de segurança aplicados pelo Cloudflare a todas as respostas.
+# O nitro acrescenta a regra de cache de /assets/* ao gerar .output/public/_headers.
+#
+# Não inclui Content-Security-Policy de propósito: CSP em app SSR quebra fácil
+# (estilos e scripts inline do TanStack Start) e precisa de teste tela a tela.
+# Fica para um PR próprio.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000
