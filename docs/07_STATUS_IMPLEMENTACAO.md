@@ -67,6 +67,14 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
   dá aos benefícios do motor de regras um `codigo` imutável, protegido contra
   rename/exclusão — o nome é parte do contrato porque as RPCs de atendimento
   resolvem Cesta Padrão/Extra por nome.
+- **[Resolvido — 2026-08-02, issue #79] Motor de regras do atendimento era
+  opcional.** A security review geral achou que `entregas`/`tentativas_bloqueadas`
+  aceitavam INSERT direto pelo PostgREST, contornando prazo de 25 dias, limite de
+  extras, bloqueio por estoque e a exigência de administrador+motivo na liberação
+  excepcional. A migration `20260802150000` cria o trigger
+  `private.impedir_registro_atendimento_direto()` (flag `seac.atendimento_via_rpc`),
+  ligado nas três RPCs de atendimento por `alter function ... set`. Toda RPC nova
+  que grave nessas tabelas precisa do mesmo `alter function`.
 - **[Resolvido em parte — 2026-07-31] `familias-repository.ts` catch-all.** O domínio
   de estoque foi extraído para `src/lib/estoque/` (repositório + hooks + query keys
   próprias; benefícios, itens, movimentações, composição e montagem). O repositório
