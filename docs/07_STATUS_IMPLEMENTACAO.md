@@ -58,6 +58,15 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 - **[Resolvido — tarefa 3] Ledger burlável por `UPDATE` direto no saldo.** Trigger
   `private.impedir_alteracao_saldo_direta()` em `beneficios`/`itens_estoque` bloqueia
   alteração de `saldo` fora das RPCs (flag transacional `seac.saldo_via_rpc`).
+- **[Resolvido — 2026-08-02, issue #78] O mesmo ledger era burlável no `INSERT`.**
+  A security review geral achou que o trigger acima só cobria `UPDATE`, então um
+  registro de catálogo podia *nascer* com saldo arbitrário e, via
+  `definir_composicao_beneficio` + `montar_cesta`, virar saldo real de Cesta Padrão.
+  A migration `20260802143000` estende o trigger para `before insert or update`
+  (todo registro nasce com saldo 0), tira `saldo` do grant de INSERT do cliente e
+  dá aos benefícios do motor de regras um `codigo` imutável, protegido contra
+  rename/exclusão — o nome é parte do contrato porque as RPCs de atendimento
+  resolvem Cesta Padrão/Extra por nome.
 - **[Resolvido — 2026-08-02, issue #79] Motor de regras do atendimento era
   opcional.** A security review geral achou que `entregas`/`tentativas_bloqueadas`
   aceitavam INSERT direto pelo PostgREST, contornando prazo de 25 dias, limite de
