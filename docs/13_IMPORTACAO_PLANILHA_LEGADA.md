@@ -8,12 +8,17 @@ não deve ser versionada** — `*.xlsx` está no `.gitignore`.
 
 ## Resumo da conclusão
 
-O que dá para importar é **o cadastro de pessoas — nome e RG**. O histórico de
-entregas por pessoa, com datas, **não existe na planilha** em forma utilizável:
-o que há são contagens mensais e uma "última retirada" que parou de ser
-atualizada em fevereiro de 2024.
+Dá para importar **o cadastro de pessoas e o histórico de entregas de 2026 com
+data real** — 4.252 retiradas de 1.036 pessoas, entre 11/01/2026 e 02/08/2026.
 
-Isso não é limitação da importação; é o que o arquivo contém.
+O histórico anterior a 2026 continua indisponível por pessoa: o que existe são
+contagens mensais e uma "última retirada" que parou em fevereiro de 2024.
+
+> **Correção de uma versão anterior deste documento.** A primeira análise
+> concluiu que não havia entrega individual com data. Estava errada: a varredura
+> lia o cabeçalho na linha 1 de cada aba, e a aba `CONTROLE` — descartada por
+> começar com o texto de regras — tem a tabela real a partir da **linha 14**. É
+> ali que está o registro de retiradas de 2026.
 
 ## O que cada aba guarda
 
@@ -27,26 +32,40 @@ Isso não é limitação da importação; é o que o arquivo contém.
 | `ADICIONADOS` | 233 inclusões com data | Complementar |
 | `GESTANTES 2024` | 141 entregas de enxoval em 2024 | Não (encerrado) |
 | `RETIRAR CADASTRP EM MAR25` | 43 pessoas, contagem mensal 07/2024–03/2025 | Não (recorte) |
-| `CONTROLE` | Regras de preenchimento | Não |
+| `CONTROLE` | **4.252 retiradas de 2026 com data, por pessoa** (tabela a partir da linha 14; as primeiras linhas são as regras de preenchimento) | **Sim — é o histórico** |
 | `Assiduidade Cesta Extra`, `Assiduidade cesta normal`, `CASOS DO FLAVIO` | Vazias | Não |
 
 ## Três achados que decidem o desenho
 
-### 1. Não existe entrega individual com data
+### 1. O histórico de 2026 existe, por pessoa e com data
 
-As colunas mensais (`janeiro`…`dezembro`) são **contagens inteiras**, não datas.
-As colunas `1.0`…`12.0` são fórmulas de apoio, não dados. Os `COMPILADO` trazem
-o total de cestas por dia da instituição — por exemplo, 11/01/2026: 185 cestas —
-mas **sem dizer quem retirou**.
+A aba `CONTROLE`, a partir da linha 14, é o registro de retiradas:
 
-Ou seja: sabe-se quantas cestas saíram em cada dia, e quantas cada pessoa já
-retirou no total, mas não *quando cada pessoa* retirou.
+| | |
+| --- | --- |
+| Retiradas registradas | 4.252 |
+| Período | 11/01/2026 a 02/08/2026 |
+| Dias de entrega | 29 |
+| Pessoas distintas | 1.036 (por RG) |
+| Cestas por registro | sempre 1 — cada linha é uma retirada |
+| Marcadas "Primeira Vez" | 289 |
 
-**Consequência:** não é possível reconstruir a tabela `entregas` com fidelidade.
-Qualquer data por pessoa seria inventada — e alimentaria a regra dos 25 dias com
-ficção.
+O campo `UNICO` é a chave: `RG-sequência-ano`, como `130132482-1-2026` — a
+primeira retirada daquele RG em 2026. Serve tanto para deduplicar quanto para
+conferir a ordem.
 
-### 2. O acompanhamento por pessoa parou em fevereiro de 2024
+Distribuição por pessoa: 202 pessoas com 1 retirada, 104 com 2, 109 com 3, 122
+com 4, 146 com 5, 180 com 6, 169 com 7 e 4 com 8.
+
+**Consequência:** a regra dos 25 dias passa a funcionar desde o primeiro dia,
+com data real. Quem retirou em 02/08 continua bloqueado no sistema novo — que é
+exatamente o comportamento que se espera de uma migração.
+
+As colunas mensais do `BANCO DE DADOS` (`janeiro`…`dezembro`) continuam sendo
+contagens, e as `1.0`…`12.0` são fórmulas de apoio; nenhuma das duas serve. Os
+`COMPILADO` trazem totais do dia da instituição, sem vínculo com pessoa.
+
+### 2. Antes de 2026, o acompanhamento por pessoa parou em fevereiro de 2024
 
 `Data ultima retirada` existe para 514 pessoas, no intervalo de 19/02/2023 a
 **18/02/2024**. A aba `Datas` termina no mesmo dia.
@@ -55,9 +74,10 @@ Enquanto isso, o `COMPILADO 2026` registra entregas em janeiro e fevereiro de
 2026. Ou seja: a operação continuou, o controle por pessoa é que deixou de ser
 alimentado há cerca de dois anos.
 
-**Consequência:** importar essas datas como "última retirada" seria importar
-informação vencida. Como todas estão a mais de 25 dias, elas não bloqueariam
-ninguém — só dariam a impressão falsa de que o sistema conhece o histórico.
+**Consequência:** o histórico de 2023–2025 fica de fora. Importar aquelas datas
+não acrescentaria nada — o registro de 2026 é mais recente para todo mundo que
+aparece nos dois — e daria a impressão falsa de que o sistema conhece um
+histórico que só tem até fev/2024.
 
 ### 3. O cadastro é mais fino do que os cabeçalhos sugerem
 
@@ -70,6 +90,18 @@ identificador real em uso é o **RG**.
 
 Também não há como agrupar famílias: sem endereço, não existe indício de quem
 mora com quem. **Cada pessoa viraria uma família de uma pessoa só.**
+
+## 196 pessoas têm entrega e não têm cadastro
+
+Cruzando `CONTROLE` com `BANCO DE DADOS` pelo RG: dos 1.036 que retiraram em
+2026, **840 estão no cadastro e 196 não**. A própria planilha tem uma coluna
+chamada "Pessoas sem cadastro" na aba de controle, então a equipe conhece a
+situação — o atendimento acontece antes do cadastro.
+
+Isso precisa de decisão: essas 196 pessoas entram como cadastro criado a partir
+do nome e RG que constam na linha de retirada, ou ficam de fora e a entrega
+delas é descartada? Descartar significa perder a informação de que retiraram, e
+com ela o bloqueio de prazo.
 
 ## Qualidade dos dados
 
@@ -89,25 +121,36 @@ mora com quem. **Cada pessoa viraria uma família de uma pessoa só.**
    372 inseridas em 2025–2026? As 397 sem marcação precisam de critério.
 3. **O RG é o documento oficial?** O sistema aceita `cpf | rg | outro`; se a
    SEAC identifica por RG, o cadastro entra com `tipo_documento = 'rg'`.
-4. **Quem já foi atendido este ano** entra com algum histórico, ou todo mundo
-   começa liberado?
+4. **Que benefício cada retirada representa?** A planilha marca "CESTA
+   DIFERENCIADA" em algumas linhas e o `COMPILADO` separa cesta comum,
+   diferenciada e enxoval. O sistema tem Cesta Padrão, Cesta Extra e Kit
+   Gestante — falta o de-para.
+5. **As 196 pessoas sem cadastro** entram (criadas a partir do nome e RG da
+   linha de retirada) ou ficam de fora?
+6. **Divergência de contagem:** em 11/01/2026, `CONTROLE` tem 196 retiradas e
+   `COMPILADO 2026` registra 185 cestas. Qual é a fonte para conferência?
 
 ## Caminhos possíveis para o histórico
 
-**A. Só o cadastro (recomendado).** Importa as pessoas; o histórico fica
-arquivado na planilha. O sistema começa a contar entregas a partir do go-live.
-Simples, honesto, e nenhuma regra é alimentada com dado inventado. O custo: no
-primeiro atendimento ninguém está bloqueado por prazo.
+**A. Cadastro + entregas de 2026 (recomendado).** Importa as pessoas e as 4.252
+retiradas com as datas reais. A regra dos 25 dias funciona desde o primeiro
+atendimento e o histórico da tela mostra o que de fato aconteceu. É o único
+caminho em que a migração não perde informação.
 
-**B. Cadastro + histórico como observação.** Cada pessoa importada recebe uma
-observação social do tipo "Documento" registrando o que a planilha sabia — total
-de cestas retiradas e data da última, com a ressalva de que o dado é de até
-fev/2024. A informação fica visível para quem atende, sem virar entrega.
-Custo: uma observação por pessoa.
+Exige atenção em três pontos: as entregas precisam entrar **sem** movimentar o
+estoque (são fatos passados, o saldo atual já reflete a saída) e sem passar pelo
+motor de regras, que recusaria retiradas em intervalo menor que 25 dias; e o
+benefício de cada linha precisa ser decidido — ver "Perguntas".
 
-**C. Cadastro + entregas sintéticas.** Criar registros de entrega com datas
-aproximadas. **Não recomendo.** Inventaria fatos no ledger, e o histórico
-passaria a misturar o que aconteceu com o que supomos.
+**B. Só o cadastro.** O histórico fica arquivado na planilha e o sistema conta a
+partir do go-live. Mais simples, mas joga fora a informação de quem retirou
+recentemente: alguém que pegou cesta em 02/08 poderia pegar outra no dia
+seguinte, sem que o sistema soubesse.
+
+**C. Cadastro + histórico como observação.** Uma observação por pessoa
+registrando total e última data, sem virar entrega. Fica visível para quem
+atende, mas **não alimenta a regra de prazo** — o bloqueio dependeria de alguém
+ler a observação e decidir na mão.
 
 ## Nota sobre o estoque
 
