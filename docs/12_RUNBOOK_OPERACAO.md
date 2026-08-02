@@ -86,6 +86,73 @@ deploy, **rebuildar** e publicar. A `service_role` é rotacionada no mesmo
 painel e não exige mudança no frontend — só reiniciar as Edge Functions.
 **[validar]**
 
+## Carga inicial do estoque (dados reais)
+
+Procedimento para trocar os números de protótipo pelos reais da SEAC
+(issue #46). Vale também para qualquer inventário físico posterior.
+
+### Por que não é um `update` no banco
+
+Desde a migration `20260802143000`, `saldo` só muda pelas RPCs de
+movimentação: um `update` direto é recusado com `SEAS1`, e um `insert`
+com saldo diferente de zero também. Isso é proposital — é o que garante
+que todo saldo tenha uma linha de ledger correspondente.
+
+Logo, a carga inicial **não** é uma migration de `update`. É uma
+operação de estoque como qualquer outra, feita pela aplicação, por um
+administrador identificado. O efeito colateral é bom: o ledger nasce
+coerente com o saldo desde o primeiro dia, e a auditoria mostra quem
+lançou o quê.
+
+### O tipo de movimentação certo é "Ajuste"
+
+As três opções não são equivalentes:
+
+| Tipo | O que o campo de quantidade significa |
+| --- | --- |
+| Entrada | quantidade **somada** ao saldo |
+| Saída | quantidade **subtraída** do saldo |
+| **Ajuste** | **novo saldo alvo** (absoluto) |
+
+Para inventário use **Ajuste**: informa-se a quantidade contada na
+prateleira e o sistema calcula sozinho a diferença, registrando o delta
+no ledger. Com Entrada seria preciso calcular a diferença na mão, e
+qualquer erro de conta vira divergência permanente.
+
+### Passo a passo
+
+1. **Contar fisicamente** o que existe, item a item, e anotar. A
+   contagem é a fonte da verdade — não parta dos números do sistema.
+2. **Conferir o catálogo** em Configurações → Itens. Item que a SEAC usa
+   e não está lá precisa ser criado antes; ele nasce com saldo 0 (o
+   trigger não aceita outra coisa) e recebe o saldo no passo seguinte.
+   Item que não é mais usado deve ser **inativado**, nunca excluído —
+   excluir quebraria o histórico de movimentações que aponta para ele.
+3. **Lançar o ajuste** de cada item em Estoque → Ajuste, preenchendo
+   "Novo saldo" com o valor contado e, no motivo, algo que identifique a
+   operação: `Inventário inicial AAAA-MM-DD`. O motivo aparece no ledger
+   e é o que permite, meses depois, separar a carga inicial do
+   movimento do dia a dia.
+4. **Repetir para os benefícios** (cestas montadas prontas em estoque),
+   se houver.
+5. **Conferir no Painel** que os totais batem com a contagem.
+
+### Sobre os dados de homologação
+
+Antes da carga, decidir o que fazer com o que foi criado durante os
+testes — famílias, entregas, movimentações. Duas observações:
+
+- **Nada disso deve ser apagado sem conferência.** Se alguma família de
+  verdade já foi cadastrada durante a homologação, apagar destrói
+  registro real de uma pessoa assistida.
+- Entregas, tentativas e movimentações **não podem** ser apagadas pela
+  aplicação (sem `DELETE` para `authenticated` desde a `20260802170000`);
+  são histórico. Se for mesmo necessário zerar, é operação de banco,
+  feita com backup na mão e decisão registrada.
+
+O caminho mais limpo, quando o volume de teste é grande, costuma ser
+começar com um projeto Supabase novo em vez de limpar o atual.
+
 ## Publicação
 
 1. Garantir `main` verde: `bun run lint`, `bun run build`, `bun run test`.
