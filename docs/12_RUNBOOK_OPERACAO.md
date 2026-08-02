@@ -153,6 +153,28 @@ testes — famílias, entregas, movimentações. Duas observações:
 O caminho mais limpo, quando o volume de teste é grande, costuma ser
 começar com um projeto Supabase novo em vez de limpar o atual.
 
+## Cabeçalhos de segurança
+
+`public/_headers` define os cabeçalhos que o Cloudflare aplica a todas as
+respostas: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy` e HSTS. O nitro acrescenta a regra de cache de
+`/assets/*` ao gerar `.output/public/_headers`; os dois blocos convivem.
+
+Dois pontos a verificar depois da primeira publicação:
+
+- **`X-Frame-Options: DENY` impede que o site seja embutido em iframe.**
+  Se a pré-visualização do Lovable (ou qualquer ferramenta) precisar
+  embutir a aplicação publicada, isso vai parar de funcionar. A saída é
+  trocar por um `Content-Security-Policy: frame-ancestors` liberando o
+  domínio específico — não voltar para `SAMEORIGIN`, que não ajuda entre
+  origens diferentes. **[validar]**
+- **HSTS sem `includeSubDomains`, de propósito.** Estender a outros
+  subdomínios do mesmo domínio os obrigaria a ter HTTPS válido, e não
+  sabemos o que mais existe ali. Ampliar só com essa conferência feita.
+
+Não há `Content-Security-Policy`: CSP em app SSR quebra fácil (estilos e
+scripts inline do TanStack Start) e precisa de teste tela a tela.
+
 ## Publicação
 
 1. Garantir `main` verde: `bun run lint`, `bun run build`, `bun run test`.
