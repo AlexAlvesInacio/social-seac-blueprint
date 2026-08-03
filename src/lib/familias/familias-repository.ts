@@ -91,6 +91,67 @@ function uniqueIds(ids: Array<string | null>): string[] {
   return [...new Set(ids.filter((id): id is string => Boolean(id)))];
 }
 
+// A API do Supabase impõe dois tetos que só aparecem com volume real, e a
+// importação da planilha (1.018 famílias, 4.170 entregas) esbarrou nos dois:
+//
+//   * `max_rows = 1000` em supabase/config.toml — uma consulta sem paginação
+//     devolve no máximo mil linhas, silenciosamente;
+//   * o comprimento da URL — um `.in()` com 1.018 UUIDs gera 36 KB e a
+//     requisição volta com HTTP 400. Medido: 500 ids passam, 1.000 não.
+//
+// Os dois helpers abaixo existem para respeitar esses limites.
+
+/** Teto de linhas por resposta (`max_rows`). */
+const LINHAS_POR_PAGINA = 1000;
+
+/** Ids por requisição num filtro `in`. 200 deixa a URL em ~7 KB, com folga. */
+const IDS_POR_LOTE = 200;
+
+function emLotes<T>(itens: T[], tamanho = IDS_POR_LOTE): T[][] {
+  const lotes: T[][] = [];
+  for (let i = 0; i < itens.length; i += tamanho) lotes.push(itens.slice(i, i + tamanho));
+  return lotes;
+}
+
+/**
+ * Percorre todas as páginas de uma consulta. `montar` recebe a faixa e devolve
+ * a consulta já pronta; paramos quando a página vem incompleta.
+ */
+async function todasAsPaginas<T>(
+  montar: (
+    de: number,
+    ate: number,
+  ) => PromiseLike<{ data: T[] | null; error: PostgrestError | null }>,
+): Promise<{ data: T[]; error: null } | { data: null; error: PostgrestError }> {
+  const acumulado: T[] = [];
+  for (let pagina = 0; ; pagina += 1) {
+    const de = pagina * LINHAS_POR_PAGINA;
+    const { data, error } = await montar(de, de + LINHAS_POR_PAGINA - 1);
+    if (error) return { data: null, error };
+    const linhas = data ?? [];
+    acumulado.push(...linhas);
+    if (linhas.length < LINHAS_POR_PAGINA) return { data: acumulado, error: null };
+  }
+}
+
+/** Como `todasAsPaginas`, mas quebrando também a lista de ids do filtro. */
+async function porLotesDeIds<T>(
+  ids: string[],
+  montar: (
+    lote: string[],
+    de: number,
+    ate: number,
+  ) => PromiseLike<{ data: T[] | null; error: PostgrestError | null }>,
+): Promise<{ data: T[]; error: null } | { data: null; error: PostgrestError }> {
+  const acumulado: T[] = [];
+  for (const lote of emLotes(ids)) {
+    const resultado = await todasAsPaginas<T>((de, ate) => montar(lote, de, ate));
+    if (resultado.error) return resultado;
+    acumulado.push(...resultado.data);
+  }
+  return { data: acumulado, error: null };
+}
+
 async function listRelatedRows(
   familiaIds: FamiliaSupabaseId[],
 ): Promise<FamiliasSupabaseReadResult<RelatedRows>> {
@@ -109,13 +170,20 @@ async function listRelatedRows(
   // snapshot transacional entre SELECTs, a tela só deve ser conectada após a
   // estratégia de atualização/invalidação ser homologada.
   const [membrosResult, assistidosResult, observacoesResult] = await Promise.all([
-    client.from("membros_familiares").select(membroColumns).in("familia_id", familiaIds),
-    client.from("assistidos").select(assistidoColumns).in("familia_id", familiaIds),
-    client
-      .from("observacoes_sociais")
-      .select(observacaoColumns)
-      .in("familia_id", familiaIds)
-      .order("criado_em", { ascending: false }),
+    porLotesDeIds<MembroFamiliarSupabaseRow>(familiaIds, (lote, de, ate) =>
+      client.from("membros_familiares").select(membroColumns).in("familia_id", lote).range(de, ate),
+    ),
+    porLotesDeIds<AssistidoSupabaseRow>(familiaIds, (lote, de, ate) =>
+      client.from("assistidos").select(assistidoColumns).in("familia_id", lote).range(de, ate),
+    ),
+    porLotesDeIds<ObservacaoSocialSupabaseRow>(familiaIds, (lote, de, ate) =>
+      client
+        .from("observacoes_sociais")
+        .select(observacaoColumns)
+        .in("familia_id", lote)
+        .order("criado_em", { ascending: false })
+        .range(de, ate),
+    ),
   ]);
 
   if (membrosResult.error) {
@@ -128,9 +196,9 @@ async function listRelatedRows(
     return failure("listar_observacoes", observacoesResult.error);
   }
 
-  const membros = (membrosResult.data ?? []) as MembroFamiliarSupabaseRow[];
-  const assistidos = (assistidosResult.data ?? []) as AssistidoSupabaseRow[];
-  const observacoes = (observacoesResult.data ?? []) as ObservacaoSocialSupabaseRow[];
+  const membros = membrosResult.data ?? [];
+  const assistidos = assistidosResult.data ?? [];
+  const observacoes = observacoesResult.data ?? [];
   const pessoaIds = uniqueIds([
     ...membros.map((row) => row.pessoa_id),
     ...assistidos.map((row) => row.pessoa_id),
@@ -139,23 +207,29 @@ async function listRelatedRows(
 
   let pessoas: PessoaSupabaseRow[] = [];
   if (pessoaIds.length > 0) {
-    const pessoasResult = await client.from("pessoas").select(pessoaColumns).in("id", pessoaIds);
+    const pessoasResult = await porLotesDeIds<PessoaSupabaseRow>(pessoaIds, (lote, de, ate) =>
+      client.from("pessoas").select(pessoaColumns).in("id", lote).range(de, ate),
+    );
 
     if (pessoasResult.error) {
       return failure("listar_pessoas", pessoasResult.error);
     }
 
-    pessoas = (pessoasResult.data ?? []) as PessoaSupabaseRow[];
+    pessoas = pessoasResult.data;
   }
 
   return { data: { membros, assistidos, observacoes, pessoas }, error: null };
 }
 
 async function listFamilias(): Promise<FamiliasSupabaseReadResult<FamiliaSupabaseReadModel[]>> {
-  const { data, error } = (await getSupabaseClient()
-    .from("familias")
-    .select(familiaColumns)
-    .order("criado_em", { ascending: false })) as RowsResult<FamiliaSupabaseRow>;
+  const client = getSupabaseClient();
+  const { data, error } = await todasAsPaginas<FamiliaSupabaseRow>((de, ate) =>
+    client
+      .from("familias")
+      .select(familiaColumns)
+      .order("criado_em", { ascending: false })
+      .range(de, ate),
+  );
 
   if (error) return failure("listar_familias", error);
 
@@ -1344,10 +1418,20 @@ async function consultarEntregas(
   const assistidoIds = uniqueIds(entregas.map((e) => e.assistido_id));
   const familiaIds = uniqueIds(entregas.map((e) => e.familia_id));
 
+  // Até 500 entregas por consulta significam até 500 ids em cada filtro — o
+  // suficiente para a URL chegar perto do limite. Vão em lotes.
   const [beneficiosResult, assistidosResult, familiasResult] = await Promise.all([
-    client.from("beneficios").select("id, nome").in("id", beneficioIds),
-    client.from("assistidos").select("id, pessoa_id").in("id", assistidoIds),
-    client.from("familias").select("id, nome_referencia, bairro").in("id", familiaIds),
+    porLotesDeIds<{ id: string; nome: string }>(beneficioIds, (lote, de, ate) =>
+      client.from("beneficios").select("id, nome").in("id", lote).range(de, ate),
+    ),
+    porLotesDeIds<{ id: string; pessoa_id: string }>(assistidoIds, (lote, de, ate) =>
+      client.from("assistidos").select("id, pessoa_id").in("id", lote).range(de, ate),
+    ),
+    porLotesDeIds<{ id: string; nome_referencia: string | null; bairro: string | null }>(
+      familiaIds,
+      (lote, de, ate) =>
+        client.from("familias").select("id, nome_referencia, bairro").in("id", lote).range(de, ate),
+    ),
   ]);
 
   if (beneficiosResult.error) {
@@ -1375,10 +1459,11 @@ async function consultarEntregas(
 
   let pessoaInfo = new Map<string, { nome: string; documento: string }>();
   if (pessoaIds.length > 0) {
-    const pessoasResult = await client
-      .from("pessoas")
-      .select("id, nome, documento")
-      .in("id", pessoaIds);
+    const pessoasResult = await porLotesDeIds<{ id: string; nome: string; documento: string }>(
+      pessoaIds,
+      (lote, de, ate) =>
+        client.from("pessoas").select("id, nome, documento").in("id", lote).range(de, ate),
+    );
     if (pessoasResult.error) {
       return {
         data: null,
@@ -1386,10 +1471,7 @@ async function consultarEntregas(
       };
     }
     pessoaInfo = new Map(
-      ((pessoasResult.data ?? []) as { id: string; nome: string; documento: string }[]).map((p) => [
-        p.id,
-        { nome: p.nome, documento: p.documento },
-      ]),
+      pessoasResult.data.map((p) => [p.id, { nome: p.nome, documento: p.documento }]),
     );
   }
 
