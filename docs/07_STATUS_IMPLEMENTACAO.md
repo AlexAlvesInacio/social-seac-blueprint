@@ -24,7 +24,7 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 | Supabase | Implementado nos domínios ativos | Cliente, migrations versionadas, RLS e RPCs cobrindo profiles, famílias/pessoas/membros/assistidos/observações, atendimento/entregas/tentativas, benefícios+itens+composição+movimentações, recebimentos, configurações e auditoria. |
 | Segurança | Revisada e endurecida (2026-08-02) | RLS em todas as tabelas expostas; RPCs de escrita `SECURITY INVOKER` com `search_path=''`; autoria/timestamps por trigger. A security review geral (#45) achou e corrigiu quatro pontos, **todos verificados no banco de produção e não apenas no código**: saldo não pode nascer inflado no INSERT (#78), entregas/tentativas só nascem nas RPCs de atendimento (#79), CSV de relatórios neutraliza fórmulas (#80) e os grants padrão do Supabase foram revogados de `authenticated` em 15 tabelas (#86). Faltam: restauração testada (#44) e suíte de testes de componentes. |
 | Testes | Parcial (lógica pura) | `bun test` cobre as regras de atendimento, a lógica de relatórios (incluindo a neutralização de fórmula no CSV), as faixas etárias oficiais e o mapper de famílias (48 testes em 2026-08-02). Sem testes de componentes/hooks/Supabase; validação de UI segue por `bun run lint` + `bun run build` e homologação manual. |
-| Dados | Zerado para produção (2026-08-02) | Os dados de homologação (13 famílias, 22 pessoas, 12 entregas, 22 movimentações, 2 recebimentos, 11 eventos de auditoria) foram apagados e os saldos zerados, com backup prévio. Preservados: catálogo de itens e benefícios, composições, unidades, categorias e os perfis de usuário. **Falta a carga inicial com os números reais da SEAC** (#46) — procedimento em `12_RUNBOOK_OPERACAO.md`. |
+| Dados | **Carregados da planilha legada (2026-08-02)** | 1.018 pessoas e famílias, 4.170 entregas com data real (11/01 a 02/08/2026), 875 assistidos definitivos e 143 extra, importados de `CESTAS SEAC 2026.xlsx` por `scripts/importar-planilha.py`. A importação é idempotente pela chave `origem_externa`; 48 linhas ficaram de fora e estão no relatório de rejeitados. **O estoque segue zerado** — a planilha não tem inventário, e a carga inicial depende da contagem física (procedimento em `12_RUNBOOK_OPERACAO.md`). Análise da fonte em `13_IMPORTACAO_PLANILHA_LEGADA.md`. |
 
 ## Divergências e riscos relevantes
 
@@ -48,6 +48,15 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
   normalizados na migration `20260731005549`.
 - **Papéis vs. status.** Perfis usam papéis `administrador/atendente/estoque`
   separados dos status `pendente/ativo/inativo` (não confundir as duas colunas).
+- **[2026-08-02] A API do Supabase tem dois tetos que só aparecem com volume.**
+  `max_rows = 1000` corta respostas em silêncio, e a URL tem limite de tamanho:
+  500 ids num `.in()` passam, 1.000 devolvem HTTP 400. Toda consulta que possa
+  crescer precisa paginar por `range` e quebrar os filtros em lotes — há
+  helpers em `familias-repository.ts` (`todasAsPaginas`, `porLotesDeIds`).
+  Foi o que derrubou Painel e Famílias depois da importação.
+- **[2026-08-02] A lista de famílias carrega o agregado inteiro.** Filtros e
+  paginação são no cliente; funcionam, mas a tela baixa ~4.000 linhas a cada
+  abertura. A paginação no servidor está registrada na issue #107.
 - **[2026-08-02] Saldo só entra por movimentação, nunca por `update`.** Depois
   da migration `20260802143000`, `update ... set saldo` é recusado com `SEAS1` e
   item novo nasce obrigatoriamente com saldo 0. Isso muda o procedimento de
