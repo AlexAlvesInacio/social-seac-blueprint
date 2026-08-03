@@ -9,7 +9,12 @@ import {
   X,
   LoaderCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  atendeAosFiltros,
+  FILTROS_VAZIOS,
+  type FamiliaListaItem,
+} from "@/lib/familias/filtro-lista";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,18 +55,6 @@ export const Route = createFileRoute("/familias/")({
   component: FamiliasPage,
 });
 
-type FamiliaListaItem = {
-  id: string;
-  nome: string;
-  responsavel: string;
-  documento: string;
-  telefone: string;
-  bairro: string;
-  tipoCadastro: "definitivo" | "extra" | "misto" | null;
-  acompanhamento: FamiliaSupabaseReadModel["acompanhamento"];
-  status: FamiliaSupabaseReadModel["status"];
-};
-
 function resumirTipoCadastro(familia: FamiliaSupabaseReadModel): FamiliaListaItem["tipoCadastro"] {
   const tiposAtivos = new Set(
     familia.assistidos
@@ -101,12 +94,28 @@ function FamiliasPage() {
   } = useFamiliasSupabase();
   const todasFamilias: FamiliaListaItem[] = (familiasSupabase ?? []).map(mapFamiliaParaLista);
   const { foco } = Route.useSearch();
-  const familiasFiltradas =
+  const [filtros, setFiltros] = useState(FILTROS_VAZIOS);
+  const filtrarPor = (campo: keyof typeof FILTROS_VAZIOS) => (valor: string) =>
+    setFiltros((atual) => ({ ...atual, [campo]: valor }));
+
+  // Bairros vêm dos próprios dados: a planilha importada não trouxe endereço,
+  // então hoje a lista fica vazia e o seletor mostra só "Todos".
+  const bairros = useMemo(
+    () => [...new Set(todasFamilias.map((f) => f.bairro).filter(Boolean))].sort(),
+    [todasFamilias],
+  );
+
+  const porFoco =
     foco === "avaliar"
       ? todasFamilias.filter((f) => f.status === "avaliar")
       : foco === "contato90"
         ? todasFamilias.filter((f) => f.acompanhamento === "sem_retirada_90")
         : todasFamilias;
+
+  const familiasFiltradas = useMemo(
+    () => porFoco.filter((f) => atendeAosFiltros(f, filtros)),
+    [porFoco, filtros],
+  );
   const selected = familiasFiltradas.find((familia) => familia.id === selectedId) ?? null;
   const { data: configData } = useConfiguracoes();
   const params = configData ?? CONFIGURACOES_PADRAO;
@@ -206,40 +215,71 @@ function FamiliasPage() {
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-6">
           <Field label="Nome">
-            <Input placeholder="Buscar por nome" />
+            <Input
+              placeholder="Buscar por nome"
+              value={filtros.nome}
+              onChange={(e) => filtrarPor("nome")(e.target.value)}
+            />
           </Field>
           <Field label="CPF / RG">
-            <Input placeholder="Buscar por CPF ou RG" />
+            <Input
+              placeholder="Buscar por CPF ou RG"
+              value={filtros.documento}
+              onChange={(e) => filtrarPor("documento")(e.target.value)}
+            />
           </Field>
           <Field label="Telefone">
-            <Input placeholder="(00) 00000-0000" />
+            <Input
+              placeholder="(00) 00000-0000"
+              value={filtros.telefone}
+              onChange={(e) => filtrarPor("telefone")(e.target.value)}
+            />
           </Field>
           <Field label="Bairro">
-            <Select>
+            <Select value={filtros.bairro} onValueChange={filtrarPor("bairro")}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
+                {bairros.map((bairro) => (
+                  <SelectItem key={bairro} value={bairro}>
+                    {bairro}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
           <Field label="Status">
-            <Select>
+            <Select value={filtros.status} onValueChange={filtrarPor("status")}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="liberado">Liberado</SelectItem>
+                <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                <SelectItem value="avaliar">Avaliar</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
               </SelectContent>
             </Select>
           </Field>
-          <div className="flex items-end gap-2">
-            <Button variant="outline" size="sm">
+          <div className="flex items-end justify-between gap-2">
+            {/* A filtragem é imediata, então não há botão "Buscar": em vez de
+                um botão que não faz nada, a contagem mostra o efeito. */}
+            <span className="text-xs text-muted-foreground">
+              <Search className="mr-1 inline h-3.5 w-3.5" />
+              {familiasFiltradas.length === todasFamilias.length
+                ? `${todasFamilias.length} famílias`
+                : `${familiasFiltradas.length} de ${todasFamilias.length}`}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={JSON.stringify(filtros) === JSON.stringify(FILTROS_VAZIOS)}
+              onClick={() => setFiltros(FILTROS_VAZIOS)}
+            >
               Limpar
-            </Button>
-            <Button size="sm" className="gap-2">
-              <Search className="h-4 w-4" /> Buscar
             </Button>
           </div>
         </CardContent>
