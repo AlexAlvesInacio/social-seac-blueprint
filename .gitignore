@@ -31,6 +31,13 @@ __pycache__/
 .ipynb_checkpoints/
 *.ipynb
 
+# Planilhas e exports com dados reais de famílias (CPF, endereço, telefone).
+# Nunca versionar: o repositório não é lugar de dado pessoal.
+*.xlsx
+*.xls
+*.csv
+*:Zone.Identifier
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
