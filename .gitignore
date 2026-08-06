@@ -25,6 +25,9 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Vercel (saída do Build Output API e vínculo local do projeto)
+.vercel/
+
 # Python (notebooks locais)
 .venv/
 __pycache__/
