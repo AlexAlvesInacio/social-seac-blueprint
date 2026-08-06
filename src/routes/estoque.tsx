@@ -27,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { emAlerta, statusEstoque } from "@/lib/estoque/status-estoque";
 import {
   useBeneficiosEstoque,
   useMovimentacoesEstoque,
@@ -45,17 +46,6 @@ export const Route = createFileRoute("/estoque")({
   }),
   component: EstoquePage,
 });
-
-type StatusItem = "Em estoque" | "Atenção" | "Estoque baixo" | "Sem estoque";
-
-function computeStatus(saldo: number, minimo: number): StatusItem {
-  if (saldo <= 0) return "Sem estoque";
-  if (minimo > 0 && saldo < minimo * 0.5) return "Estoque baixo";
-  if (minimo > 0 && saldo < minimo) return "Atenção";
-  return "Em estoque";
-}
-
-const STATUS_ALERTA = new Set<StatusItem>(["Atenção", "Estoque baixo", "Sem estoque"]);
 
 type FormMov = {
   tipo: MovimentacaoEstoqueTipo & ("entrada" | "saida" | "ajuste");
@@ -89,13 +79,10 @@ function EstoquePage() {
   };
 
   const lista = beneficios.data ?? [];
-  const visiveis =
-    foco === "alertas"
-      ? lista.filter((b) => STATUS_ALERTA.has(computeStatus(b.saldo, b.minimo)))
-      : lista;
+  const visiveis = foco === "alertas" ? lista.filter((b) => emAlerta(b.saldo, b.minimo)) : lista;
 
   const kpis = useMemo(() => {
-    const abaixo = lista.filter((b) => computeStatus(b.saldo, b.minimo) !== "Em estoque").length;
+    const abaixo = lista.filter((b) => emAlerta(b.saldo, b.minimo)).length;
     const sem = lista.filter((b) => b.saldo <= 0).length;
     return { total: lista.length, abaixo, sem };
   }, [lista]);
@@ -296,7 +283,7 @@ function EstoquePage() {
 }
 
 function SaldoLinha({ beneficio }: { beneficio: BeneficioEstoque }) {
-  const status = computeStatus(beneficio.saldo, beneficio.minimo);
+  const status = statusEstoque(beneficio.saldo, beneficio.minimo);
   const destaque = status === "Sem estoque" || status === "Estoque baixo";
   return (
     <TableRow>

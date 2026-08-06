@@ -4,6 +4,7 @@
 
 import { getConfiguracoes } from "@/lib/configuracoes/configuracoes-supabase";
 import { listarBeneficiosNoSupabase } from "@/lib/estoque/estoque-repository";
+import { statusEstoque } from "@/lib/estoque/status-estoque";
 import {
   listFamiliasFromSupabase,
   listarEntregasRecentesNoSupabase,
@@ -69,13 +70,6 @@ function labelAcompanhamento(a: string): string {
     default:
       return "—";
   }
-}
-
-function statusEstoque(saldo: number, minimo: number): string {
-  if (saldo <= 0) return "Sem estoque";
-  if (minimo > 0 && saldo < minimo * 0.5) return "Estoque baixo";
-  if (minimo > 0 && saldo < minimo) return "Atenção";
-  return "Em estoque";
 }
 
 const ORIGEM_LABEL: Record<RecebimentoOrigem, string> = {

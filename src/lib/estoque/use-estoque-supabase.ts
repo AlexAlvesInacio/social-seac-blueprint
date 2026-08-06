@@ -6,6 +6,7 @@ import {
   listarComposicoesNoSupabase,
   listarItensEstoqueNoSupabase,
   listarMovimentacoesEstoqueNoSupabase,
+  listarMovimentacoesItensNoSupabase,
   montarCestaNoSupabase,
   registrarMovimentacaoEstoqueNoSupabase,
   registrarMovimentacaoItemNoSupabase,
@@ -23,6 +24,7 @@ export const estoqueQueryKeys = {
   beneficios: ["estoque", "beneficios"] as const,
   movimentacoes: ["estoque", "movimentacoes"] as const,
   itens: ["estoque", "itens"] as const,
+  movimentacoesItens: ["estoque", "movimentacoes-itens"] as const,
   composicoes: ["estoque", "composicoes"] as const,
 };
 
@@ -75,6 +77,17 @@ export function useItensEstoque() {
   });
 }
 
+export function useMovimentacoesItens() {
+  return useQuery({
+    queryKey: estoqueQueryKeys.movimentacoesItens,
+    queryFn: async () => {
+      const result = await listarMovimentacoesItensNoSupabase();
+      if (result.error) throw new FamiliasSupabaseQueryError(result.error);
+      return result.data;
+    },
+  });
+}
+
 export function useComposicoes() {
   return useQuery({
     queryKey: estoqueQueryKeys.composicoes,
@@ -97,6 +110,7 @@ export function useRegistrarMovimentacaoItem() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: estoqueQueryKeys.itens });
+      void queryClient.invalidateQueries({ queryKey: estoqueQueryKeys.movimentacoesItens });
     },
   });
 }
@@ -130,6 +144,7 @@ export function useMontarCesta() {
       void queryClient.invalidateQueries({ queryKey: estoqueQueryKeys.itens });
       void queryClient.invalidateQueries({ queryKey: estoqueQueryKeys.beneficios });
       void queryClient.invalidateQueries({ queryKey: estoqueQueryKeys.movimentacoes });
+      void queryClient.invalidateQueries({ queryKey: estoqueQueryKeys.movimentacoesItens });
     },
   });
 }

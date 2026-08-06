@@ -8,6 +8,7 @@ import type {
   ItemEstoque,
   MontarCestaResult,
   MovimentacaoEstoque,
+  MovimentacaoItem,
   RegistrarMovimentacaoItemResult,
   RegistrarMovimentacaoResult,
 } from "@/lib/familias/familias-supabase-types";
@@ -300,6 +301,82 @@ export async function listarItensEstoqueNoSupabase(): Promise<
     return {
       data: null,
       error: toUnexpectedFamiliasSupabaseReadError("listar_itens_estoque", error),
+    };
+  }
+}
+
+type MovimentacaoItemRow = {
+  id: string;
+  item_id: string;
+  tipo: "entrada" | "saida" | "ajuste";
+  quantidade: number;
+  saldo_resultante: number;
+  motivo: string | null;
+  observacao: string | null;
+  criado_em: string;
+};
+
+async function listarMovimentacoesItens(): Promise<FamiliasSupabaseReadResult<MovimentacaoItem[]>> {
+  const client = getSupabaseClient();
+
+  const { data, error } = await client
+    .from("movimentacoes_itens")
+    .select("id, item_id, tipo, quantidade, saldo_resultante, motivo, observacao, criado_em")
+    .order("criado_em", { ascending: false })
+    .limit(LIMITE_MOVIMENTACOES);
+
+  if (error) {
+    return { data: null, error: toFamiliasSupabaseReadError("listar_movimentacoes_itens", error) };
+  }
+
+  const rows = (data ?? []) as MovimentacaoItemRow[];
+  if (rows.length === 0) return { data: [], error: null };
+
+  // Resolve nome/unidade só dos itens que aparecem no recorte.
+  const itensResult = await client
+    .from("itens_estoque")
+    .select("id, nome, unidade")
+    .in("id", uniqueIds(rows.map((r) => r.item_id)));
+
+  if (itensResult.error) {
+    return {
+      data: null,
+      error: toFamiliasSupabaseReadError("listar_movimentacoes_itens", itensResult.error),
+    };
+  }
+
+  const itemPorId = new Map(
+    ((itensResult.data ?? []) as { id: string; nome: string; unidade: string }[]).map((i) => [
+      i.id,
+      i,
+    ]),
+  );
+
+  return {
+    data: rows.map((r) => ({
+      id: r.id,
+      itemNome: itemPorId.get(r.item_id)?.nome ?? "—",
+      unidade: itemPorId.get(r.item_id)?.unidade ?? "",
+      tipo: r.tipo,
+      quantidade: r.quantidade,
+      saldoResultante: r.saldo_resultante,
+      motivo: r.motivo ?? undefined,
+      observacao: r.observacao ?? undefined,
+      criadoEm: r.criado_em,
+    })),
+    error: null,
+  };
+}
+
+export async function listarMovimentacoesItensNoSupabase(): Promise<
+  FamiliasSupabaseReadResult<MovimentacaoItem[]>
+> {
+  try {
+    return await listarMovimentacoesItens();
+  } catch (error) {
+    return {
+      data: null,
+      error: toUnexpectedFamiliasSupabaseReadError("listar_movimentacoes_itens", error),
     };
   }
 }

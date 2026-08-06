@@ -128,13 +128,16 @@ qualquer erro de conta vira divergência permanente.
    trigger não aceita outra coisa) e recebe o saldo no passo seguinte.
    Item que não é mais usado deve ser **inativado**, nunca excluído —
    excluir quebraria o histórico de movimentações que aponta para ele.
-3. **Lançar o ajuste** de cada item em Estoque → Ajuste, preenchendo
-   "Novo saldo" com o valor contado e, no motivo, algo que identifique a
-   operação: `Inventário inicial AAAA-MM-DD`. O motivo aparece no ledger
-   e é o que permite, meses depois, separar a carga inicial do
-   movimento do dia a dia.
-4. **Repetir para os benefícios** (cestas montadas prontas em estoque),
-   se houver.
+3. **Lançar o ajuste** de cada item em **Itens e composição → Estoque de
+   itens → Ajuste / inventário**, preenchendo "Novo saldo" com o valor
+   contado e, no motivo, algo que identifique a operação:
+   `Inventário inicial AAAA-MM-DD`. O motivo é **obrigatório** no ajuste
+   de item: ele aparece no ledger e é o que permite, meses depois,
+   separar a carga inicial do movimento do dia a dia. Cada lançamento
+   aparece na tabela "Movimentações de itens", logo abaixo.
+4. **Repetir para os benefícios** (cestas já montadas na prateleira), se
+   houver, em Estoque → Ajuste. Cesta que ainda vai ser montada **não**
+   entra aqui: ela nasce da montagem, que consome os itens do passo 3.
 5. **Conferir no Painel** que os totais batem com a contagem.
 
 ### Sobre os dados de homologação
