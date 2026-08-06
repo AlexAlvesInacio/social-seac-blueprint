@@ -57,6 +57,64 @@ ou funcionamento local — este arquivo é a fonte de status corrente.
 - **[2026-08-02] A lista de famílias carrega o agregado inteiro.** Filtros e
   paginação são no cliente; funcionam, mas a tela baixa ~4.000 linhas a cada
   abertura. A paginação no servidor está registrada na issue #107.
+- **[Resolvido — 2026-08-06] O estoque de itens não tinha tela.**
+  `registrar_movimentacao_item` e `useRegistrarMovimentacaoItem` existiam desde
+  2026-07-24 e não eram chamados por rota nenhuma: `itens_estoque.saldo` só subia
+  por recebimento vinculado ao catálogo e só descia por `montar_cesta`, e o ledger
+  `movimentacoes_itens` era invisível. Isso tornava o passo 3 do runbook
+  (`12_RUNBOOK_OPERACAO.md`) inexecutável e travava a carga inicial do inventário.
+  A rota `/composicao-cesta` virou **"Itens e composição"** e abre numa aba
+  **Estoque de itens** com saldos, entrada/saída/ajuste e o histórico do ledger.
+  O motivo é obrigatório no ajuste — é o que separa a carga inicial do movimento
+  do dia a dia. O status de saldo saiu de três cópias idênticas
+  (`estoque.tsx`, `painel.tsx`, `relatorios-supabase.ts`) para
+  `src/lib/estoque/status-estoque.ts`, com teste.
+- **[Resolvido — 2026-08-06] A auditoria não registrava estoque nem entrega.** Só as
+  telas de cadastro emitiam evento pelo cliente (`registrarAuditoria`); movimentação de
+  estoque, montagem, recebimento, entrega e tentativa bloqueada não geravam nada — dar
+  entrada num item e saída numa cesta deixava a tela vazia. A migration `20260806225547`
+  audita por **trigger AFTER INSERT** nas tabelas de fato (os dois ledgers, `entregas`,
+  `tentativas_bloqueadas`, `recebimentos`), o que cobre todo caminho de escrita sem
+  reescrever o corpo de seis RPCs. O gravador `private.auditar_evento` é
+  `SECURITY DEFINER` porque a policy de INSERT da trilha exige `gerir_familias` e quem
+  movimenta estoque pode ser o papel `estoque` — sem isso a movimentação dele falharia
+  na auditoria e derrubaria a operação. O gravador também **não audita quando não há
+  usuário identificado**, para que a trilha nunca derrube a operação de origem.
+- **[Mitigado — 2026-08-06] A tela de auditoria carregava 500 eventos de todos os
+  tempos.** Com estoque e entrega auditados, esses 500 passariam a cobrir poucos dias, e
+  o excedente sumia **sem aviso** — omissão silenciosa, não lentidão. O recorte virou
+  temporal e vai no servidor: a tela abre nos **últimos 7 dias** (`gte`/`lt` sobre
+  `criado_em`), "Limpar filtros" volta a essa janela em vez de "todos os tempos", e
+  quando a consulta bate no teto aparece um aviso pedindo para reduzir o intervalo.
+  As datas do calendário viram instantes em `src/lib/auditoria/periodo.ts` — comparar
+  texto de data traria de volta o erro de fuso. **Paginação no servidor continua
+  follow-up**, junto de filtro de autor/ação/módulo no servidor (que exige fonte
+  própria para os seletores, hoje derivados dos eventos carregados). Mesma dívida da
+  issue #107 para famílias.
+- **[Resolvido — 2026-08-06] Uma entrega deixou de significar uma visita.** Com o
+  multi-benefício, o card "Entregas hoje" marcou 2 para uma única família atendida, e a
+  coluna `entregas.quantidade` não era somada por ninguém. O Painel passou a separar
+  **Visitas hoje** (atendimentos distintos, por `assistidoId + criadoEm`) de
+  **Benefícios entregues hoje** (soma de `quantidade`); "Cestas em estoque" conta só
+  Cesta Padrão + Extra; "Últimas entregas" agrupa por visita; e o card "Contato
+  necessário 90+" saiu da grade a pedido do usuário — a lista dele continua na página.
+  Lógica pura e testada em `src/lib/painel/visitas.ts`.
+- **[Resolvido — 2026-08-06] O filtro de período da auditoria errava o dia.** Comparava
+  `criadoEm.slice(0,10)`, a data em **UTC**, contra o que o usuário digita no fuso dele,
+  enquanto a tabela exibe convertido: um evento das 22:33 de 05/08 em Brasília é 01:33
+  de 06/08 em UTC e aparecia filtrado no dia seguinte ao que a própria tela mostrava.
+  Agora compara a data local (`src/lib/auditoria/periodo.ts`, com teste que roda em
+  qualquer fuso).
+- **[Resolvido — 2026-08-06] A entrega só conhecia Cesta Padrão e Cesta Extra.** A RPC
+  resolvia o benefício pelo tipo de cadastro e o frontend lia saldo só desses dois nomes,
+  então Kit Gestante, Ovo de Páscoa e qualquer sazonal **não tinham como ser entregues**
+  — a montagem funcionava, a entrega não. A migration `20260806015315` dá a
+  `registrar_entrega_atendimento` o parâmetro `p_beneficios_extras jsonb` e devolve uma
+  coluna `extras`; `entregas` ganhou `quantidade` e `autorizado_por`. Cada adicional gera
+  entrega e baixa próprias na mesma transação, herda o prazo da cesta (nunca sai sozinho),
+  bloqueia tudo se faltar saldo, e acima de 1 por família exige administrador,
+  justificativa e evento de auditoria. Regras em `02_REGRAS_NEGOCIO.md` §Benefícios
+  adicionais e `REGRAS_APROVADAS_SEAC_SOCIAL.md` §5.1.
 - **[2026-08-02] Saldo só entra por movimentação, nunca por `update`.** Depois
   da migration `20260802143000`, `update ... set saldo` é recusado com `SEAS1` e
   item novo nasce obrigatoriamente com saldo 0. Isso muda o procedimento de
