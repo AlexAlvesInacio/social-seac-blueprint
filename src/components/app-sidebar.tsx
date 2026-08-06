@@ -38,7 +38,7 @@ const operacional = [
 const estoque = [
   { title: "Estoque", url: "/estoque", icon: Package },
   { title: "Recebimentos", url: "/recebimentos", icon: PackagePlus },
-  { title: "Composição por benefício", url: "/composicao-cesta", icon: Boxes },
+  { title: "Itens e composição", url: "/composicao-cesta", icon: Boxes },
 ];
 
 const admin = [

@@ -4,10 +4,10 @@ import {
   Users,
   UserRound,
   Package,
+  PackageCheck,
   Truck,
   Calendar,
   AlertTriangle,
-  PhoneCall,
   ClipboardCheck,
   TrendingUp,
   TrendingDown,
@@ -29,6 +29,8 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { statusEstoque } from "@/lib/estoque/status-estoque";
+import { chaveDaVisita, contarBeneficios, contarVisitas } from "@/lib/painel/visitas";
 import { useBeneficiosEstoque, useMovimentacoesEstoque } from "@/lib/estoque/use-estoque-supabase";
 import { useEntregasPainel, useFamiliasSupabase } from "@/lib/familias/use-familias-supabase";
 import type {
@@ -53,14 +55,6 @@ function daysAgo(n: number): Date {
   const d = startOfDay(new Date());
   d.setDate(d.getDate() - n);
   return d;
-}
-
-type StatusEstoque = "Em estoque" | "Atenção" | "Estoque baixo" | "Sem estoque";
-function statusEstoque(saldo: number, minimo: number): StatusEstoque {
-  if (saldo <= 0) return "Sem estoque";
-  if (minimo > 0 && saldo < minimo * 0.5) return "Estoque baixo";
-  if (minimo > 0 && saldo < minimo) return "Atenção";
-  return "Em estoque";
 }
 
 function trend(current: number, previous: number): { label: string; dir: "up" | "down" | "flat" } {
@@ -98,7 +92,11 @@ function computarDados(
   const famAtend30 = new Set(entregas30.map((e) => e.familiaId));
   const famAtend30Prev = new Set(entregas30Prev.map((e) => e.familiaId));
 
-  const cestasEstoque = beneficios.reduce((acc, b) => acc + b.saldo, 0);
+  // Só as duas cestas: é o que sustenta o atendimento do dia a dia. Sazonais
+  // (Ovo de Páscoa, Kit Gestante) seguem nos alertas e na tela de cestas.
+  const cestasEstoque = beneficios
+    .filter((b) => b.nome === "Cesta Padrão" || b.nome === "Cesta Extra")
+    .reduce((acc, b) => acc + b.saldo, 0);
   const assistidosAtivos = familias.reduce(
     (acc, f) => acc + f.assistidos.filter((a) => a.status === "ativo").length,
     0,
@@ -145,9 +143,10 @@ function computarDados(
   const entregasPorDia: { dia: string; qtd: number }[] = [];
   for (let i = 29; i >= 0; i--) {
     const d = daysAgo(i);
-    const qtd = entregas.filter(
-      (e) => startOfDay(parse(e.criadoEm)).getTime() === d.getTime(),
-    ).length;
+    // O gráfico é de atendimentos: conta visitas, não benefícios.
+    const qtd = contarVisitas(
+      entregas.filter((e) => startOfDay(parse(e.criadoEm)).getTime() === d.getTime()),
+    );
     if (qtd === 0) continue;
     const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
     entregasPorDia.push({ dia: label, qtd });
@@ -157,9 +156,36 @@ function computarDados(
   const entregasPorBeneficio = beneficiosNomes
     .map((nome) => ({
       name: nome,
-      value: entregasMes.filter((e) => e.beneficioNome === nome).length,
+      value: contarBeneficios(entregasMes.filter((e) => e.beneficioNome === nome)),
     }))
     .filter((b) => b.value > 0);
+
+  // Uma visita, uma linha: sem agrupar, a mesma família aparecia uma vez por
+  // benefício entregue.
+  const porVisita = new Map<
+    string,
+    { id: string; assistidoNome: string; familiaNome: string; criadoEm: string; itens: string[] }
+  >();
+  for (const e of entregas) {
+    const chave = chaveDaVisita(e);
+    const atual = porVisita.get(chave);
+    // Só para ao encontrar uma 6ª visita: as 5 primeiras seguem acumulando os
+    // benefícios que faltam.
+    if (!atual && porVisita.size >= 5) break;
+    const rotulo = e.quantidade > 1 ? `${e.beneficioNome} ×${e.quantidade}` : e.beneficioNome;
+    if (atual) {
+      atual.itens.push(rotulo);
+      continue;
+    }
+    porVisita.set(chave, {
+      id: e.id,
+      assistidoNome: e.assistidoNome,
+      familiaNome: e.familiaNome,
+      criadoEm: e.criadoEm,
+      itens: [rotulo],
+    });
+  }
+  const ultimasVisitas = [...porVisita.values()];
 
   const statusFamilias = [
     { status: "Liberado", chave: "liberado", fill: "hsl(152 55% 42%)" },
@@ -187,20 +213,21 @@ function computarDados(
       familiasAtendidas30: famAtend30.size,
       familiasAtendidas30Prev: famAtend30Prev.size,
       assistidosAtivos,
-      entregasHoje: entregasHoje.length,
-      entregasMes: entregasMes.length,
+      visitasHoje: contarVisitas(entregasHoje),
+      beneficiosHoje: contarBeneficios(entregasHoje),
+      beneficiosMes: contarBeneficios(entregasMes),
       cestasEstoque,
       aguardandoAvaliacao: aguardandoAvaliacao.length,
-      contatoNecessario: contatoNecessario.length,
-      entregas30: entregas30.length,
-      entregas30Prev: entregas30Prev.length,
+      // A tendência compara visitas: misturar as duas unidades distorceria o %.
+      entregas30: contarVisitas(entregas30),
+      entregas30Prev: contarVisitas(entregas30Prev),
     },
     publico,
     entregasPorDia,
     entregasPorBeneficio,
     statusFamilias,
     alertasEstoque,
-    ultimasEntregas: entregas.slice(0, 5),
+    ultimasEntregas: ultimasVisitas,
     ultimasMovimentacoes: movimentacoes.slice(0, 5),
     aguardandoAvaliacao: aguardandoAvaliacao.slice(0, 6),
     contatoNecessario: contatoNecessario.slice(0, 6),
@@ -274,15 +301,22 @@ function PainelPage() {
     },
     {
       icon: Calendar,
-      label: "Entregas hoje",
-      value: c.entregasHoje,
-      hint: "Hoje",
+      label: "Visitas hoje",
+      value: c.visitasHoje,
+      hint: "Atendimentos",
       tone: "bg-amber-100 text-amber-700",
     },
     {
+      icon: PackageCheck,
+      label: "Benefícios entregues hoje",
+      value: c.beneficiosHoje,
+      hint: "Cestas e adicionais",
+      tone: "bg-orange-100 text-orange-700",
+    },
+    {
       icon: Truck,
-      label: "Entregas no mês",
-      value: c.entregasMes,
+      label: "Benefícios no mês",
+      value: c.beneficiosMes,
       hint: tEntregas30.label,
       tone: "bg-emerald-100 text-emerald-700",
       trend: tEntregas30,
@@ -291,7 +325,7 @@ function PainelPage() {
       icon: Package,
       label: "Cestas em estoque",
       value: c.cestasEstoque,
-      hint: "Benefícios entregáveis",
+      hint: "Padrão + Extra",
       tone: "bg-primary/10 text-primary",
     },
     {
@@ -300,13 +334,6 @@ function PainelPage() {
       value: c.aguardandoAvaliacao,
       hint: "Cadastro definitivo",
       tone: "bg-violet-100 text-violet-700",
-    },
-    {
-      icon: PhoneCall,
-      label: "Contato necessário 90+",
-      value: c.contatoNecessario,
-      hint: "Sem retirada",
-      tone: "bg-red-100 text-red-700",
     },
   ];
 
@@ -497,7 +524,7 @@ function PainelPage() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{e.assistidoNome}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {e.familiaNome} • {e.beneficioNome}
+                        {e.familiaNome} • {e.itens.join(" + ")}
                       </p>
                     </div>
                     <span className="shrink-0 text-xs text-muted-foreground">

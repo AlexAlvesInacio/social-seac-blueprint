@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { getSupabaseClient, supabase } from "@/lib/supabase/client";
+import { limitesDoPeriodo } from "@/lib/auditoria/periodo";
 
 /** Entrada emitida pela aplicação. `usuario` é aceito por compatibilidade com o
  * helper legado, mas é ignorado — o autor real vem de `criado_por` (auth.uid()). */
@@ -23,8 +24,24 @@ export interface AuditoriaEventoReadModel {
   observacao?: string;
 }
 
+export interface PeriodoAuditoria {
+  /** Data local YYYY-MM-DD; vazio não restringe. */
+  de: string;
+  ate: string;
+}
+
+/**
+ * Resultado da consulta. `atingiuLimite` existe para que a tela possa avisar que
+ * há mais eventos no período do que ela mostrou — antes o excedente sumia calado.
+ */
+export interface EventosAuditoriaPagina {
+  eventos: AuditoriaEventoReadModel[];
+  atingiuLimite: boolean;
+}
+
 export const auditoriaQueryKeys = {
   eventos: ["auditoria", "eventos"] as const,
+  periodo: (de: string, ate: string) => ["auditoria", "eventos", de, ate] as const,
 };
 
 /**
@@ -61,19 +78,28 @@ type AuditoriaRow = {
 
 const LIMITE_EVENTOS = 500;
 
-async function listarEventosAuditoria(): Promise<AuditoriaEventoReadModel[]> {
+async function listarEventosAuditoria(periodo: PeriodoAuditoria): Promise<EventosAuditoriaPagina> {
   const client = getSupabaseClient();
+  const { desde, antesDe } = limitesDoPeriodo(periodo.de, periodo.ate);
 
-  const { data, error } = await client
+  // O recorte vai para o servidor: sem ele a consulta é sempre "os 500 últimos de
+  // todos os tempos", e o que passa disso não aparece nem avisa.
+  let query = client
     .from("auditoria_eventos")
     .select("id, criado_em, criado_por, acao, modulo, registro, observacao")
     .order("criado_em", { ascending: false })
     .limit(LIMITE_EVENTOS);
 
+  if (desde) query = query.gte("criado_em", desde);
+  if (antesDe) query = query.lt("criado_em", antesDe);
+
+  const { data, error } = await query;
+
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as AuditoriaRow[];
-  if (rows.length === 0) return [];
+  const atingiuLimite = rows.length >= LIMITE_EVENTOS;
+  if (rows.length === 0) return { eventos: [], atingiuLimite: false };
 
   // Resolve o nome do autor (best-effort; RLS pode restringir a leitura de perfis).
   const autorIds = [...new Set(rows.map((r) => r.criado_por))];
@@ -85,20 +111,23 @@ async function listarEventosAuditoria(): Promise<AuditoriaEventoReadModel[]> {
     }
   }
 
-  return rows.map((r) => ({
-    id: r.id,
-    criadoEm: r.criado_em,
-    autor: nomePorId.get(r.criado_por) ?? "—",
-    acao: r.acao,
-    modulo: r.modulo,
-    registro: r.registro ?? "—",
-    observacao: r.observacao ?? undefined,
-  }));
+  return {
+    eventos: rows.map((r) => ({
+      id: r.id,
+      criadoEm: r.criado_em,
+      autor: nomePorId.get(r.criado_por) ?? "—",
+      acao: r.acao,
+      modulo: r.modulo,
+      registro: r.registro ?? "—",
+      observacao: r.observacao ?? undefined,
+    })),
+    atingiuLimite,
+  };
 }
 
-export function useEventosAuditoria() {
+export function useEventosAuditoria(periodo: PeriodoAuditoria) {
   return useQuery({
-    queryKey: auditoriaQueryKeys.eventos,
-    queryFn: listarEventosAuditoria,
+    queryKey: auditoriaQueryKeys.periodo(periodo.de, periodo.ate),
+    queryFn: () => listarEventosAuditoria(periodo),
   });
 }

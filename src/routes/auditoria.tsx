@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { LoaderCircle } from "lucide-react";
+import { AlertTriangle, LoaderCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,20 +22,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useEventosAuditoria } from "@/lib/auditoria/auditoria-supabase";
+import { diasAtrasLocalISO, hojeLocalISO } from "@/lib/auditoria/periodo";
 
 export const Route = createFileRoute("/auditoria")({
   head: () => ({ meta: [{ title: "Auditoria — SEAC Social" }] }),
   component: AuditoriaPage,
 });
 
+/** Janela inicial: cobre a semana sem depender do teto de 500 eventos. */
+const JANELA_PADRAO_DIAS = 7;
+
 function AuditoriaPage() {
-  const { data, isPending, isError, refetch, isFetching } = useEventosAuditoria();
-  const eventos = useMemo(() => data ?? [], [data]);
-  const [de, setDe] = useState("");
-  const [ate, setAte] = useState("");
+  const [de, setDe] = useState(() => diasAtrasLocalISO(JANELA_PADRAO_DIAS));
+  const [ate, setAte] = useState(() => hojeLocalISO());
   const [autor, setAutor] = useState("all");
   const [acao, setAcao] = useState("all");
   const [modulo, setModulo] = useState("all");
+
+  // O período vai para a consulta; os demais filtros seguem no cliente, sobre o
+  // recorte já reduzido.
+  const { data, isPending, isError, refetch, isFetching } = useEventosAuditoria({ de, ate });
+  const eventos = useMemo(() => data?.eventos ?? [], [data]);
+  const atingiuLimite = data?.atingiuLimite ?? false;
 
   const autores = useMemo(() => Array.from(new Set(eventos.map((e) => e.autor))), [eventos]);
   const acoes = useMemo(() => Array.from(new Set(eventos.map((e) => e.acao))), [eventos]);
@@ -44,14 +52,12 @@ function AuditoriaPage() {
   const filtered = useMemo(
     () =>
       eventos.filter((e) => {
-        if (de && e.criadoEm.slice(0, 10) < de) return false;
-        if (ate && e.criadoEm.slice(0, 10) > ate) return false;
         if (autor !== "all" && e.autor !== autor) return false;
         if (acao !== "all" && e.acao !== acao) return false;
         if (modulo !== "all" && e.modulo !== modulo) return false;
         return true;
       }),
-    [eventos, de, ate, autor, acao, modulo],
+    [eventos, autor, acao, modulo],
   );
 
   return (
@@ -117,8 +123,10 @@ function AuditoriaPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setDe("");
-                setAte("");
+                // Volta à janela padrão, não a "todos os tempos": sem recorte a
+                // consulta bate no teto de eventos e omite o excedente.
+                setDe(diasAtrasLocalISO(JANELA_PADRAO_DIAS));
+                setAte(hojeLocalISO());
                 setAutor("all");
                 setAcao("all");
                 setModulo("all");
@@ -129,6 +137,16 @@ function AuditoriaPage() {
           </div>
         </CardContent>
       </Card>
+
+      {atingiuLimite && (
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Este período tem mais eventos do que a tela mostra — estão listados apenas os mais
+            recentes. Reduza o intervalo de datas para ver o restante.
+          </span>
+        </div>
+      )}
 
       <Card className="mt-4">
         <CardContent className="p-0">

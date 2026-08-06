@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Pencil, Plus, ShoppingBasket, Trash2, Users } from "lucide-react";
+import { AlertTriangle, Package, Pencil, Plus, ShoppingBasket, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -24,19 +26,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { emAlerta, statusEstoque } from "@/lib/estoque/status-estoque";
 import {
   useBeneficiosEstoque,
   useComposicoes,
   useDefinirComposicaoBeneficio,
   useItensEstoque,
   useMontarCesta,
+  useMovimentacoesItens,
+  useRegistrarMovimentacaoItem,
 } from "@/lib/estoque/use-estoque-supabase";
 import type { ItemEstoque } from "@/lib/familias/familias-supabase-types";
 
 export const Route = createFileRoute("/composicao-cesta")({
-  head: () => ({ meta: [{ title: "Composição por benefício — SEAC Social" }] }),
+  head: () => ({ meta: [{ title: "Itens e composição — SEAC Social" }] }),
   component: ComposicaoPage,
 });
+
+/** Movimentação manual de item: entrada e saída somam/subtraem, ajuste define o saldo. */
+type FormMovItem = {
+  tipo: "entrada" | "saida" | "ajuste";
+  itemId: string;
+  quantidade: string;
+  motivo: string;
+  observacao: string;
+};
+
+const formMovVazio: FormMovItem = {
+  tipo: "entrada",
+  itemId: "",
+  quantidade: "",
+  motivo: "",
+  observacao: "",
+};
+
+function formatarDataHora(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
 
 /** Linha editável da composição (referência ao catálogo + quantidade por cesta). */
 type LinhaComposicao = { itemId: string; quantidade: number };
@@ -49,6 +77,8 @@ function ComposicaoPage() {
   const composicoesQuery = useComposicoes();
   const definirComposicao = useDefinirComposicaoBeneficio();
   const montarCesta = useMontarCesta();
+  const movimentacoesItensQuery = useMovimentacoesItens();
+  const registrarMovItem = useRegistrarMovimentacaoItem();
 
   const beneficios = useMemo(() => beneficiosQuery.data ?? [], [beneficiosQuery.data]);
   const itens = useMemo(() => itensQuery.data ?? [], [itensQuery.data]);
@@ -82,6 +112,12 @@ function ComposicaoPage() {
   const [novoItemId, setNovoItemId] = useState("");
   const [novaQtd, setNovaQtd] = useState<string>("");
   const [editandoItemId, setEditandoItemId] = useState<string | null>(null);
+
+  // Movimentação manual de item (entrada/saída/ajuste).
+  const [movAberto, setMovAberto] = useState(false);
+  const [formMov, setFormMov] = useState<FormMovItem>(formMovVazio);
+  const setMov = <K extends keyof FormMovItem>(k: K, v: FormMovItem[K]) =>
+    setFormMov((f) => ({ ...f, [k]: v }));
 
   // Seleciona o primeiro benefício quando a lista carrega.
   useEffect(() => {
@@ -128,7 +164,13 @@ function ComposicaoPage() {
       ? linhas.map((l) => (l.itemId === editandoItemId ? nova : l))
       : [...linhas, nova];
     setLinhas(beneficioId, next);
-    toast.success(editandoItemId ? "Item atualizado." : "Item adicionado à composição.");
+    // Adicionar/editar mexe só no rascunho local: sem dizer isso, o toast verde
+    // passa a impressão de que a composição já foi gravada.
+    toast.warning(
+      editandoItemId
+        ? "Item atualizado no rascunho — clique em Salvar composição para gravar."
+        : "Item adicionado ao rascunho — clique em Salvar composição para gravar.",
+    );
     resetForm();
   };
 
@@ -192,6 +234,9 @@ function ComposicaoPage() {
 
   const temFalta = preview.some((p) => p.status === "sem");
   const semComposicaoMontagem = preview.length === 0;
+  // A montagem consome a composição SALVA; rascunho pendente engana quem acabou
+  // de editar a receita e vem direto montar.
+  const rascunhoPendenteMontagem = rascunho[beneficioMontagem] !== undefined;
 
   const handleMontar = () => {
     if (!beneficioMontagem || quantidade <= 0) return;
@@ -213,13 +258,50 @@ function ComposicaoPage() {
     beneficiosQuery.isLoading || itensQuery.isLoading || composicoesQuery.isLoading;
   const erro = beneficiosQuery.error ?? itensQuery.error ?? composicoesQuery.error;
 
-  const alertasEstoque = itens.filter((i) => i.minimo > 0 && i.saldo < i.minimo).length;
+  const alertasEstoque = itens.filter((i) => emAlerta(i.saldo, i.minimo)).length;
+
+  const abrirMov = (tipo: FormMovItem["tipo"]) => {
+    setFormMov({ ...formMovVazio, tipo, itemId: itens[0]?.id ?? "" });
+    setMovAberto(true);
+  };
+
+  const salvarMovItem = async () => {
+    const qtd = Number(formMov.quantidade);
+    if (!formMov.itemId) {
+      toast.error("Selecione o item.");
+      return;
+    }
+    if (!Number.isFinite(qtd) || qtd < 0 || (formMov.tipo !== "ajuste" && qtd <= 0)) {
+      toast.error("Informe uma quantidade válida.");
+      return;
+    }
+    // O motivo é o que separa a carga inicial do movimento do dia a dia no ledger.
+    if (formMov.tipo === "ajuste" && formMov.motivo.trim() === "") {
+      toast.error("Informe o motivo do ajuste (ex.: Inventário inicial 2026-08-06).");
+      return;
+    }
+    try {
+      const data = await registrarMovItem.mutateAsync({
+        itemId: formMov.itemId,
+        tipo: formMov.tipo,
+        quantidade: qtd,
+        motivo: formMov.motivo,
+        observacao: formMov.observacao,
+      });
+      toast.success(`Movimentação registrada. Saldo atual: ${data.saldo_resultante}.`);
+      setMovAberto(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Não foi possível registrar a movimentação.",
+      );
+    }
+  };
 
   return (
-    <AppShell title="Composição por benefício">
+    <AppShell title="Itens e composição">
       <p className="mb-4 text-sm text-muted-foreground">
-        Configure os itens que compõem cada cesta ou benefício do SEAC e monte cestas consumindo o
-        estoque de itens.
+        Controle o estoque físico de itens, defina o que compõe cada cesta ou benefício do SEAC e
+        monte as cestas consumindo esse estoque.
       </p>
 
       {erro ? (
@@ -242,7 +324,7 @@ function ComposicaoPage() {
               tone="emerald"
             />
             <ResumoCard
-              icon={<Users className="h-5 w-5" />}
+              icon={<Package className="h-5 w-5" />}
               label="Itens no catálogo"
               value={String(itens.length)}
               hint="itens"
@@ -271,11 +353,125 @@ function ComposicaoPage() {
             />
           </div>
 
-          <Tabs defaultValue="composicao">
+          <Tabs defaultValue="itens">
             <TabsList>
+              <TabsTrigger value="itens">Estoque de itens</TabsTrigger>
               <TabsTrigger value="composicao">Composição do benefício</TabsTrigger>
               <TabsTrigger value="montagem">Montagem de cestas</TabsTrigger>
             </TabsList>
+
+            {/* Estoque físico de itens: saldos, lançamentos e histórico */}
+            <TabsContent value="itens" className="mt-4 space-y-4">
+              <Card>
+                <CardContent className="space-y-4 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Estoque de itens</p>
+                      <p className="text-xs text-muted-foreground">
+                        É o estoque físico recebido em doação. As cestas saem daqui: só é possível
+                        montar enquanto houver item suficiente.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" className="gap-2" onClick={() => abrirMov("entrada")}>
+                        <Plus className="h-4 w-4" /> Nova entrada
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => abrirMov("saida")}>
+                        Nova saída
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => abrirMov("ajuste")}>
+                        Ajuste / inventário
+                      </Button>
+                    </div>
+                  </div>
+
+                  {itens.length === 0 ? (
+                    <p className="rounded-md border p-8 text-center text-sm text-muted-foreground">
+                      Nenhum item no catálogo. Cadastre em Configurações → Itens.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Categoria</TableHead>
+                          <TableHead>Unidade</TableHead>
+                          <TableHead>Saldo</TableHead>
+                          <TableHead>Mínimo</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {itens.map((i) => (
+                          <TableRow key={i.id}>
+                            <TableCell className="text-sm font-medium">{i.nome}</TableCell>
+                            <TableCell className="text-sm">{i.categoria ?? "—"}</TableCell>
+                            <TableCell className="text-sm">{i.unidade}</TableCell>
+                            <TableCell className="text-sm">{i.saldo}</TableCell>
+                            <TableCell className="text-sm">{i.minimo}</TableCell>
+                            <TableCell>
+                              <SaldoBadge status={statusEstoque(i.saldo, i.minimo)} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="space-y-3 p-4">
+                  <div>
+                    <p className="text-sm font-semibold">Movimentações de itens</p>
+                    <p className="text-xs text-muted-foreground">
+                      Inclui o consumo da montagem de cestas e as entradas geradas por recebimentos
+                      vinculados ao catálogo.
+                    </p>
+                  </div>
+                  {movimentacoesItensQuery.isLoading ? (
+                    <p className="p-6 text-center text-sm text-muted-foreground">Carregando…</p>
+                  ) : movimentacoesItensQuery.isError ? (
+                    <p className="p-6 text-center text-sm text-destructive">
+                      Não foi possível carregar as movimentações de itens.
+                    </p>
+                  ) : (movimentacoesItensQuery.data ?? []).length === 0 ? (
+                    <p className="p-6 text-center text-sm text-muted-foreground">
+                      Nenhuma movimentação de item registrada.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Qtd.</TableHead>
+                          <TableHead>Saldo</TableHead>
+                          <TableHead>Motivo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(movimentacoesItensQuery.data ?? []).map((m) => (
+                          <TableRow key={m.id}>
+                            <TableCell className="text-sm">
+                              {formatarDataHora(m.criadoEm)}
+                            </TableCell>
+                            <TableCell className="text-sm">{m.itemNome}</TableCell>
+                            <TableCell className="text-sm capitalize">{m.tipo}</TableCell>
+                            <TableCell className="text-sm">
+                              {m.quantidade > 0 ? `+${m.quantidade}` : m.quantidade}
+                            </TableCell>
+                            <TableCell className="text-sm">{m.saldoResultante}</TableCell>
+                            <TableCell className="text-sm">{m.motivo ?? "—"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Composição */}
             <TabsContent value="composicao" className="mt-4 space-y-4">
@@ -292,7 +488,8 @@ function ComposicaoPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {temRascunho ? (
-                          <Badge variant="outline" className="text-[10px]">
+                          <Badge className="gap-1 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100">
+                            <AlertTriangle className="h-3 w-3" />
                             Alterações não salvas
                           </Badge>
                         ) : null}
@@ -541,7 +738,9 @@ function ComposicaoPage() {
                                   colSpan={6}
                                   className="py-8 text-center text-sm text-muted-foreground"
                                 >
-                                  Este benefício não possui composição definida.
+                                  {rascunhoPendenteMontagem
+                                    ? "A composição editada ainda não foi salva — a montagem só enxerga o que está gravado."
+                                    : "Este benefício não possui composição definida."}
                                 </TableCell>
                               </TableRow>
                             ) : (
@@ -568,9 +767,31 @@ function ComposicaoPage() {
                     </div>
 
                     <div className="space-y-3">
+                      {rascunhoPendenteMontagem ? (
+                        <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-600" />
+                            <div>
+                              <p className="text-sm font-semibold text-amber-800">
+                                Composição com alterações não salvas.
+                              </p>
+                              <p className="text-xs text-amber-700">
+                                A montagem usa a composição gravada no servidor. Volte à aba
+                                &quot;Composição do benefício&quot; e clique em Salvar composição.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
                       {semComposicaoMontagem ? (
                         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-                          Defina a composição deste benefício antes de montar.
+                          Defina a composição deste benefício antes de montar. Sem receita, o
+                          servidor recusa a montagem.
+                        </div>
+                      ) : quantidade <= 0 ? (
+                        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                          Informe quantas unidades deseja montar.
                         </div>
                       ) : temFalta ? (
                         <div className="rounded-md border border-red-200 bg-red-50 p-3">
@@ -596,7 +817,7 @@ function ComposicaoPage() {
                                   <span className="font-medium">{p.nome}</span>
                                   <span className="text-muted-foreground">
                                     {p.status === "sem"
-                                      ? `Faltam ${Math.abs(p.depois)} unidades`
+                                      ? `Faltam ${Math.abs(p.depois)} — precisa de ${p.total}, saldo atual ${p.saldo}`
                                       : `Saldo ficará baixo (${p.depois} unidades)`}
                                   </span>
                                 </li>
@@ -635,8 +856,87 @@ function ComposicaoPage() {
           </Tabs>
         </>
       )}
+
+      <Sheet open={movAberto} onOpenChange={setMovAberto}>
+        <SheetContent className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>
+              {formMov.tipo === "entrada"
+                ? "Nova entrada de item"
+                : formMov.tipo === "saida"
+                  ? "Nova saída de item"
+                  : "Ajuste de saldo do item"}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-1.5">
+              <Label>Item</Label>
+              <Select value={formMov.itemId} onValueChange={(v) => setMov("itemId", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {itens.map((i) => (
+                    <SelectItem key={i.id} value={i.id}>
+                      {i.nome} (saldo {i.saldo} {i.unidade})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>{formMov.tipo === "ajuste" ? "Novo saldo" : "Quantidade"}</Label>
+              <Input
+                type="number"
+                min={0}
+                value={formMov.quantidade}
+                onChange={(e) => setMov("quantidade", e.target.value)}
+              />
+              {formMov.tipo === "ajuste" ? (
+                <p className="text-xs text-muted-foreground">
+                  No ajuste, informe a quantidade contada — ela vira o saldo do item.
+                </p>
+              ) : null}
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Motivo{formMov.tipo === "ajuste" ? " *" : ""}</Label>
+              <Input
+                value={formMov.motivo}
+                onChange={(e) => setMov("motivo", e.target.value)}
+                placeholder={
+                  formMov.tipo === "ajuste" ? "Ex.: Inventário inicial 2026-08-06" : undefined
+                }
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Observação</Label>
+              <Textarea
+                rows={3}
+                value={formMov.observacao}
+                onChange={(e) => setMov("observacao", e.target.value)}
+              />
+            </div>
+          </div>
+          <SheetFooter>
+            <Button variant="outline" onClick={() => setMovAberto(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={registrarMovItem.isPending} onClick={() => void salvarMovItem()}>
+              {registrarMovItem.isPending ? "Salvando…" : "Salvar"}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </AppShell>
   );
+}
+
+function SaldoBadge({ status }: { status: ReturnType<typeof statusEstoque> }) {
+  if (status === "Em estoque")
+    return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{status}</Badge>;
+  if (status === "Atenção")
+    return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">{status}</Badge>;
+  return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">{status}</Badge>;
 }
 
 function ResumoCard({

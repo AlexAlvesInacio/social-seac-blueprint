@@ -237,6 +237,7 @@ export type FamiliasSupabaseReadOperation =
   | "buscar_assistidos"
   | "listar_beneficios"
   | "listar_movimentacoes"
+  | "listar_movimentacoes_itens"
   | "listar_entregas_painel"
   | "listar_recebimentos"
   | "listar_tentativas"
@@ -440,6 +441,14 @@ export type RegistrarEntregaStatus =
   | "bloqueado_estoque"
   | "bloqueado_extra";
 
+/** Benefício adicional efetivamente entregue na mesma visita. */
+export interface EntregaExtraAplicada {
+  entrega_id: string;
+  beneficio: string;
+  quantidade: number;
+  saldo_resultante: number;
+}
+
 export interface RegistrarEntregaResult {
   status: RegistrarEntregaStatus;
   /** Preenchidos quando `status === "entregue"`. */
@@ -448,6 +457,8 @@ export interface RegistrarEntregaResult {
   saldo_resultante: number | null;
   /** Preenchido quando o desfecho é um bloqueio (tentativa registrada). */
   tentativa_id: string | null;
+  /** Benefícios adicionais da visita; vazio quando houve bloqueio. */
+  extras: EntregaExtraAplicada[];
 }
 
 /** Retorno de `public.registrar_tentativa_bloqueada`. */
@@ -459,11 +470,23 @@ export interface RegistrarTentativaResult {
  * Insumos de leitura para calcular a elegibilidade no cliente (exibição) com
  * `verificarElegibilidadeAtendimento`. O enforcement real é da RPC.
  */
+/**
+ * Benefício que pode sair junto da cesta na mesma visita (Ovo de Páscoa, Kit
+ * Gestante, Cesta de Natal…). A cesta do próprio assistido nunca aparece aqui.
+ */
+export interface BeneficioAdicionalDisponivel {
+  id: string;
+  nome: string;
+  saldo: number;
+  controlaEstoque: boolean;
+}
+
 export interface ResumoAtendimentoAssistido {
   ultimaRetiradaISO: string | null;
   retiradasExtras: number;
   saldoPadrao: number;
   saldoExtra: number;
+  beneficiosAdicionais: BeneficioAdicionalDisponivel[];
 }
 
 /**
@@ -538,6 +561,8 @@ export interface EntregaPainel {
   beneficioNome: string;
   excepcional: boolean;
   observacao?: string;
+  /** Unidades entregues. 1 na cesta; adicional pode ser maior (admin autoriza). */
+  quantidade: number;
 }
 
 /** Tentativa bloqueada para relatórios (nomes resolvidos). */
@@ -568,6 +593,23 @@ export interface ItemEstoque {
   minimo: number;
   valor: number;
   ativo: boolean;
+}
+
+/**
+ * Linha do ledger de itens (`movimentacoes_itens`). Diferente do ledger de
+ * benefícios, não existe baixa por entrega aqui: item só sai por movimentação
+ * manual ou por consumo da montagem de cesta.
+ */
+export interface MovimentacaoItem {
+  id: string;
+  itemNome: string;
+  unidade: string;
+  tipo: "entrada" | "saida" | "ajuste";
+  quantidade: number;
+  saldoResultante: number;
+  motivo?: string;
+  observacao?: string;
+  criadoEm: string;
 }
 
 /** Item dentro da composição de um benefício (nome/unidade/valor resolvidos). */

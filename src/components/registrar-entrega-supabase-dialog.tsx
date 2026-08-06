@@ -10,11 +10,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   formatBR,
+  recusaDoBeneficioAdicional,
   verificarElegibilidadeAtendimento,
   type Elegibilidade,
 } from "@/lib/atendimento-regras";
@@ -29,6 +32,7 @@ import {
   useRegistrarTentativaSupabase,
   useResumoAtendimento,
 } from "@/lib/familias/use-familias-supabase";
+import { descricaoAssistido } from "@/lib/familias/descricao-assistido";
 
 type Props = {
   open: boolean;
@@ -38,6 +42,9 @@ type Props = {
 };
 
 const MOTIVO_MINIMO = 5;
+
+/** Estado de um benefício adicional marcado no diálogo. */
+type ExtraSelecionado = { quantidade: string; justificativa: string };
 
 export function RegistrarEntregaSupabaseDialog({
   open,
@@ -56,15 +63,21 @@ export function RegistrarEntregaSupabaseDialog({
   const inativarAssistido = useInativarAssistido();
   const [motivo, setMotivo] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [perfilNome, setPerfilNome] = useState<string | null>(null);
+  // Benefícios adicionais marcados na visita: presença da chave = marcado.
+  const [extras, setExtras] = useState<Record<string, ExtraSelecionado>>({});
 
   useEffect(() => {
     if (!open) {
       setMotivo("");
+      setExtras({});
       return;
     }
     let active = true;
     void getCurrentProfile().then(({ data }) => {
-      if (active) setIsAdmin(data?.papel === "administrador");
+      if (!active) return;
+      setIsAdmin(data?.papel === "administrador");
+      setPerfilNome(data?.nome_completo ?? null);
     });
     return () => {
       active = false;
@@ -99,6 +112,35 @@ export function RegistrarEntregaSupabaseDialog({
         )
       : null;
 
+  const adicionais = resumoQuery.data?.beneficiosAdicionais ?? [];
+
+  const alternarExtra = (id: string, marcado: boolean) =>
+    setExtras((prev) => {
+      if (!marcado) {
+        const { [id]: _removido, ...resto } = prev;
+        void _removido;
+        return resto;
+      }
+      return { ...prev, [id]: { quantidade: "1", justificativa: "" } };
+    });
+
+  const editarExtra = (id: string, campo: keyof ExtraSelecionado, valor: string) =>
+    setExtras((prev) => (prev[id] ? { ...prev, [id]: { ...prev[id], [campo]: valor } } : prev));
+
+  const extrasSelecionados = Object.entries(extras).map(([beneficioId, e]) => ({
+    beneficioId,
+    quantidade: Number(e.quantidade),
+    justificativa: e.justificativa,
+  }));
+
+  const extraInvalido = extrasSelecionados.some(
+    (e) =>
+      recusaDoBeneficioAdicional(
+        { quantidade: e.quantidade, justificativa: e.justificativa },
+        isAdmin,
+      ) !== null,
+  );
+
   const confirmarEntrega = async (excepcional: boolean) => {
     if (!assistido) return;
     try {
@@ -107,10 +149,19 @@ export function RegistrarEntregaSupabaseDialog({
         familiaId: assistido.familiaId,
         excepcional,
         observacao: excepcional ? motivo : undefined,
+        beneficiosExtras: extrasSelecionados.map((e) => ({
+          beneficioId: e.beneficioId,
+          quantidade: e.quantidade,
+          justificativa: e.quantidade > 1 ? e.justificativa : undefined,
+        })),
       });
       if (data.status === "entregue") {
+        const adicionaisEntregues = data.extras
+          .map((e) => `${e.beneficio}${e.quantidade > 1 ? ` ×${e.quantidade}` : ""}`)
+          .join(", ");
         toast.success(
-          `Entrega registrada (${data.beneficio}). Saldo restante: ${data.saldo_resultante}.`,
+          `Entrega registrada (${data.beneficio}). Saldo restante: ${data.saldo_resultante}.` +
+            (adicionaisEntregues ? ` Também entregue: ${adicionaisEntregues}.` : ""),
         );
       } else {
         // O servidor reaplicou as regras e bloqueou (ex.: saldo/prazo mudou desde a
@@ -183,9 +234,7 @@ export function RegistrarEntregaSupabaseDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Registrar entrega</DialogTitle>
-          <DialogDescription>
-            {assistido ? `${assistido.nome} — ${familiaNome}` : "—"}
-          </DialogDescription>
+          <DialogDescription>{descricaoAssistido(assistido?.nome, familiaNome)}</DialogDescription>
         </DialogHeader>
 
         {resumoQuery.isPending ? (
@@ -204,13 +253,87 @@ export function RegistrarEntregaSupabaseDialog({
               limiteExtra={limiteExtra}
             />
 
+            {/* Adicionais só aparecem quando a visita pode virar entrega: o
+                benefício sazonal nunca sai sozinho. */}
+            {(elegibilidade.cenario === "liberado_padrao" ||
+              elegibilidade.cenario === "liberado_extra" ||
+              (elegibilidade.cenario === "bloqueio_25dias" && isAdmin)) &&
+              adicionais.length > 0 && (
+                <div className="space-y-2 rounded-md border p-3">
+                  <p className="text-xs font-semibold">Entregar também nesta visita</p>
+                  {adicionais.map((b) => {
+                    const marcado = extras[b.id] !== undefined;
+                    const semSaldo = b.controlaEstoque && b.saldo <= 0;
+                    const qtd = Number(extras[b.id]?.quantidade ?? "1");
+                    return (
+                      <div key={b.id} className="space-y-2">
+                        <label className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={marcado}
+                            disabled={semSaldo || salvando}
+                            onCheckedChange={(v) => alternarExtra(b.id, v === true)}
+                          />
+                          <span className={semSaldo ? "text-muted-foreground" : ""}>{b.nome}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {semSaldo ? "sem saldo em estoque" : `saldo ${b.saldo}`}
+                          </span>
+                        </label>
+
+                        {marcado && (
+                          <div className="ml-6 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground">Quantidade</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                className="h-8 w-20"
+                                value={extras[b.id].quantidade}
+                                onChange={(e) => editarExtra(b.id, "quantidade", e.target.value)}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                1 por família é o padrão
+                              </span>
+                            </div>
+
+                            {qtd > 1 &&
+                              (isAdmin ? (
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-muted-foreground">
+                                    Aprovado por {perfilNome ?? "administrador"} — justificativa
+                                    (obrigatória)
+                                  </Label>
+                                  <Textarea
+                                    rows={2}
+                                    value={extras[b.id].justificativa}
+                                    onChange={(e) =>
+                                      editarExtra(b.id, "justificativa", e.target.value)
+                                    }
+                                    placeholder="Por que esta família leva mais de uma unidade?"
+                                  />
+                                </div>
+                              ) : (
+                                <p className="text-xs text-destructive">
+                                  Somente um administrador pode autorizar mais de 1 por família.
+                                </p>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
             {(elegibilidade.cenario === "liberado_padrao" ||
               elegibilidade.cenario === "liberado_extra") && (
               <DialogFooter>
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
                   Cancelar
                 </Button>
-                <Button disabled={salvando} onClick={() => void confirmarEntrega(false)}>
+                <Button
+                  disabled={salvando || extraInvalido}
+                  onClick={() => void confirmarEntrega(false)}
+                >
                   {salvando ? "Registrando…" : `Confirmar entrega — ${elegibilidade.beneficio}`}
                 </Button>
               </DialogFooter>
@@ -245,7 +368,7 @@ export function RegistrarEntregaSupabaseDialog({
                   </Button>
                   {isAdmin && (
                     <Button
-                      disabled={salvando || motivo.trim().length < MOTIVO_MINIMO}
+                      disabled={salvando || extraInvalido || motivo.trim().length < MOTIVO_MINIMO}
                       onClick={() => void confirmarEntrega(true)}
                     >
                       {salvando ? "Liberando…" : "Liberar excepcionalmente"}

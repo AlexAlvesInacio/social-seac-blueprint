@@ -110,7 +110,7 @@ observações relevantes de cada área do MVP.
 - **Pendências não bloqueantes:** integração automática com nota
   fiscal eletrônica fica para fase futura.
 
-## 8. Composição por benefício (`/composicao-cesta`)
+## 8. Itens e composição (`/composicao-cesta`)
 
 - **Status:** Homologado
 - **Validado:** cadastro dos itens que compõem cada benefício
@@ -120,7 +120,10 @@ observações relevantes de cada área do MVP.
   composição e aumenta o benefício pronto; sem saldo, montagem
   bloqueada.
 - **Observações:** entrega ao assistido baixa o benefício pronto,
-  não os itens individuais.
+  não os itens individuais. Desde 2026-08-06 a tela abre na aba
+  **Estoque de itens**, que mostra os saldos do estoque físico, permite
+  entrada/saída/ajuste por item e exibe o ledger `movimentacoes_itens`
+  (antes invisível na aplicação).
 - **Pendências não bloqueantes:** custo estimado por cesta a partir
   do valor médio dos itens.
 

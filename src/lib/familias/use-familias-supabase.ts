@@ -477,6 +477,7 @@ export function useCriarRecebimento() {
       void queryClient.invalidateQueries({ queryKey: familiasSupabaseQueryKeys.recebimentos });
       // Itens vinculados ao catálogo geram entrada no estoque.
       void queryClient.invalidateQueries({ queryKey: estoqueQueryKeys.itens });
+      void queryClient.invalidateQueries({ queryKey: estoqueQueryKeys.movimentacoesItens });
     },
   });
 }

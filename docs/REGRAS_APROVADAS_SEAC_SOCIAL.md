@@ -78,6 +78,20 @@ registro do motivo neste arquivo.
   movimentações.
 - Itens abaixo do mínimo aparecem como atenção.
 - Itens zerados aparecem como sem estoque.
+- O estoque físico de itens tem tela própria (Itens e composição →
+  Estoque de itens), com entrada, saída e ajuste. O motivo é
+  obrigatório no ajuste — é o que identifica o inventário no ledger.
+  Aprovado em 2026-08-06.
+
+## 5.1 Benefícios adicionais na entrega (aprovado em 2026-08-06)
+
+- Todo benefício ativo aparece como caixa de seleção na tela de
+  entrega, além da cesta decidida pelo tipo de cadastro.
+- Cada marcado gera entrega e baixa próprias, na mesma transação.
+- O adicional nunca sai sozinho e herda o prazo de 25 dias da cesta.
+- Sem saldo do adicional, a entrega inteira é bloqueada.
+- 1 por família é o padrão; acima disso exige administrador,
+  justificativa e gera auditoria.
 
 ## 6. Configurações
 
