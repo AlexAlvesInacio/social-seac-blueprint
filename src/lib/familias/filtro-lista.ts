@@ -58,3 +58,27 @@ export function atendeAosFiltros(familia: FamiliaListaItem, filtros: Filtros): b
   if (filtros.status !== "all" && familia.status !== filtros.status) return false;
   return true;
 }
+
+/** Famílias por página na listagem. */
+export const POR_PAGINA = 50;
+
+export type Paginacao = {
+  paginaAtual: number;
+  totalPaginas: number;
+  primeiro: number;
+};
+
+/**
+ * Calcula a fatia visível. Existe separado porque é onde moram os erros de
+ * fronteira: filtrar encurta a lista, e quem estava numa página alta veria
+ * uma tela vazia em vez do resultado da busca.
+ */
+export function calcularPaginacao(
+  totalItens: number,
+  paginaDesejada: number,
+  porPagina = POR_PAGINA,
+): Paginacao {
+  const totalPaginas = Math.max(1, Math.ceil(totalItens / porPagina));
+  const paginaAtual = Math.min(Math.max(1, paginaDesejada), totalPaginas);
+  return { paginaAtual, totalPaginas, primeiro: (paginaAtual - 1) * porPagina };
+}

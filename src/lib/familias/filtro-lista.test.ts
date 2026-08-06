@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   atendeAosFiltros,
+  calcularPaginacao,
   FILTROS_VAZIOS,
   type FamiliaListaItem,
 } from "@/lib/familias/filtro-lista";
@@ -67,5 +68,36 @@ describe("filtro da lista de famílias", () => {
 
   test("espaço em branco não filtra nada", () => {
     expect(atendeAosFiltros(FAMILIA, com({ nome: "   " }))).toBe(true);
+  });
+});
+
+describe("calcularPaginacao", () => {
+  test("lista vazia continua tendo uma página", () => {
+    expect(calcularPaginacao(0, 1)).toEqual({ paginaAtual: 1, totalPaginas: 1, primeiro: 0 });
+  });
+
+  test("1.018 famílias em páginas de 50 dão 21 páginas", () => {
+    const { totalPaginas } = calcularPaginacao(1018, 1);
+    expect(totalPaginas).toBe(21);
+  });
+
+  test("a última página começa no item certo", () => {
+    expect(calcularPaginacao(1018, 21).primeiro).toBe(1000);
+  });
+
+  test("página além do fim volta para a última", () => {
+    // O caso real: estar na página 12 e filtrar para 3 resultados.
+    const { paginaAtual, primeiro } = calcularPaginacao(3, 12);
+    expect(paginaAtual).toBe(1);
+    expect(primeiro).toBe(0);
+  });
+
+  test("página zero ou negativa vira a primeira", () => {
+    expect(calcularPaginacao(100, 0).paginaAtual).toBe(1);
+    expect(calcularPaginacao(100, -5).paginaAtual).toBe(1);
+  });
+
+  test("total exatamente múltiplo não cria página vazia", () => {
+    expect(calcularPaginacao(100, 1, 50).totalPaginas).toBe(2);
   });
 });

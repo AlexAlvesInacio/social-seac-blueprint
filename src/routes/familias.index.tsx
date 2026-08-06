@@ -12,7 +12,9 @@ import {
 import { useMemo, useState } from "react";
 import {
   atendeAosFiltros,
+  calcularPaginacao,
   FILTROS_VAZIOS,
+  POR_PAGINA,
   type FamiliaListaItem,
 } from "@/lib/familias/filtro-lista";
 import { AppShell } from "@/components/app-shell";
@@ -95,8 +97,11 @@ function FamiliasPage() {
   const todasFamilias: FamiliaListaItem[] = (familiasSupabase ?? []).map(mapFamiliaParaLista);
   const { foco } = Route.useSearch();
   const [filtros, setFiltros] = useState(FILTROS_VAZIOS);
-  const filtrarPor = (campo: keyof typeof FILTROS_VAZIOS) => (valor: string) =>
+  const [pagina, setPagina] = useState(1);
+  const filtrarPor = (campo: keyof typeof FILTROS_VAZIOS) => (valor: string) => {
     setFiltros((atual) => ({ ...atual, [campo]: valor }));
+    setPagina(1);
+  };
 
   // Bairros vêm dos próprios dados: a planilha importada não trouxe endereço,
   // então hoje a lista fica vazia e o seletor mostra só "Todos".
@@ -115,6 +120,16 @@ function FamiliasPage() {
   const familiasFiltradas = useMemo(
     () => porFoco.filter((f) => atendeAosFiltros(f, filtros)),
     [porFoco, filtros],
+  );
+
+  const {
+    paginaAtual,
+    totalPaginas,
+    primeiro: primeiroDaPagina,
+  } = calcularPaginacao(familiasFiltradas.length, pagina);
+  const familiasDaPagina = useMemo(
+    () => familiasFiltradas.slice(primeiroDaPagina, primeiroDaPagina + POR_PAGINA),
+    [familiasFiltradas, primeiroDaPagina],
   );
   const selected = familiasFiltradas.find((familia) => familia.id === selectedId) ?? null;
   const { data: configData } = useConfiguracoes();
@@ -356,7 +371,7 @@ function FamiliasPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  familiasFiltradas.map((familia) => {
+                  familiasDaPagina.map((familia) => {
                     const isSelected = selectedId === familia.id;
                     return (
                       <TableRow key={familia.id} className={cn(isSelected && "bg-muted/40")}>
@@ -423,6 +438,36 @@ function FamiliasPage() {
                 )}
               </TableBody>
             </Table>
+            {familiasFiltradas.length > POR_PAGINA && (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3">
+                <span className="text-xs text-muted-foreground">
+                  Mostrando {primeiroDaPagina + 1}–
+                  {Math.min(primeiroDaPagina + POR_PAGINA, familiasFiltradas.length)} de{" "}
+                  {familiasFiltradas.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={paginaAtual === 1}
+                    onClick={() => setPagina(paginaAtual - 1)}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Página {paginaAtual} de {totalPaginas}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={paginaAtual === totalPaginas}
+                    onClick={() => setPagina(paginaAtual + 1)}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
