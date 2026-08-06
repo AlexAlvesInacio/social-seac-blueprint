@@ -962,6 +962,15 @@ export interface RegistrarEntregaInput {
   familiaId: string;
   excepcional?: boolean;
   observacao?: string;
+  /** Benefícios adicionais marcados para sair na mesma visita. */
+  beneficiosExtras?: EntregaExtraSolicitada[];
+}
+
+/** Benefício adicional pedido na entrega. Quantidade > 1 exige admin + justificativa. */
+export interface EntregaExtraSolicitada {
+  beneficioId: string;
+  quantidade: number;
+  justificativa?: string;
 }
 
 export interface RegistrarTentativaInput {
@@ -978,6 +987,11 @@ async function registrarEntrega(
     p_assistido_id: input.assistidoId,
     p_excepcional: input.excepcional ?? false,
     p_observacao: nullableParam(input.observacao),
+    p_beneficios_extras: (input.beneficiosExtras ?? []).map((e) => ({
+      beneficio_id: e.beneficioId,
+      quantidade: e.quantidade,
+      justificativa: nullableParam(e.justificativa),
+    })),
   });
 
   if (error) {
@@ -998,7 +1012,9 @@ async function registrarEntrega(
     };
   }
 
-  return { data: row, error: null };
+  // `extras` vem como jsonb; normaliza para lista mesmo quando o Postgres
+  // devolve null (nenhum adicional na visita).
+  return { data: { ...row, extras: row.extras ?? [] }, error: null };
 }
 
 export async function registrarEntregaAtendimentoNoSupabase(
@@ -1157,7 +1173,13 @@ const BENEFICIO_PADRAO = "Cesta Padrão";
 const BENEFICIO_EXTRA = "Cesta Extra";
 
 type EntregaResumoRow = { criado_em: string; beneficio_id: string };
-type BeneficioSaldoRow = { id: string; nome: string; saldo: number };
+type BeneficioSaldoRow = {
+  id: string;
+  nome: string;
+  saldo: number;
+  controla_estoque: boolean;
+  ativo: boolean;
+};
 
 async function getResumoAtendimento(
   assistidoId: string,
@@ -1202,10 +1224,9 @@ async function getResumoAtendimento(
       .select("criado_em, beneficio_id")
       .eq("pessoa_id", pessoaId)
       .order("criado_em", { ascending: false }),
-    client
-      .from("beneficios")
-      .select("id, nome, saldo")
-      .in("nome", [BENEFICIO_PADRAO, BENEFICIO_EXTRA]),
+    // Todos os benefícios, não só as duas cestas: os demais podem sair como
+    // adicionais na mesma visita (Ovo de Páscoa, Kit Gestante, Cesta de Natal).
+    client.from("beneficios").select("id, nome, saldo, controla_estoque, ativo").order("nome"),
   ]);
 
   if (entregasResult.error) {
@@ -1229,12 +1250,25 @@ async function getResumoAtendimento(
   const retiradasExtras = extraId ? entregas.filter((e) => e.beneficio_id === extraId).length : 0;
   const saldoDe = (nome: string) => beneficios.find((b) => b.nome === nome)?.saldo ?? 0;
 
+  // As duas cestas saem da lista de adicionais: qual delas o assistido recebe é
+  // decidido pelo tipo de cadastro, no servidor, e marcá-la de novo seria dupla
+  // entrega — a RPC recusa.
+  const beneficiosAdicionais = beneficios
+    .filter((b) => b.ativo && b.nome !== BENEFICIO_PADRAO && b.nome !== BENEFICIO_EXTRA)
+    .map((b) => ({
+      id: b.id,
+      nome: b.nome,
+      saldo: b.saldo,
+      controlaEstoque: b.controla_estoque,
+    }));
+
   return {
     data: {
       ultimaRetiradaISO,
       retiradasExtras,
       saldoPadrao: saldoDe(BENEFICIO_PADRAO),
       saldoExtra: saldoDe(BENEFICIO_EXTRA),
+      beneficiosAdicionais,
     },
     error: null,
   };
@@ -1382,6 +1416,7 @@ type EntregaPainelRow = {
   assistido_id: string;
   excepcional: boolean;
   observacao: string | null;
+  quantidade: number | null;
 };
 
 // Filtro comum às consultas de entregas: por janela de tempo (painel) ou por
@@ -1395,7 +1430,9 @@ async function consultarEntregas(
 
   let query = client
     .from("entregas")
-    .select("id, criado_em, familia_id, beneficio_id, assistido_id, excepcional, observacao")
+    .select(
+      "id, criado_em, familia_id, beneficio_id, assistido_id, excepcional, observacao, quantidade",
+    )
     .order("criado_em", { ascending: false })
     .limit(filtro.limite);
 
@@ -1504,6 +1541,8 @@ async function consultarEntregas(
       beneficioNome: nomeBeneficio.get(e.beneficio_id) ?? "—",
       excepcional: e.excepcional,
       observacao: e.observacao ?? undefined,
+      // Entregas anteriores à migration 20260806015315 não têm a coluna preenchida.
+      quantidade: e.quantidade ?? 1,
     };
   });
 

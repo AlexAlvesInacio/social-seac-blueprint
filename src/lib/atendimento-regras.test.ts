@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   formatBR,
+  recusaDoBeneficioAdicional,
   verificarElegibilidadeAtendimento,
   type AssistidoRegra,
   type EstoqueBeneficio,
@@ -133,5 +134,36 @@ describe("formatBR", () => {
   });
   test("null → travessão", () => {
     expect(formatBR(null)).toBe("—");
+  });
+});
+
+describe("recusaDoBeneficioAdicional", () => {
+  const pedido = (quantidade: number, justificativa = "") => ({ quantidade, justificativa });
+
+  test("1 por família passa sem administrador e sem justificativa", () => {
+    expect(recusaDoBeneficioAdicional(pedido(1), false)).toBeNull();
+  });
+
+  test("quantidade zero, negativa ou fracionada é inválida", () => {
+    expect(recusaDoBeneficioAdicional(pedido(0), true)).toBe("quantidade_invalida");
+    expect(recusaDoBeneficioAdicional(pedido(-1), true)).toBe("quantidade_invalida");
+    expect(recusaDoBeneficioAdicional(pedido(1.5), true)).toBe("quantidade_invalida");
+    expect(recusaDoBeneficioAdicional(pedido(Number.NaN), true)).toBe("quantidade_invalida");
+  });
+
+  test("acima de 1 sem ser administrador é recusado", () => {
+    expect(recusaDoBeneficioAdicional(pedido(2, "família com cinco crianças"), false)).toBe(
+      "exige_administrador",
+    );
+  });
+
+  test("administrador ainda precisa justificar acima de 1", () => {
+    expect(recusaDoBeneficioAdicional(pedido(2), true)).toBe("exige_justificativa");
+    expect(recusaDoBeneficioAdicional(pedido(2, "   "), true)).toBe("exige_justificativa");
+    expect(recusaDoBeneficioAdicional(pedido(2, "abc"), true)).toBe("exige_justificativa");
+  });
+
+  test("administrador com justificativa suficiente é aceito", () => {
+    expect(recusaDoBeneficioAdicional(pedido(3, "família com cinco crianças"), true)).toBeNull();
   });
 });

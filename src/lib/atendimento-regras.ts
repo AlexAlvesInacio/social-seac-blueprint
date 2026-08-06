@@ -110,6 +110,43 @@ export function verificarElegibilidadeAtendimento(
   return { cenario: "liberado_extra", beneficio: "Cesta Extra", progresso };
 }
 
+/** Quantidade que uma família leva de um benefício adicional sem autorização. */
+export const QUANTIDADE_PADRAO_POR_FAMILIA = 1;
+
+/** Mínimo de caracteres da justificativa de quantidade acima do padrão. */
+export const JUSTIFICATIVA_MINIMA = 5;
+
+export type BeneficioAdicionalSolicitado = {
+  quantidade: number;
+  justificativa: string;
+};
+
+export type MotivoRecusaAdicional =
+  | "quantidade_invalida"
+  | "exige_administrador"
+  | "exige_justificativa";
+
+/**
+ * Valida um benefício adicional marcado na entrega.
+ *
+ * Regra homologada em 2026-08-06: 1 por família é o padrão; acima disso exige
+ * administrador e justificativa — mesmo desenho da liberação excepcional de
+ * prazo. O enforcement real é da RPC; isto evita perder a entrega inteira por
+ * um pedido que o servidor recusaria.
+ */
+export function recusaDoBeneficioAdicional(
+  pedido: BeneficioAdicionalSolicitado,
+  ehAdministrador: boolean,
+): MotivoRecusaAdicional | null {
+  if (!Number.isInteger(pedido.quantidade) || pedido.quantidade < 1) {
+    return "quantidade_invalida";
+  }
+  if (pedido.quantidade === QUANTIDADE_PADRAO_POR_FAMILIA) return null;
+  if (!ehAdministrador) return "exige_administrador";
+  if (pedido.justificativa.trim().length < JUSTIFICATIVA_MINIMA) return "exige_justificativa";
+  return null;
+}
+
 /** Utilitário para formatar YYYY-MM-DD em DD/MM/AAAA. */
 export function formatBR(iso: string | null): string {
   if (!iso) return "—";

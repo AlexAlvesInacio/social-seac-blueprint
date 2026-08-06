@@ -94,6 +94,28 @@ nem substitui a função central de elegibilidade.
 - Montagem de cesta baixa os itens da composição e aumenta o benefício pronto;
   a entrega baixa o benefício, não novamente seus itens.
 
+## Benefícios adicionais na mesma visita
+
+Homologado em 2026-08-06. A cesta do assistido continua sendo decidida pelo tipo
+de cadastro (definitivo → Cesta Padrão, extra → Cesta Extra). Além dela, a tela
+de entrega lista **todo benefício ativo** como caixa de seleção, para o que mais
+sair naquela visita: Kit Gestante, Ovo de Páscoa, Cesta de Natal, Dia das
+Crianças.
+
+- Cada benefício marcado gera **sua própria entrega** e **sua própria baixa** de
+  estoque, na mesma transação da cesta.
+- O benefício adicional **nunca sai sozinho** — é sempre marcado junto de uma
+  cesta liberada. Por isso ele **herda o prazo de 25 dias** da cesta e não tem
+  contador próprio.
+- **Falta de saldo bloqueia a entrega inteira**, cesta incluída. A tela
+  desabilita a caixa quando o saldo é zero, de modo que isso só dispara se o
+  estoque acabar entre abrir a tela e confirmar.
+- **1 por família** é o padrão. Acima disso exige **administrador** e
+  **justificativa**, mesmo desenho da liberação excepcional de prazo, e gera
+  evento de auditoria com o benefício, a quantidade e quem autorizou.
+- Todo benefício precisa de itens e composição para ser montado; sem montagem
+  não há saldo, e sem saldo a caixa fica desabilitada.
+
 ## Tentativas bloqueadas
 
 - Bloqueio por prazo deve ser registrado.
