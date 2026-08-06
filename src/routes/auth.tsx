@@ -186,14 +186,6 @@ function AuthPage() {
                 <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? "Entrando…" : "Entrar"}
                 </Button>
-                <div className="relative py-2 text-center">
-                  <span className="bg-card px-3 text-xs uppercase tracking-wide text-muted-foreground">
-                    ou
-                  </span>
-                </div>
-                <p className="text-center text-sm text-muted-foreground">
-                  O acesso é criado pela administração do SEAC.
-                </p>
               </form>
             </CardContent>
           </Card>
@@ -203,8 +195,10 @@ function AuthPage() {
         <div className="relative hidden overflow-hidden bg-gradient-to-br from-secondary/60 via-background to-accent/40 lg:flex">
           <div className="relative z-10 flex w-full flex-col items-center justify-center gap-8 px-10 py-16 text-center">
             <div className="flex flex-col items-center gap-4">
+              {/* Só o logo grande usa a versão com o nome escrito: nos ícones
+                  pequenos (cartão de login, menu) a palavra ficaria ilegível. */}
               <img
-                src="/seac-logo.svg"
+                src="/seac-logo-completo.png"
                 alt="SEAC — Sopa, Esperança, Amor e Caridade"
                 className="w-full max-w-xs rounded-2xl bg-background/60 p-8 shadow-sm ring-1 ring-border"
               />
